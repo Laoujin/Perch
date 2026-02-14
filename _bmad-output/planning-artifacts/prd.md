@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [step-01-init, step-02-discovery, step-03-success, step-04-journeys]
+stepsCompleted: [step-01-init, step-02-discovery, step-03-success, step-04-journeys, step-05-domain]
 inputDocuments: ['_bmad-output/brainstorming/brainstorming-session-2026-02-08.md']
 workflowType: 'prd'
 documentCounts:
@@ -119,4 +119,24 @@ Wouter wants to onboard a complex app where he's not sure where the settings liv
 | Windows Sandbox integration | | | | x | 3 |
 | MAUI interactive explorer | | | | x | 3 |
 | CLI onboarding fallback | | | | x | 3 |
+
+## Domain-Specific Requirements
+
+### Windows Filesystem Constraints
+
+- **Dynamic config paths:** Some apps (e.g., Visual Studio Community 2019+) store settings in paths containing random/hash strings. The manifest format must support pattern-based or glob-style path resolution, not just static paths
+- **Special folder path variables:** Support common ones out of the box (`%AppData%\Roaming`, `%AppData%\Local`, `%UserProfile%`, etc.). Additional special folders added on a need basis as new apps require them — the system should be extensible, not exhaustive upfront
+- **Short root path recommendation:** Document that perch-config should be cloned near the filesystem root (e.g., `C:\tools\dotfiles`) to mitigate long path issues
+
+### Git on Windows
+
+- **Platform-specific gitconfig:** Already handled via `includeIf` with `.windows.gitconfig` / `.linux.gitconfig` — Perch doesn't need to manage this
+- **Git identity bootstrap:** Username/email setup and initial `.gitconfig` copy to user folder is manual today. For scope 1-2: document the process in the git-config module. For scope 3: consider automating this as part of deploy
+- **Symlink edge cases in third-party tools:** Some tools have historically had issues with symlinks (e.g., older Angular/Node dependencies). This is outside Perch's control — document as a known limitation, not a bug
+
+### App Config Handling
+
+- **File locking detection (Scope 2):** If a config file is locked by a running app during deploy, detect it and report it. At the end of the deploy run, offer the user a choice: close those programs and retry, or skip and handle manually
+- **App config rewriting:** Not observed as a real issue with symlinks — no special handling needed
+- **Sync discipline:** Don't have the target app open during sync. This is a user behavior expectation, not a technical enforcement
 
