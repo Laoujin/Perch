@@ -65,6 +65,19 @@
 - **Dotfiles utilities directory:** https://dotfiles.github.io/utilities/
 - **Awesome dotfiles (curated list):** https://github.com/webpro/awesome-dotfiles
 
+## Chezmoi Deep Dive (Primary Competitor)
+
+- **Design FAQ:** https://www.chezmoi.io/user-guide/frequently-asked-questions/design/
+- **Architecture:** https://www.chezmoi.io/developer-guide/architecture/
+- **Target types:** https://www.chezmoi.io/reference/target-types/
+- **Symlink feature request:** https://github.com/twpayne/chezmoi/issues/1005
+- **Core model:** Copy-on-apply by default. Computes target state, copies files. Has optional symlink mode but it can't handle encrypted, private, or templated files.
+- **No registry support:** chezmoi is a file manager, not a system configurator
+- **No app awareness:** file-level only, no manifest/convention-over-config concept
+- **No discovery tooling:** user must know where configs live
+- **Templates:** Powerful Go templates for machine-specific config differences
+- **Secrets:** Built-in encryption (age, GPG) + password manager integration (1Password, Bitwarden)
+
 ## Perch's Differentiators
 
 1. **Symlink-based, zero re-run philosophy** — change a setting in an app, it's immediately in git. No `re-add` step (vs chezmoi)
