@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [step-01-init, step-02-discovery, step-03-success, step-04-journeys, step-05-domain]
+stepsCompleted: [step-01-init, step-02-discovery, step-03-success, step-04-journeys, step-05-domain, step-06-innovation, step-07-project-type, step-08-scoping]
 inputDocuments: ['_bmad-output/brainstorming/brainstorming-session-2026-02-08.md']
 workflowType: 'prd'
 documentCounts:
@@ -141,4 +141,117 @@ Wouter wants to onboard a complex app where he's not sure where the settings liv
 - **File locking detection (Scope 2):** If a config file is locked by a running app during deploy, detect it and report it. At the end of the deploy run, offer the user a choice: close those programs and retry, or skip and handle manually
 - **App config rewriting:** Not observed as a real issue with symlinks — no special handling needed
 - **Sync discipline:** Don't have the target app open during sync. This is a user behavior expectation, not a technical enforcement
+
+## CLI Tool Specific Requirements
+
+### Command Structure
+
+- **Primary command:** `perch deploy` — creates symlinks for all managed configs
+- **Default mode:** Non-interactive, streams actions in real-time as they happen. User can `Ctrl+C` to abort if something looks wrong
+- **Interactive mode (Scope 3):** Step-level and command-level confirmation prompts
+- **CI mode:** No color, no live rendering, porcelain output only
+
+### Output & Console UI
+
+- **Rich console output** via Spectre.Console (or similar):
+  - Live-updating summary table showing progress per category (e.g., "Settings linked: 5/15", "Git configs: 2/2")
+  - Individual actions streaming below the summary as they execute
+  - Colored status indicators (success/skip/fail)
+- **Porcelain mode:** Structured C# result objects serialized to JSON for machine consumption (CI, MAUI UI)
+- Output mode selected via flag (e.g., `--output pretty|json`)
+
+### Config Schema
+
+- **App manifests:** Currently co-located in the config repo alongside config files
+- **Future evolution:** Manifests become templates from a separate repository, hosted via GitHub Pages as a public gallery/registry. Users pull templates and customize locally
+- **Engine config:** How Perch locates the config repo — TBD in architecture
+
+### Backup & Restore
+
+- **Pre-deploy backup** of existing files before overwriting (Scope 2)
+- **Restore capability** from backup (Scope 3, possibly MAUI-only)
+
+### Scripting & Automation
+
+- Clean exit codes (0 = success, non-zero = specific failure types)
+- No prompts in default mode — CI-safe
+- Porcelain output for piping
+- Re-runnable safely — additive only, never destructive without explicit flag
+
+## Project Scoping & Phased Development
+
+### MVP Strategy & Philosophy
+
+**MVP Approach:** Problem-solving MVP — the minimum that gets Wouter off the old machine and onto the new one. Every feature must directly serve the "clone, deploy, switch" story.
+
+**Resource:** Solo developer + AI assistance. C# / .NET.
+
+### Phase 1: Switch Machines (MVP)
+
+**Core Journeys Supported:** J1 (Fresh Machine Setup), J2 (Onboarding New Program), J3 (Day-to-Day Sync)
+
+**Must-Have Capabilities:**
+- Symlink/junction creation engine reading co-located manifests
+- Convention-over-config discovery (folder name = package name)
+- `perch deploy` command — creates all symlinks, re-runnable (additive)
+- Engine/config repo split
+- Spectre.Console colored text streaming (action-by-action output)
+- Basic error reporting (what failed and why)
+- Clean exit codes
+- Run from source (`dotnet run`)
+
+**Explicitly NOT in MVP:**
+- Live-updating tables / rich progress UI
+- `dotnet tool install` distribution
+- Porcelain/JSON output
+- Interactive mode
+- Dry-run / WhatIf
+- Backup/restore
+- Git clean filters
+- App discovery tooling
+- Shell completion
+
+### Phase 2: Rock Solid
+
+**Capabilities:**
+- `dotnet tool install perch -g` distribution
+- Rich Spectre.Console UI (live tables, progress tracking)
+- Porcelain/JSON output mode
+- Idempotent deploy with drift reporting
+- Dry-run / WhatIf mode (`--dry-run`)
+- Pre-deploy backup snapshots
+- File locking detection + reporting
+- Package manifest (replaces chocolatey.txt + boxstarter gist)
+- Git clean filters for noisy configs
+- Before/after diffing for settings discovery
+- Installed app detection + missing config detection
+- NUnit + NSubstitute test suite
+- GitHub Actions CI on Windows runners
+- Lifecycle hooks per plugin
+
+### Phase 3: Accessible & Complete
+
+**Capabilities:**
+- Interactive mode (step-level and command-level confirmation)
+- Machine-specific overrides (layered config system)
+- Registry management (requires dedicated brainstorm)
+- Manifest templates from external repo (GitHub Pages gallery)
+- Restore from backup
+- Shell completion
+- MAUI onboarding app (AI-assisted discovery, Windows Sandbox)
+- MAUI drift dashboard
+- 1Password / secrets integration (approach TBD — symlink model tension)
+- Community config path database
+- Git identity bootstrap automation
+
+### Risk Mitigation Strategy
+
+**Technical Risks:**
+- *Existing repo split may not work* — previous AI session started the engine/config split, current state unknown. Mitigation: assess what exists before building on it, be prepared to restructure
+- *Dynamic config paths (VS hash paths)* — complex glob/pattern matching needed. Mitigation: scope 1 handles static paths only, dynamic paths can wait for scope 2 if no current apps need it
+- *Symlink permissions on Windows* — brainstorm flagged as paper tiger but worth verifying on new machine. Mitigation: test early in scope 1
+
+**Resource Risks:**
+- Solo developer — if blocked, the new machine doesn't get set up. Mitigation: scope 1 is deliberately minimal, can be completed in focused sessions
+- AI-written code needs review — Mitigation: strong test suite in scope 2 catches regressions
 
