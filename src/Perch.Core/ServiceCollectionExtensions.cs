@@ -35,6 +35,16 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IFileLockDetector, UnixFileLockDetector>();
             services.AddSingleton<IRegistryProvider, NoOpRegistryProvider>();
         }
+        if (OperatingSystem.IsLinux())
+        {
+            services.AddSingleton<IPackageManagerProvider, AptPackageManagerProvider>();
+        }
+        if (OperatingSystem.IsMacOS())
+        {
+            services.AddSingleton<IPackageManagerProvider, BrewPackageManagerProvider>();
+        }
+        services.AddSingleton<IPackageManagerProvider, NpmPackageManagerProvider>();
+        services.AddSingleton<IPackageManagerProvider, VsCodeExtensionProvider>();
         services.AddSingleton<IFileBackupProvider, FileBackupProvider>();
         services.AddSingleton<ISnapshotProvider, SnapshotProvider>();
         services.AddSingleton<SymlinkOrchestrator>();
@@ -45,6 +55,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMachineProfileService, MachineProfileService>();
         services.AddSingleton<ICleanFilterService, CleanFilterService>();
         services.AddSingleton<IDiffSnapshotService, DiffSnapshotService>();
+        services.AddSingleton<ISystemPackageInstaller, SystemPackageInstaller>();
         services.AddSingleton<IDeployService, DeployService>();
         services.AddSingleton<IStatusService, StatusService>();
         services.AddSingleton<ISettingsProvider, YamlSettingsProvider>();

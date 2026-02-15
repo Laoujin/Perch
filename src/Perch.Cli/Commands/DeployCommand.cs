@@ -27,7 +27,7 @@ public sealed class DeployCommand : AsyncCommand<DeployCommand.Settings>
         [Description("Output format (Pretty or Json)")]
         public OutputFormat Output { get; init; } = OutputFormat.Pretty;
 
-        [CommandOption("--interactive")]
+        [CommandOption("--interactive|-i")]
         [Description("Preview each module and prompt before executing")]
         public bool Interactive { get; init; }
     }
