@@ -31,6 +31,14 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _canGoBack;
 
+    [ObservableProperty]
+    private string _stepLabel = "Step 1 of 10";
+
+    [ObservableProperty]
+    private string _currentStepTitle = "Welcome";
+
+    public List<StepHeaderItem> StepHeaders { get; } = [];
+
     public MainWindowViewModel(ISystemScanner scanner, ICatalogService? catalogService = null)
     {
         _scanner = scanner;
@@ -55,6 +63,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         TotalSteps = _steps.Count;
         _currentPage = _steps[0];
 
+        for (int i = 0; i < _steps.Count; i++)
+        {
+            StepHeaders.Add(new StepHeaderItem(i, _steps[i].Title));
+        }
+        StepHeaders[0].IsCurrent = true;
+        StepHeaders[0].IsVisited = true;
+
         scanStep.BeginScan(scanner);
     }
 
@@ -68,6 +83,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             CurrentStepIndex++;
             CurrentPage = _steps[CurrentStepIndex];
             CanGoBack = CurrentPage is WizardStepViewModel ws && ws.CanGoBack;
+            UpdateNavigationState();
             await OnEnteringStepAsync(CurrentStepIndex).ConfigureAwait(true);
         }
     }
@@ -80,6 +96,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             CurrentStepIndex--;
             CurrentPage = _steps[CurrentStepIndex];
             CanGoBack = CurrentPage is WizardStepViewModel ws && ws.CanGoBack;
+            UpdateNavigationState();
         }
     }
 
@@ -91,7 +108,21 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             CurrentStepIndex = stepIndex;
             CurrentPage = _steps[CurrentStepIndex];
             CanGoBack = CurrentPage is WizardStepViewModel ws && ws.CanGoBack;
+            UpdateNavigationState();
         }
+    }
+
+    private void UpdateNavigationState()
+    {
+        StepLabel = $"Step {CurrentStepIndex + 1} of {TotalSteps}";
+        CurrentStepTitle = _steps[CurrentStepIndex].Title;
+
+        foreach (var header in StepHeaders)
+        {
+            header.IsCurrent = header.Index == CurrentStepIndex;
+        }
+
+        StepHeaders[CurrentStepIndex].IsVisited = true;
     }
 
     private Task OnLeavingStepAsync(int _) => Task.CompletedTask;
@@ -144,4 +175,22 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _catalogService != null
             ? new WindowsTweaksStepViewModel(_catalogService, _state)
             : new WindowsTweaksStepViewModel(new NoOpCatalogService(), _state);
+}
+
+public sealed partial class StepHeaderItem : ViewModelBase
+{
+    [ObservableProperty]
+    private bool _isCurrent;
+
+    [ObservableProperty]
+    private bool _isVisited;
+
+    public int Index { get; }
+    public string Title { get; }
+
+    public StepHeaderItem(int index, string title)
+    {
+        Index = index;
+        Title = title;
+    }
 }
