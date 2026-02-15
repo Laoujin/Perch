@@ -58,7 +58,7 @@ public sealed class StatusService : IStatusService
                 continue;
             }
 
-            if (CheckModuleLinks(module, currentPlatform, progress))
+            if (CheckModuleLinks(module, currentPlatform, machineProfile, progress))
             {
                 hasDrift = true;
             }
@@ -118,7 +118,7 @@ public sealed class StatusService : IStatusService
         return false;
     }
 
-    private bool CheckModuleLinks(AppModule module, Platform currentPlatform, IProgress<StatusResult>? progress)
+    private bool CheckModuleLinks(AppModule module, Platform currentPlatform, MachineProfile? machineProfile, IProgress<StatusResult>? progress)
     {
         bool hasDrift = false;
 
@@ -130,7 +130,7 @@ public sealed class StatusService : IStatusService
                 continue;
             }
 
-            string expandedTarget = EnvironmentExpander.Expand(target);
+            string expandedTarget = EnvironmentExpander.Expand(target, machineProfile?.Variables);
             string sourcePath = Path.GetFullPath(Path.Combine(module.ModulePath, link.Source));
 
             IReadOnlyList<string> resolvedTargets = _globResolver.Resolve(expandedTarget);
