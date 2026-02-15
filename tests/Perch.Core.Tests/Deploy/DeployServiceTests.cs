@@ -682,7 +682,7 @@ public sealed class DeployServiceTests
 
         try
         {
-            var profile = new MachineProfile(ImmutableArray.Create("git"), ImmutableArray<string>.Empty);
+            var profile = new MachineProfile(ImmutableArray.Create("git"), ImmutableArray<string>.Empty, ImmutableDictionary<string, string>.Empty);
             _machineProfileService.LoadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(profile);
 
             var modules = ImmutableArray.Create(
@@ -719,7 +719,7 @@ public sealed class DeployServiceTests
 
         try
         {
-            var profile = new MachineProfile(ImmutableArray<string>.Empty, ImmutableArray.Create("steam"));
+            var profile = new MachineProfile(ImmutableArray<string>.Empty, ImmutableArray.Create("steam"), ImmutableDictionary<string, string>.Empty);
             _machineProfileService.LoadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(profile);
 
             var modules = ImmutableArray.Create(

@@ -272,7 +272,7 @@ public sealed class StatusServiceTests
             _symlinkProvider.IsSymlink(targetFile).Returns(true);
             _symlinkProvider.GetSymlinkTarget(targetFile).Returns(sourcePath);
 
-            var profile = new MachineProfile(ImmutableArray.Create("git"), ImmutableArray<string>.Empty);
+            var profile = new MachineProfile(ImmutableArray.Create("git"), ImmutableArray<string>.Empty, ImmutableDictionary<string, string>.Empty);
             _machineProfileService.LoadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(profile);
 
             var modules = ImmutableArray.Create(
