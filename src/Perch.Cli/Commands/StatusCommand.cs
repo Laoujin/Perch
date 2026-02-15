@@ -63,27 +63,12 @@ public sealed class StatusCommand : AsyncCommand<StatusCommand.Settings>
         _console.MarkupLine($"[blue]Checking status for:[/] {configPath.EscapeMarkup()}");
         _console.WriteLine();
 
-        var progress = new SynchronousProgress<StatusResult>(result =>
-        {
-            if (driftOnly && result.Level == DriftLevel.Ok)
-            {
-                return;
-            }
-
-            string icon = result.Level switch
-            {
-                DriftLevel.Ok => "[green]OK[/]",
-                DriftLevel.Missing => "[red]MISS[/]",
-                DriftLevel.Drift => "[yellow]DRIFT[/]",
-                DriftLevel.Error => "[red]FAIL[/]",
-                _ => "[grey]??[/]",
-            };
-
-            _console.MarkupLine($"  {icon} [{GetColor(result.Level)}]{result.ModuleName.EscapeMarkup()}[/] {result.Message.EscapeMarkup()}");
-            _console.MarkupLine($"       [grey]{result.TargetPath.EscapeMarkup()}[/]");
-        });
+        var results = new List<StatusResult>();
+        var progress = new SynchronousProgress<StatusResult>(results.Add);
 
         int exitCode = await _statusService.CheckAsync(configPath, progress, cancellationToken);
+
+        RenderGroupedResults(results, driftOnly);
 
         _console.WriteLine();
         if (exitCode == 0)
@@ -97,6 +82,58 @@ public sealed class StatusCommand : AsyncCommand<StatusCommand.Settings>
 
         return exitCode;
     }
+
+    private void RenderGroupedResults(List<StatusResult> results, bool driftOnly)
+    {
+        var groups = results
+            .GroupBy(r => r.Category)
+            .OrderBy(g => g.Key);
+
+        foreach (var group in groups)
+        {
+            var items = driftOnly
+                ? group.Where(r => r.Level != DriftLevel.Ok).ToList()
+                : group.ToList();
+
+            if (items.Count == 0)
+            {
+                continue;
+            }
+
+            _console.MarkupLine($"[bold]{GetCategoryLabel(group.Key)}[/]");
+
+            foreach (StatusResult result in items)
+            {
+                string icon = result.Level switch
+                {
+                    DriftLevel.Ok => "[green]OK[/]",
+                    DriftLevel.Missing => "[red]MISS[/]",
+                    DriftLevel.Drift => "[yellow]DRIFT[/]",
+                    DriftLevel.Error => "[red]FAIL[/]",
+                    _ => "[grey]??[/]",
+                };
+
+                _console.MarkupLine($"  {icon} [{GetColor(result.Level)}]{result.ModuleName.EscapeMarkup()}[/] {result.Message.EscapeMarkup()}");
+                if (!string.IsNullOrEmpty(result.TargetPath))
+                {
+                    _console.MarkupLine($"       [grey]{result.TargetPath.EscapeMarkup()}[/]");
+                }
+            }
+
+            _console.WriteLine();
+        }
+    }
+
+    private static string GetCategoryLabel(StatusCategory category) => category switch
+    {
+        StatusCategory.Link => "Symlinks",
+        StatusCategory.Registry => "Registry",
+        StatusCategory.GlobalPackage => "Global Packages",
+        StatusCategory.VscodeExtension => "VS Code Extensions",
+        StatusCategory.PsModule => "PowerShell Modules",
+        StatusCategory.SystemPackage => "System Packages",
+        _ => category.ToString(),
+    };
 
     private async Task<int> ExecuteJsonAsync(string configPath, bool driftOnly, CancellationToken cancellationToken)
     {
@@ -116,6 +153,7 @@ public sealed class StatusCommand : AsyncCommand<StatusCommand.Settings>
             exitCode,
             results = results.Select(r => new
             {
+                category = r.Category.ToString(),
                 moduleName = r.ModuleName,
                 sourcePath = r.SourcePath,
                 targetPath = r.TargetPath,

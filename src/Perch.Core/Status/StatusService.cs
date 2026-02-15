@@ -204,7 +204,7 @@ public sealed class StatusService : IStatusService
             bool found = installed.Contains(package);
             var level = found ? DriftLevel.Ok : DriftLevel.Missing;
             string message = found ? "OK" : $"Global package {package} is not installed";
-            progress?.Report(new StatusResult(module.DisplayName, "", package, level, message));
+            progress?.Report(new StatusResult(module.DisplayName, "", package, level, message, StatusCategory.GlobalPackage));
 
             if (!found)
             {
@@ -231,7 +231,7 @@ public sealed class StatusService : IStatusService
             bool found = installed.Contains(extension);
             var level = found ? DriftLevel.Ok : DriftLevel.Missing;
             string message = found ? "OK" : $"VS Code extension {extension} is not installed";
-            progress?.Report(new StatusResult(module.DisplayName, "", extension, level, message));
+            progress?.Report(new StatusResult(module.DisplayName, "", extension, level, message, StatusCategory.VscodeExtension));
 
             if (!found)
             {
@@ -264,7 +264,7 @@ public sealed class StatusService : IStatusService
 
                 if (result.ExitCode != 0)
                 {
-                    progress?.Report(new StatusResult(module.DisplayName, "", "pwsh", DriftLevel.Error, $"pwsh failed: {result.StandardError}"));
+                    progress?.Report(new StatusResult(module.DisplayName, "", "pwsh", DriftLevel.Error, $"pwsh failed: {result.StandardError}", StatusCategory.PsModule));
                     return (true, null, true);
                 }
 
@@ -274,7 +274,7 @@ public sealed class StatusService : IStatusService
             }
             catch (Exception ex)
             {
-                progress?.Report(new StatusResult(module.DisplayName, "", "pwsh", DriftLevel.Error, $"pwsh unavailable: {ex.Message}"));
+                progress?.Report(new StatusResult(module.DisplayName, "", "pwsh", DriftLevel.Error, $"pwsh unavailable: {ex.Message}", StatusCategory.PsModule));
                 return (true, null, true);
             }
         }
@@ -287,7 +287,7 @@ public sealed class StatusService : IStatusService
             bool found = cache.Contains(psModule);
             var level = found ? DriftLevel.Ok : DriftLevel.Missing;
             string message = found ? "OK" : $"PowerShell module {psModule} is not installed";
-            progress?.Report(new StatusResult(module.DisplayName, "", psModule, level, message));
+            progress?.Report(new StatusResult(module.DisplayName, "", psModule, level, message, StatusCategory.PsModule));
 
             if (!found)
             {
@@ -311,7 +311,7 @@ public sealed class StatusService : IStatusService
 
         foreach (string error in parseResult.Errors)
         {
-            progress?.Report(new StatusResult("system-packages", "", "", DriftLevel.Error, error));
+            progress?.Report(new StatusResult("system-packages", "", "", DriftLevel.Error, error, StatusCategory.SystemPackage));
         }
 
         bool hasDrift = parseResult.Errors.Length > 0;
@@ -329,7 +329,7 @@ public sealed class StatusService : IStatusService
             bool found = installed.Contains(package.Name);
             var level = found ? DriftLevel.Ok : DriftLevel.Missing;
             string message = found ? "OK" : $"System package {package.Name} is not installed";
-            progress?.Report(new StatusResult("system-packages", "", package.Name, level, message));
+            progress?.Report(new StatusResult("system-packages", "", package.Name, level, message, StatusCategory.SystemPackage));
 
             if (!found)
             {
@@ -368,16 +368,16 @@ public sealed class StatusService : IStatusService
 
         if (currentValue == null)
         {
-            return new StatusResult(moduleName, "", registryPath, DriftLevel.Missing, $"Registry value {entry.Name} does not exist");
+            return new StatusResult(moduleName, "", registryPath, DriftLevel.Missing, $"Registry value {entry.Name} does not exist", StatusCategory.Registry);
         }
 
         if (!Equals(currentValue, entry.Value))
         {
             return new StatusResult(moduleName, "", registryPath, DriftLevel.Drift,
-                $"Registry {entry.Name} is {currentValue}, expected {entry.Value}");
+                $"Registry {entry.Name} is {currentValue}, expected {entry.Value}", StatusCategory.Registry);
         }
 
-        return new StatusResult(moduleName, "", registryPath, DriftLevel.Ok, "OK");
+        return new StatusResult(moduleName, "", registryPath, DriftLevel.Ok, "OK", StatusCategory.Registry);
     }
 
     private StatusResult CheckLink(string moduleName, string sourcePath, string targetPath)
