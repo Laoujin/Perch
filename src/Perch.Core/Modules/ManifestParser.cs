@@ -32,9 +32,10 @@ public sealed class ManifestParser
 
         bool hasLinks = model?.Links != null && model.Links.Count > 0;
         bool hasRegistry = model?.Registry != null && model.Registry.Count > 0;
-        if (!hasLinks && !hasRegistry)
+        bool hasGlobalPackages = model?.GlobalPackages?.Packages != null && model.GlobalPackages.Packages.Count > 0;
+        if (!hasLinks && !hasRegistry && !hasGlobalPackages)
         {
-            return ManifestParseResult.Failure("Manifest must contain at least one entry in 'links' or 'registry'.");
+            return ManifestParseResult.Failure("Manifest must contain at least one entry in 'links', 'registry', or 'global-packages'.");
         }
 
         var links = new List<LinkEntry>();
@@ -66,7 +67,8 @@ public sealed class ManifestParser
         var hooks = ParseHooks(model.Hooks);
         var cleanFilter = ParseCleanFilter(model.CleanFilter);
         var registry = ParseRegistry(model.Registry);
-        var manifest = new AppManifest(moduleName, displayName, platforms, links.ToImmutableArray(), hooks, cleanFilter, registry);
+        var globalPackages = ParseGlobalPackages(model.GlobalPackages);
+        var manifest = new AppManifest(moduleName, displayName, model.Enabled, platforms, links.ToImmutableArray(), hooks, cleanFilter, registry, globalPackages);
         return ManifestParseResult.Success(manifest);
     }
 
@@ -189,6 +191,26 @@ public sealed class ManifestParser
             RegistryValueType.QWord when value is string s && long.TryParse(s, out long parsed) => parsed,
             _ => value.ToString() ?? string.Empty,
         };
+
+    private static GlobalPackagesDefinition? ParseGlobalPackages(GlobalPackagesYamlModel? model)
+    {
+        if (model?.Packages == null || model.Packages.Count == 0)
+        {
+            return null;
+        }
+
+        var manager = model.Manager?.ToLowerInvariant() switch
+        {
+            "bun" => GlobalPackageManager.Bun,
+            _ => GlobalPackageManager.Npm,
+        };
+
+        var packages = model.Packages
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .ToImmutableArray();
+
+        return packages.Length > 0 ? new GlobalPackagesDefinition(manager, packages) : null;
+    }
 
     private static LinkType ParseLinkType(string? value) =>
         value?.ToLowerInvariant() switch

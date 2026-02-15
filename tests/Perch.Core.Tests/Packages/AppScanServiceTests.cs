@@ -163,7 +163,7 @@ public sealed class AppScanServiceTests
     private void SetupModules(params string[] names)
     {
         var modules = names.Select(n =>
-            new AppModule(n, n, Path.Combine(_tempDir, n), ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty))
+            new AppModule(n, n, true, Path.Combine(_tempDir, n), ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty))
             .ToImmutableArray();
 
         _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())

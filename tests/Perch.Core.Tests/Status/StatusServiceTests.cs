@@ -55,7 +55,7 @@ public sealed class StatusServiceTests
             _symlinkProvider.GetSymlinkTarget(targetFile).Returns(sourcePath);
 
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", targetFile, LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -87,7 +87,7 @@ public sealed class StatusServiceTests
         try
         {
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", targetFile, LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -122,7 +122,7 @@ public sealed class StatusServiceTests
             _symlinkProvider.IsSymlink(targetFile).Returns(false);
 
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", targetFile, LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -159,7 +159,7 @@ public sealed class StatusServiceTests
             _symlinkProvider.GetSymlinkTarget(targetFile).Returns("C:\\wrong\\target.txt");
 
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", targetFile, LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -190,7 +190,7 @@ public sealed class StatusServiceTests
         {
             _platformDetector.CurrentPlatform.Returns(Platform.Windows);
             var modules = ImmutableArray.Create(
-                new AppModule("linux-only", "Linux Only", Path.Combine(tempDir, "mod"), ImmutableArray.Create(Platform.Linux), ImmutableArray.Create(
+                new AppModule("linux-only", "Linux Only", true, Path.Combine(tempDir, "mod"), ImmutableArray.Create(Platform.Linux), ImmutableArray.Create(
                     new LinkEntry("f", Path.Combine(tempDir, "t"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -218,7 +218,7 @@ public sealed class StatusServiceTests
         try
         {
             var modules = ImmutableArray.Create(
-                new AppModule("a", "A", Path.Combine(tempDir, "a"), ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("a", "A", true, Path.Combine(tempDir, "a"), ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("f", Path.Combine(tempDir, "t"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -257,9 +257,9 @@ public sealed class StatusServiceTests
             _machineProfileService.LoadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(profile);
 
             var modules = ImmutableArray.Create(
-                new AppModule("git", "Git", modAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("git", "Git", true, modAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", targetFile, LinkType.Symlink))),
-                new AppModule("steam", "Steam", modBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("steam", "Steam", true, modBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", Path.Combine(tempDir, "other.txt"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -293,7 +293,7 @@ public sealed class StatusServiceTests
             var registry = ImmutableArray.Create(
                 new RegistryEntryDefinition(@"HKCU\Software\Test", "Theme", 0, RegistryValueType.DWord));
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty, Registry: registry));
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty, Registry: registry));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
 
@@ -326,7 +326,7 @@ public sealed class StatusServiceTests
             var registry = ImmutableArray.Create(
                 new RegistryEntryDefinition(@"HKCU\Software\Test", "Theme", 0, RegistryValueType.DWord));
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty, Registry: registry));
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty, Registry: registry));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
 
@@ -359,7 +359,7 @@ public sealed class StatusServiceTests
             var registry = ImmutableArray.Create(
                 new RegistryEntryDefinition(@"HKCU\Software\Test", "Theme", 0, RegistryValueType.DWord));
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty, Registry: registry));
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty, Registry: registry));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
 
@@ -394,7 +394,7 @@ public sealed class StatusServiceTests
             var registry = ImmutableArray.Create(
                 new RegistryEntryDefinition(@"HKCU\Software\Test", "Theme", 0, RegistryValueType.DWord));
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty, Registry: registry));
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty, Registry: registry));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
 

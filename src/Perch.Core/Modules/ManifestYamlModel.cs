@@ -2,12 +2,20 @@ namespace Perch.Core.Modules;
 
 internal sealed class ManifestYamlModel
 {
+    public bool Enabled { get; set; } = true;
     public string? DisplayName { get; set; }
     public List<string>? Platforms { get; set; }
     public List<LinkYamlModel>? Links { get; set; }
     public HooksYamlModel? Hooks { get; set; }
     public CleanFilterYamlModel? CleanFilter { get; set; }
     public List<RegistryYamlModel>? Registry { get; set; }
+    public GlobalPackagesYamlModel? GlobalPackages { get; set; }
+}
+
+internal sealed class GlobalPackagesYamlModel
+{
+    public string? Manager { get; set; }
+    public List<string>? Packages { get; set; }
 }
 
 internal sealed class HooksYamlModel

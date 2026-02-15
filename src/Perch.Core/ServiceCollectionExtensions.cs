@@ -39,6 +39,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ISnapshotProvider, SnapshotProvider>();
         services.AddSingleton<SymlinkOrchestrator>();
         services.AddSingleton<IHookRunner, HookRunner>();
+        services.AddSingleton<IGlobalPackageInstaller, GlobalPackageInstaller>();
         services.AddSingleton<IMachineProfileService, MachineProfileService>();
         services.AddSingleton<ICleanFilterService, CleanFilterService>();
         services.AddSingleton<IDiffSnapshotService, DiffSnapshotService>();

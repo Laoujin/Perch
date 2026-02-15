@@ -41,7 +41,7 @@ public sealed class CleanFilterServiceTests
         string scriptPath = Path.Combine(modulePath, scriptName);
         File.WriteAllText(scriptPath, "#!/bin/bash");
         var filter = new CleanFilterDefinition($"{name}-clean", scriptName, files.ToImmutableArray());
-        return new AppModule(name, name, modulePath, ImmutableArray<Platform>.Empty,
+        return new AppModule(name, name, true, modulePath, ImmutableArray<Platform>.Empty,
             ImmutableArray.Create(new LinkEntry("dummy", "dummy", LinkType.Symlink)), CleanFilter: filter);
     }
 
@@ -98,7 +98,7 @@ public sealed class CleanFilterServiceTests
         string modulePath = Path.Combine(_tempDir, "mymod");
         Directory.CreateDirectory(modulePath);
         var filter = new CleanFilterDefinition("mymod-clean", "nonexistent.sh", ImmutableArray.Create("data.json"));
-        var module = new AppModule("mymod", "mymod", modulePath, ImmutableArray<Platform>.Empty,
+        var module = new AppModule("mymod", "mymod", true, modulePath, ImmutableArray<Platform>.Empty,
             ImmutableArray.Create(new LinkEntry("dummy", "dummy", LinkType.Symlink)), CleanFilter: filter);
         var modules = ImmutableArray.Create(module);
 
@@ -129,7 +129,7 @@ public sealed class CleanFilterServiceTests
     [Test]
     public async Task SetupAsync_NoCleanFilter_Skips()
     {
-        var module = new AppModule("plain", "plain", Path.Combine(_tempDir, "plain"), ImmutableArray<Platform>.Empty,
+        var module = new AppModule("plain", "plain", true, Path.Combine(_tempDir, "plain"), ImmutableArray<Platform>.Empty,
             ImmutableArray.Create(new LinkEntry("dummy", "dummy", LinkType.Symlink)));
         var modules = ImmutableArray.Create(module);
 

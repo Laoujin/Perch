@@ -387,4 +387,120 @@ public sealed class ManifestParserTests
         Assert.That(result.IsSuccess, Is.True);
         Assert.That(result.Manifest!.CleanFilter, Is.Null);
     }
+
+    [Test]
+    public void Parse_GlobalPackagesWithBun_ReturnsParsedPackages()
+    {
+        string yaml = """
+            global-packages:
+              manager: bun
+              packages:
+                - eslint_d
+                - prettier
+                - tsx
+            """;
+
+        var result = _parser.Parse(yaml, "bun-packages");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Manifest!.GlobalPackages, Is.Not.Null);
+            Assert.That(result.Manifest!.GlobalPackages!.Manager, Is.EqualTo(GlobalPackageManager.Bun));
+            Assert.That(result.Manifest!.GlobalPackages!.Packages, Has.Length.EqualTo(3));
+            Assert.That(result.Manifest!.GlobalPackages!.Packages[0], Is.EqualTo("eslint_d"));
+        });
+    }
+
+    [Test]
+    public void Parse_GlobalPackagesDefaultsToNpm()
+    {
+        string yaml = """
+            global-packages:
+              packages:
+                - prettier
+            """;
+
+        var result = _parser.Parse(yaml, "npm-packages");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Manifest!.GlobalPackages!.Manager, Is.EqualTo(GlobalPackageManager.Npm));
+    }
+
+    [Test]
+    public void Parse_GlobalPackagesOnly_NoLinksRequired()
+    {
+        string yaml = """
+            global-packages:
+              manager: bun
+              packages:
+                - tsx
+            """;
+
+        var result = _parser.Parse(yaml, "bun-packages");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Manifest!.Links, Is.Empty);
+        Assert.That(result.Manifest!.GlobalPackages, Is.Not.Null);
+    }
+
+    [Test]
+    public void Parse_NoGlobalPackages_ReturnsNull()
+    {
+        string yaml = """
+            links:
+              - source: settings.json
+                target: "%APPDATA%\\App\\settings.json"
+            """;
+
+        var result = _parser.Parse(yaml, "myapp");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Manifest!.GlobalPackages, Is.Null);
+    }
+
+    [Test]
+    public void Parse_EnabledDefaultsToTrue()
+    {
+        string yaml = """
+            links:
+              - source: settings.json
+                target: "%APPDATA%\\App\\settings.json"
+            """;
+
+        var result = _parser.Parse(yaml, "myapp");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Manifest!.Enabled, Is.True);
+    }
+
+    [Test]
+    public void Parse_EnabledFalse_ReturnsFalse()
+    {
+        string yaml = """
+            enabled: false
+            global-packages:
+              manager: bun
+              packages:
+                - tsx
+            """;
+
+        var result = _parser.Parse(yaml, "disabled-module");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Manifest!.Enabled, Is.False);
+    }
+
+    [Test]
+    public void Parse_NoLinksNoRegistryNoGlobalPackages_Fails()
+    {
+        string yaml = """
+            display-name: Empty Module
+            """;
+
+        var result = _parser.Parse(yaml, "empty");
+
+        Assert.That(result.IsSuccess, Is.False);
+        Assert.That(result.Error, Does.Contain("global-packages"));
+    }
 }

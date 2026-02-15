@@ -27,6 +27,7 @@ public sealed class DeployServiceTests
     private IHookRunner _hookRunner = null!;
     private IMachineProfileService _machineProfileService = null!;
     private IRegistryProvider _registryProvider = null!;
+    private IGlobalPackageInstaller _globalPackageInstaller = null!;
     private DeployService _deployService = null!;
     private List<DeployResult> _reported = null!;
     private IProgress<DeployResult> _progress = null!;
@@ -49,7 +50,8 @@ public sealed class DeployServiceTests
             .Returns(new DeployResult("", "", "", ResultLevel.Ok, "Hook completed"));
         _machineProfileService = Substitute.For<IMachineProfileService>();
         _registryProvider = Substitute.For<IRegistryProvider>();
-        _deployService = new DeployService(_discoveryService, orchestrator, _platformDetector, _globResolver, _snapshotProvider, _hookRunner, _machineProfileService, _registryProvider);
+        _globalPackageInstaller = Substitute.For<IGlobalPackageInstaller>();
+        _deployService = new DeployService(_discoveryService, orchestrator, _platformDetector, _globResolver, _snapshotProvider, _hookRunner, _machineProfileService, _registryProvider, _globalPackageInstaller);
         _reported = new List<DeployResult>();
         _progress = new SynchronousProgress<DeployResult>(r => _reported.Add(r));
     }
@@ -69,9 +71,9 @@ public sealed class DeployServiceTests
         try
         {
             var modules = ImmutableArray.Create(
-                new AppModule("a", "Module A", moduleAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("a", "Module A", true, moduleAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", Path.Combine(targetDir, "a.txt"), LinkType.Symlink))),
-                new AppModule("b", "Module B", moduleBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("b", "Module B", true, moduleBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", Path.Combine(targetDir, "b.txt"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -102,7 +104,7 @@ public sealed class DeployServiceTests
         try
         {
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", Path.Combine(tempDir, "nonexistent", "sub", "a.txt"), LinkType.Symlink),
                     new LinkEntry("file2.txt", Path.Combine(tempDir, "a.txt"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -127,7 +129,7 @@ public sealed class DeployServiceTests
         try
         {
             var modules = ImmutableArray.Create(
-                new AppModule("a", "A", Path.Combine(tempDir, "a"), ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("a", "A", true, Path.Combine(tempDir, "a"), ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("f", Path.Combine(tempDir, "t"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -158,7 +160,7 @@ public sealed class DeployServiceTests
         try
         {
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", "%PERCH_TEST_DEPLOY%\\output.txt", LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -188,7 +190,7 @@ public sealed class DeployServiceTests
         try
         {
             var modules = ImmutableArray.Create(
-                new AppModule("vscode", "VS Code", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("vscode", "VS Code", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("settings.json", Path.Combine(targetDir, "settings.json"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -214,7 +216,7 @@ public sealed class DeployServiceTests
         {
             _platformDetector.CurrentPlatform.Returns(Platform.Windows);
             var modules = ImmutableArray.Create(
-                new AppModule("linux-only", "Linux Only", Path.Combine(tempDir, "mod"), ImmutableArray.Create(Platform.Linux), ImmutableArray.Create(
+                new AppModule("linux-only", "Linux Only", true, Path.Combine(tempDir, "mod"), ImmutableArray.Create(Platform.Linux), ImmutableArray.Create(
                     new LinkEntry("f", Path.Combine(tempDir, "t"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -249,7 +251,7 @@ public sealed class DeployServiceTests
         {
             _platformDetector.CurrentPlatform.Returns(Platform.Windows);
             var modules = ImmutableArray.Create(
-                new AppModule("win-mod", "Windows Module", modulePath, ImmutableArray.Create(Platform.Windows), ImmutableArray.Create(
+                new AppModule("win-mod", "Windows Module", true, modulePath, ImmutableArray.Create(Platform.Windows), ImmutableArray.Create(
                     new LinkEntry("f.txt", Path.Combine(targetDir, "f.txt"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -277,7 +279,7 @@ public sealed class DeployServiceTests
         try
         {
             var modules = ImmutableArray.Create(
-                new AppModule("all-plat", "All Platforms", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("all-plat", "All Platforms", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("f.txt", Path.Combine(targetDir, "f.txt"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -311,7 +313,7 @@ public sealed class DeployServiceTests
                 KeyValuePair.Create(Platform.Linux, "/home/test/lin.txt"),
             });
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("f.txt", null, platformTargets, LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -342,7 +344,7 @@ public sealed class DeployServiceTests
                 KeyValuePair.Create(Platform.Windows, @"C:\test\win.txt"),
             });
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("f.txt", null, platformTargets, LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -383,7 +385,7 @@ public sealed class DeployServiceTests
             _globResolver.Resolve(globTarget).Returns(new[] { resolved1, resolved2 });
 
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("settings.json", globTarget, LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -411,7 +413,7 @@ public sealed class DeployServiceTests
         try
         {
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", Path.Combine(targetDir, "file.txt"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -446,7 +448,7 @@ public sealed class DeployServiceTests
         try
         {
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", Path.Combine(targetDir, "file.txt"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -474,7 +476,7 @@ public sealed class DeployServiceTests
         try
         {
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", Path.Combine(targetDir, "file.txt"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -503,7 +505,7 @@ public sealed class DeployServiceTests
             _globResolver.Resolve(globTarget).Returns(Array.Empty<string>());
 
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("settings.json", globTarget, LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -539,7 +541,7 @@ public sealed class DeployServiceTests
         {
             var hooks = new DeployHooks("./setup.ps1", null);
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", Path.Combine(targetDir, "file.txt"), LinkType.Symlink)), hooks));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -575,7 +577,7 @@ public sealed class DeployServiceTests
         {
             var hooks = new DeployHooks(null, "./cleanup.ps1");
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", Path.Combine(targetDir, "file.txt"), LinkType.Symlink)), hooks));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -609,7 +611,7 @@ public sealed class DeployServiceTests
         {
             var hooks = new DeployHooks("./setup.ps1", "./cleanup.ps1");
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", Path.Combine(targetDir, "file.txt"), LinkType.Symlink)), hooks));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -637,7 +639,7 @@ public sealed class DeployServiceTests
         try
         {
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("file.txt", Path.Combine(targetDir, "file.txt"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -672,9 +674,9 @@ public sealed class DeployServiceTests
             _machineProfileService.LoadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(profile);
 
             var modules = ImmutableArray.Create(
-                new AppModule("git", "Git", modAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("git", "Git", true, modAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("f", Path.Combine(targetDir, "a.txt"), LinkType.Symlink))),
-                new AppModule("steam", "Steam", modBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("steam", "Steam", true, modBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("f", Path.Combine(targetDir, "b.txt"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -709,9 +711,9 @@ public sealed class DeployServiceTests
             _machineProfileService.LoadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(profile);
 
             var modules = ImmutableArray.Create(
-                new AppModule("git", "Git", modAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("git", "Git", true, modAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("f", Path.Combine(targetDir, "a.txt"), LinkType.Symlink))),
-                new AppModule("steam", "Steam", modBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("steam", "Steam", true, modBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("f", Path.Combine(targetDir, "b.txt"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -746,9 +748,9 @@ public sealed class DeployServiceTests
                 .Returns((MachineProfile?)null);
 
             var modules = ImmutableArray.Create(
-                new AppModule("git", "Git", modAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("git", "Git", true, modAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("f", Path.Combine(targetDir, "a.txt"), LinkType.Symlink))),
-                new AppModule("steam", "Steam", modBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("steam", "Steam", true, modBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("f", Path.Combine(targetDir, "b.txt"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -779,7 +781,7 @@ public sealed class DeployServiceTests
             var registry = ImmutableArray.Create(
                 new RegistryEntryDefinition(@"HKCU\Software\Perch\Test", "Theme", 0, RegistryValueType.DWord));
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("f.txt", Path.Combine(targetDir, "f.txt"), LinkType.Symlink)), Registry: registry));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -810,7 +812,7 @@ public sealed class DeployServiceTests
             var registry = ImmutableArray.Create(
                 new RegistryEntryDefinition(@"HKCU\Software\Perch\Test", "Theme", 0, RegistryValueType.DWord));
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("f.txt", Path.Combine(targetDir, "f.txt"), LinkType.Symlink)), Registry: registry));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -841,7 +843,7 @@ public sealed class DeployServiceTests
             var registry = ImmutableArray.Create(
                 new RegistryEntryDefinition(@"HKCU\Software\Perch\Test", "Theme", 0, RegistryValueType.DWord));
             var modules = ImmutableArray.Create(
-                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
                     new LinkEntry("f.txt", Path.Combine(targetDir, "f.txt"), LinkType.Symlink)), Registry: registry));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
@@ -851,6 +853,93 @@ public sealed class DeployServiceTests
             _registryProvider.DidNotReceive().SetValue(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<object>(), Arg.Any<RegistryValueType>());
             _registryProvider.DidNotReceive().GetValue(Arg.Any<string>(), Arg.Any<string>());
             Assert.That(_reported.Any(r => r.Message.Contains("Would set")), Is.True);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_DisabledModule_SkipsModule()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        try
+        {
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", false, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f.txt", Path.Combine(tempDir, "f.txt"), LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, progress: _progress);
+
+            Assert.That(exitCode, Is.EqualTo(0));
+            Assert.That(_reported.Any(r => r.Message.Contains("Skipped (disabled)")), Is.True);
+            _symlinkProvider.DidNotReceive().CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_GlobalPackages_InstallsViaInstaller()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        _globalPackageInstaller.InstallAsync(Arg.Any<string>(), Arg.Any<GlobalPackageManager>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(x => new DeployResult(x.ArgAt<string>(0), "", x.ArgAt<string>(2), ResultLevel.Ok, $"Installed {x.ArgAt<string>(2)}"));
+
+        try
+        {
+            var globalPackages = new GlobalPackagesDefinition(GlobalPackageManager.Bun, ImmutableArray.Create("prettier", "tsx"));
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Bun Packages", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty, GlobalPackages: globalPackages));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, progress: _progress);
+
+            Assert.That(exitCode, Is.EqualTo(0));
+            await _globalPackageInstaller.Received(2).InstallAsync("Bun Packages", GlobalPackageManager.Bun, Arg.Any<string>(), false, Arg.Any<CancellationToken>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_GlobalPackages_DryRun_PassesDryRunFlag()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        _globalPackageInstaller.InstallAsync(Arg.Any<string>(), Arg.Any<GlobalPackageManager>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(x => new DeployResult(x.ArgAt<string>(0), "", x.ArgAt<string>(2), ResultLevel.Ok, "Would run"));
+
+        try
+        {
+            var globalPackages = new GlobalPackagesDefinition(GlobalPackageManager.Bun, ImmutableArray.Create("tsx"));
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Bun", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty, GlobalPackages: globalPackages));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            await _deployService.DeployAsync(tempDir, dryRun: true, _progress);
+
+            await _globalPackageInstaller.Received(1).InstallAsync("Bun", GlobalPackageManager.Bun, "tsx", true, Arg.Any<CancellationToken>());
         }
         finally
         {

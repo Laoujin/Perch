@@ -16,8 +16,9 @@ public sealed class DeployService : IDeployService
     private readonly IHookRunner _hookRunner;
     private readonly IMachineProfileService _machineProfileService;
     private readonly IRegistryProvider _registryProvider;
+    private readonly IGlobalPackageInstaller _globalPackageInstaller;
 
-    public DeployService(IModuleDiscoveryService discoveryService, SymlinkOrchestrator orchestrator, IPlatformDetector platformDetector, IGlobResolver globResolver, ISnapshotProvider snapshotProvider, IHookRunner hookRunner, IMachineProfileService machineProfileService, IRegistryProvider registryProvider)
+    public DeployService(IModuleDiscoveryService discoveryService, SymlinkOrchestrator orchestrator, IPlatformDetector platformDetector, IGlobResolver globResolver, ISnapshotProvider snapshotProvider, IHookRunner hookRunner, IMachineProfileService machineProfileService, IRegistryProvider registryProvider, IGlobalPackageInstaller globalPackageInstaller)
     {
         _discoveryService = discoveryService;
         _orchestrator = orchestrator;
@@ -27,6 +28,7 @@ public sealed class DeployService : IDeployService
         _hookRunner = hookRunner;
         _machineProfileService = machineProfileService;
         _registryProvider = registryProvider;
+        _globalPackageInstaller = globalPackageInstaller;
     }
 
     public async Task<int> DeployAsync(string configRepoPath, bool dryRun = false, IProgress<DeployResult>? progress = null, CancellationToken cancellationToken = default)
@@ -51,6 +53,12 @@ public sealed class DeployService : IDeployService
         foreach (AppModule module in discovery.Modules)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            if (!module.Enabled)
+            {
+                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, "Skipped (disabled)"));
+                continue;
+            }
 
             if (module.Platforms.Length > 0 && !module.Platforms.Contains(currentPlatform))
             {
@@ -97,6 +105,10 @@ public sealed class DeployService : IDeployService
 
         bool moduleHadErrors = ProcessModuleLinks(module, currentPlatform, dryRun, progress);
         ProcessModuleRegistry(module, dryRun, progress);
+        if (await ProcessModuleGlobalPackagesAsync(module, dryRun, progress, cancellationToken).ConfigureAwait(false))
+        {
+            moduleHadErrors = true;
+        }
         hasErrors = moduleHadErrors;
 
         if (!dryRun && module.Hooks?.PostDeploy != null && !moduleHadErrors)
@@ -181,6 +193,28 @@ public sealed class DeployService : IDeployService
             progress?.Report(new DeployResult(module.DisplayName, "", $"{entry.Key}\\{entry.Name}",
                 ResultLevel.Ok, $"Set {entry.Name} to {entry.Value}"));
         }
+    }
+
+    private async Task<bool> ProcessModuleGlobalPackagesAsync(AppModule module, bool dryRun, IProgress<DeployResult>? progress, CancellationToken cancellationToken)
+    {
+        if (module.GlobalPackages == null || module.GlobalPackages.Packages.IsEmpty)
+        {
+            return false;
+        }
+
+        bool hasErrors = false;
+        foreach (string package in module.GlobalPackages.Packages)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DeployResult result = await _globalPackageInstaller.InstallAsync(module.DisplayName, module.GlobalPackages.Manager, package, dryRun, cancellationToken).ConfigureAwait(false);
+            progress?.Report(result);
+            if (result.Level == ResultLevel.Error)
+            {
+                hasErrors = true;
+            }
+        }
+
+        return hasErrors;
     }
 
     private IReadOnlyList<string> CollectTargetPaths(System.Collections.Immutable.ImmutableArray<AppModule> modules, Platform currentPlatform)

@@ -41,6 +41,11 @@ public sealed class StatusService : IStatusService
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (!module.Enabled)
+            {
+                continue;
+            }
+
             if (module.Platforms.Length > 0 && !module.Platforms.Contains(currentPlatform))
             {
                 continue;

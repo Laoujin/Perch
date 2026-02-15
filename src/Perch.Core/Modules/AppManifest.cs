@@ -3,4 +3,4 @@ using Perch.Core;
 
 namespace Perch.Core.Modules;
 
-public sealed record AppManifest(string ModuleName, string DisplayName, ImmutableArray<Platform> Platforms, ImmutableArray<LinkEntry> Links, DeployHooks? Hooks = null, CleanFilterDefinition? CleanFilter = null, ImmutableArray<RegistryEntryDefinition> Registry = default);
+public sealed record AppManifest(string ModuleName, string DisplayName, bool Enabled, ImmutableArray<Platform> Platforms, ImmutableArray<LinkEntry> Links, DeployHooks? Hooks = null, CleanFilterDefinition? CleanFilter = null, ImmutableArray<RegistryEntryDefinition> Registry = default, GlobalPackagesDefinition? GlobalPackages = null);
