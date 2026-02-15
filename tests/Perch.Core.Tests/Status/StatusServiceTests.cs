@@ -885,6 +885,53 @@ public sealed class StatusServiceTests
         }
     }
 
+    [Test]
+    public async Task CheckAsync_MachineProfileVariables_ExpandInTargetPaths()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+        string targetDir = Path.Combine(tempDir, "resolved");
+        Directory.CreateDirectory(targetDir);
+        string targetFile = Path.Combine(targetDir, "file.txt");
+        File.WriteAllText(targetFile, "content");
+        string sourcePath = Path.Combine(modulePath, "file.txt");
+
+        try
+        {
+            _symlinkProvider.IsSymlink(targetFile).Returns(true);
+            _symlinkProvider.GetSymlinkTarget(targetFile).Returns(sourcePath);
+
+            var variables = ImmutableDictionary.CreateRange(new[]
+            {
+                KeyValuePair.Create("config_dir", targetDir),
+            });
+            var profile = new MachineProfile(ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, variables);
+            _machineProfileService.LoadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(profile);
+
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("file.txt", $"%config_dir%{Path.DirectorySeparatorChar}file.txt", LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _statusService.CheckAsync(tempDir, _progress);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(_reported, Has.Count.EqualTo(1));
+                Assert.That(_reported[0].Level, Is.EqualTo(DriftLevel.Ok));
+                Assert.That(_reported[0].TargetPath, Is.EqualTo(targetFile));
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
     private sealed class SynchronousProgress<T>(Action<T> handler) : IProgress<T>
     {
         public void Report(T value) => handler(value);

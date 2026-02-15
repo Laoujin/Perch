@@ -1487,4 +1487,40 @@ public sealed class DeployServiceTests
             Directory.Delete(tempDir, true);
         }
     }
+
+    [Test]
+    public async Task DeployAsync_MachineProfileVariables_ExpandInTargetPaths()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+        string targetDir = Path.Combine(tempDir, "resolved");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            var variables = ImmutableDictionary.CreateRange(new[]
+            {
+                KeyValuePair.Create("config_dir", targetDir),
+            });
+            var profile = new MachineProfile(ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, variables);
+            _machineProfileService.LoadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(profile);
+
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("file.txt", $"%config_dir%{Path.DirectorySeparatorChar}output.txt", LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            string expectedTarget = Path.Combine(targetDir, "output.txt");
+            _symlinkProvider.Received(1).CreateSymlink(expectedTarget, Arg.Any<string>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
 }
