@@ -19,7 +19,7 @@ public sealed class ChocolateyPackageManagerProvider : IPackageManagerProvider
         ProcessRunResult result;
         try
         {
-            result = await _processRunner.RunAsync("choco", "list", cancellationToken: cancellationToken).ConfigureAwait(false);
+            result = await _processRunner.RunAsync("choco", "list --local-only", cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (Win32Exception)
         {
@@ -46,7 +46,9 @@ public sealed class ChocolateyPackageManagerProvider : IPackageManagerProvider
             if (string.IsNullOrWhiteSpace(trimmed))
                 continue;
 
-            // Skip summary lines like "42 packages installed."
+            // Skip header "Chocolatey vX.Y.Z" and summary "42 packages installed."
+            if (trimmed.StartsWith("Chocolatey v", StringComparison.OrdinalIgnoreCase))
+                continue;
             if (trimmed.EndsWith("installed.", StringComparison.OrdinalIgnoreCase))
                 continue;
 
