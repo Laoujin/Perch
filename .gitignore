@@ -3,3 +3,9 @@ _bmad
 perch
 perch-config
 dotfiles
+
+# .NET
+bin/
+obj/
+*.user
+.vs/
