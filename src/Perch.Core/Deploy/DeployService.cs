@@ -40,8 +40,12 @@ public sealed class DeployService : IDeployService
         _systemPackageInstaller = systemPackageInstaller;
     }
 
-    public async Task<int> DeployAsync(string configRepoPath, bool dryRun = false, IProgress<DeployResult>? progress = null, IDeployConfirmation? confirmation = null, CancellationToken cancellationToken = default)
+    public async Task<int> DeployAsync(string configRepoPath, DeployOptions? options = null, CancellationToken cancellationToken = default)
     {
+        bool dryRun = options?.DryRun ?? false;
+        IProgress<DeployResult>? progress = options?.Progress;
+        var beforeModule = options?.BeforeModule;
+
         DiscoveryResult discovery = await _discoveryService.DiscoverAsync(configRepoPath, cancellationToken).ConfigureAwait(false);
 
         foreach (string error in discovery.Errors)
@@ -53,42 +57,58 @@ public sealed class DeployService : IDeployService
         Platform currentPlatform = _platformDetector.CurrentPlatform;
         MachineProfile? machineProfile = await _machineProfileService.LoadAsync(configRepoPath, cancellationToken).ConfigureAwait(false);
 
+        var eligibleModules = new List<AppModule>();
+        foreach (AppModule module in discovery.Modules)
+        {
+            string? skipReason = GetSkipReason(module, currentPlatform, machineProfile);
+            if (skipReason != null)
+            {
+                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, skipReason, DeployEventType.ModuleSkipped));
+            }
+            else
+            {
+                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, "", DeployEventType.ModuleDiscovered));
+                eligibleModules.Add(module);
+            }
+        }
+
         if (!dryRun)
         {
             IReadOnlyList<string> allTargetPaths = CollectTargetPaths(discovery.Modules, currentPlatform);
             _snapshotProvider.CreateSnapshot(allTargetPaths, cancellationToken);
         }
 
-        bool allConfirmed = false;
-
-        foreach (AppModule module in discovery.Modules)
+        foreach (AppModule module in eligibleModules)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            string? skipReason = GetSkipReason(module, currentPlatform, machineProfile);
-            if (skipReason != null)
+            if (beforeModule != null)
             {
-                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, skipReason));
-                continue;
-            }
+                IReadOnlyList<DeployResult> preview = dryRun
+                    ? CollectModulePreview(module, currentPlatform)
+                    : await CollectModulePreviewAsync(module, currentPlatform, cancellationToken).ConfigureAwait(false);
 
-            if (confirmation != null && !allConfirmed)
-            {
-                var choice = confirmation.Confirm(module.DisplayName);
-                switch (choice)
+                ModuleAction action = await beforeModule(module, preview).ConfigureAwait(false);
+                if (action == ModuleAction.Skip)
                 {
-                    case DeployConfirmationChoice.No:
-                        progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, "Skipped (user declined)"));
-                        continue;
-                    case DeployConfirmationChoice.All:
-                        allConfirmed = true;
-                        break;
-                    case DeployConfirmationChoice.Quit:
-                        return hasErrors ? 1 : 0;
+                    progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, "Skipped (user)", DeployEventType.ModuleSkipped));
+                    continue;
+                }
+
+                if (action == ModuleAction.Abort)
+                {
+                    break;
                 }
             }
 
-            if (await DeployModuleAsync(module, currentPlatform, dryRun, progress, cancellationToken).ConfigureAwait(false))
+            progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, "", DeployEventType.ModuleStarted));
+
+            bool moduleHadErrors = await DeployModuleAsync(module, currentPlatform, dryRun, progress, cancellationToken).ConfigureAwait(false);
+
+            ResultLevel completionLevel = moduleHadErrors ? ResultLevel.Error : ResultLevel.Ok;
+            progress?.Report(new DeployResult(module.DisplayName, "", "", completionLevel, "", DeployEventType.ModuleCompleted));
+
+            if (moduleHadErrors)
             {
                 hasErrors = true;
             }
@@ -125,6 +145,27 @@ public sealed class DeployService : IDeployService
         }
 
         return null;
+    }
+
+    private IReadOnlyList<DeployResult> CollectModulePreview(AppModule module, Platform currentPlatform)
+    {
+        var results = new List<DeployResult>();
+        var previewProgress = new SynchronousProgress<DeployResult>(results.Add);
+        ProcessModuleLinks(module, currentPlatform, true, previewProgress);
+        ProcessModuleRegistry(module, true, previewProgress);
+        return results;
+    }
+
+    private async Task<IReadOnlyList<DeployResult>> CollectModulePreviewAsync(AppModule module, Platform currentPlatform, CancellationToken cancellationToken)
+    {
+        var results = new List<DeployResult>();
+        var previewProgress = new SynchronousProgress<DeployResult>(results.Add);
+        ProcessModuleLinks(module, currentPlatform, true, previewProgress);
+        ProcessModuleRegistry(module, true, previewProgress);
+        await ProcessModuleGlobalPackagesAsync(module, true, previewProgress, cancellationToken).ConfigureAwait(false);
+        await ProcessListAsync(module.VscodeExtensions, id => _vscodeExtensionInstaller.InstallAsync(module.DisplayName, id, true, cancellationToken), previewProgress, cancellationToken).ConfigureAwait(false);
+        await ProcessListAsync(module.PsModules, name => _psModuleInstaller.InstallAsync(module.DisplayName, name, true, cancellationToken), previewProgress, cancellationToken).ConfigureAwait(false);
+        return results;
     }
 
     private async Task<bool> DeployModuleAsync(AppModule module, Platform currentPlatform, bool dryRun, IProgress<DeployResult>? progress, CancellationToken cancellationToken)
@@ -359,5 +400,10 @@ public sealed class DeployService : IDeployService
         }
 
         return targets;
+    }
+
+    private sealed class SynchronousProgress<T>(Action<T> handler) : IProgress<T>
+    {
+        public void Report(T value) => handler(value);
     }
 }
