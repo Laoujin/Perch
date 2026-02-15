@@ -79,7 +79,7 @@ public sealed class StatusCommand : AsyncCommand<StatusCommand.Settings>
         _console.WriteLine();
         if (exitCode == 0)
         {
-            _console.MarkupLine("[green]All links are in sync.[/]");
+            _console.MarkupLine("[green]All checks passed.[/]");
         }
         else
         {

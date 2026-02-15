@@ -252,7 +252,7 @@ public sealed class DeployService : IDeployService
         return hasErrors;
     }
 
-    private static bool IsPlatformMatch(PackageManager manager, Platform platform) =>
+    internal static bool IsPlatformMatch(PackageManager manager, Platform platform) =>
         manager switch
         {
             PackageManager.Chocolatey or PackageManager.Winget => platform == Platform.Windows,
