@@ -3,6 +3,7 @@ using Perch.Core.Backup;
 using Perch.Core.Config;
 using Perch.Core.Deploy;
 using Perch.Core.Modules;
+using Perch.Core.Packages;
 using Perch.Core.Status;
 using Perch.Core.Symlinks;
 
@@ -32,6 +33,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDeployService, DeployService>();
         services.AddSingleton<IStatusService, StatusService>();
         services.AddSingleton<ISettingsProvider, YamlSettingsProvider>();
+        services.AddSingleton<PackageManifestParser>();
+        services.AddSingleton<IProcessRunner, DefaultProcessRunner>();
+        services.AddSingleton<IPackageManagerProvider, ChocolateyPackageManagerProvider>();
+        services.AddSingleton<IPackageManagerProvider, WingetPackageManagerProvider>();
+        services.AddSingleton<IAppScanService, AppScanService>();
         return services;
     }
 }
