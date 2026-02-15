@@ -33,9 +33,11 @@ public sealed class ManifestParser
         bool hasLinks = model?.Links != null && model.Links.Count > 0;
         bool hasRegistry = model?.Registry != null && model.Registry.Count > 0;
         bool hasGlobalPackages = model?.GlobalPackages?.Packages != null && model.GlobalPackages.Packages.Count > 0;
-        if (!hasLinks && !hasRegistry && !hasGlobalPackages)
+        bool hasVscodeExtensions = model?.VscodeExtensions != null && model.VscodeExtensions.Count > 0;
+        bool hasPsModules = model?.PsModules != null && model.PsModules.Count > 0;
+        if (!hasLinks && !hasRegistry && !hasGlobalPackages && !hasVscodeExtensions && !hasPsModules)
         {
-            return ManifestParseResult.Failure("Manifest must contain at least one entry in 'links', 'registry', or 'global-packages'.");
+            return ManifestParseResult.Failure("Manifest must contain at least one actionable section.");
         }
 
         var links = new List<LinkEntry>();
@@ -68,7 +70,9 @@ public sealed class ManifestParser
         var cleanFilter = ParseCleanFilter(model.CleanFilter);
         var registry = ParseRegistry(model.Registry);
         var globalPackages = ParseGlobalPackages(model.GlobalPackages);
-        var manifest = new AppManifest(moduleName, displayName, model.Enabled, platforms, links.ToImmutableArray(), hooks, cleanFilter, registry, globalPackages);
+        var vscodeExtensions = ParseStringList(model.VscodeExtensions);
+        var psModules = ParseStringList(model.PsModules);
+        var manifest = new AppManifest(moduleName, displayName, model.Enabled, platforms, links.ToImmutableArray(), hooks, cleanFilter, registry, globalPackages, vscodeExtensions, psModules);
         return ManifestParseResult.Success(manifest);
     }
 
@@ -211,6 +215,11 @@ public sealed class ManifestParser
 
         return packages.Length > 0 ? new GlobalPackagesDefinition(manager, packages) : null;
     }
+
+    private static ImmutableArray<string> ParseStringList(List<string>? items) =>
+        items == null || items.Count == 0
+            ? ImmutableArray<string>.Empty
+            : items.Where(s => !string.IsNullOrWhiteSpace(s)).ToImmutableArray();
 
     private static LinkType ParseLinkType(string? value) =>
         value?.ToLowerInvariant() switch

@@ -40,6 +40,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<SymlinkOrchestrator>();
         services.AddSingleton<IHookRunner, HookRunner>();
         services.AddSingleton<IGlobalPackageInstaller, GlobalPackageInstaller>();
+        services.AddSingleton<IVscodeExtensionInstaller, VscodeExtensionInstaller>();
+        services.AddSingleton<IPsModuleInstaller, PsModuleInstaller>();
         services.AddSingleton<IMachineProfileService, MachineProfileService>();
         services.AddSingleton<ICleanFilterService, CleanFilterService>();
         services.AddSingleton<IDiffSnapshotService, DiffSnapshotService>();

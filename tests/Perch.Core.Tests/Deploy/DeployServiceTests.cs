@@ -28,6 +28,8 @@ public sealed class DeployServiceTests
     private IMachineProfileService _machineProfileService = null!;
     private IRegistryProvider _registryProvider = null!;
     private IGlobalPackageInstaller _globalPackageInstaller = null!;
+    private IVscodeExtensionInstaller _vscodeExtensionInstaller = null!;
+    private IPsModuleInstaller _psModuleInstaller = null!;
     private DeployService _deployService = null!;
     private List<DeployResult> _reported = null!;
     private IProgress<DeployResult> _progress = null!;
@@ -51,7 +53,9 @@ public sealed class DeployServiceTests
         _machineProfileService = Substitute.For<IMachineProfileService>();
         _registryProvider = Substitute.For<IRegistryProvider>();
         _globalPackageInstaller = Substitute.For<IGlobalPackageInstaller>();
-        _deployService = new DeployService(_discoveryService, orchestrator, _platformDetector, _globResolver, _snapshotProvider, _hookRunner, _machineProfileService, _registryProvider, _globalPackageInstaller);
+        _vscodeExtensionInstaller = Substitute.For<IVscodeExtensionInstaller>();
+        _psModuleInstaller = Substitute.For<IPsModuleInstaller>();
+        _deployService = new DeployService(_discoveryService, orchestrator, _platformDetector, _globResolver, _snapshotProvider, _hookRunner, _machineProfileService, _registryProvider, _globalPackageInstaller, _vscodeExtensionInstaller, _psModuleInstaller);
         _reported = new List<DeployResult>();
         _progress = new SynchronousProgress<DeployResult>(r => _reported.Add(r));
     }
@@ -940,6 +944,124 @@ public sealed class DeployServiceTests
             await _deployService.DeployAsync(tempDir, dryRun: true, _progress);
 
             await _globalPackageInstaller.Received(1).InstallAsync("Bun", GlobalPackageManager.Bun, "tsx", true, Arg.Any<CancellationToken>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_VscodeExtensions_InstallsAll()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        _vscodeExtensionInstaller.InstallAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(x => new DeployResult(x.ArgAt<string>(0), "", x.ArgAt<string>(1), ResultLevel.Ok, $"Installed {x.ArgAt<string>(1)}"));
+
+        try
+        {
+            var extensions = ImmutableArray.Create("ms-dotnettools.csharp", "esbenp.prettier-vscode");
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "VS Code", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty, VscodeExtensions: extensions));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, progress: _progress);
+
+            Assert.That(exitCode, Is.EqualTo(0));
+            await _vscodeExtensionInstaller.Received(2).InstallAsync("VS Code", Arg.Any<string>(), false, Arg.Any<CancellationToken>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_VscodeExtensions_DryRun_PassesDryRunFlag()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        _vscodeExtensionInstaller.InstallAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(x => new DeployResult(x.ArgAt<string>(0), "", x.ArgAt<string>(1), ResultLevel.Ok, "Would run"));
+
+        try
+        {
+            var extensions = ImmutableArray.Create("ms-dotnettools.csharp");
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "VS Code", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty, VscodeExtensions: extensions));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            await _deployService.DeployAsync(tempDir, dryRun: true, _progress);
+
+            await _vscodeExtensionInstaller.Received(1).InstallAsync("VS Code", "ms-dotnettools.csharp", true, Arg.Any<CancellationToken>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_PsModules_InstallsAll()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        _psModuleInstaller.InstallAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(x => new DeployResult(x.ArgAt<string>(0), "", x.ArgAt<string>(1), ResultLevel.Ok, $"Installed {x.ArgAt<string>(1)}"));
+
+        try
+        {
+            var psModules = ImmutableArray.Create("posh-git", "PSReadLine");
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "PowerShell", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty, PsModules: psModules));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, progress: _progress);
+
+            Assert.That(exitCode, Is.EqualTo(0));
+            await _psModuleInstaller.Received(2).InstallAsync("PowerShell", Arg.Any<string>(), false, Arg.Any<CancellationToken>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_PsModules_DryRun_PassesDryRunFlag()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        _psModuleInstaller.InstallAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+            .Returns(x => new DeployResult(x.ArgAt<string>(0), "", x.ArgAt<string>(1), ResultLevel.Ok, "Would run"));
+
+        try
+        {
+            var psModules = ImmutableArray.Create("posh-git");
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "PowerShell", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray<LinkEntry>.Empty, PsModules: psModules));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            await _deployService.DeployAsync(tempDir, dryRun: true, _progress);
+
+            await _psModuleInstaller.Received(1).InstallAsync("PowerShell", "posh-git", true, Arg.Any<CancellationToken>());
         }
         finally
         {

@@ -42,7 +42,7 @@ public sealed class ModuleDiscoveryService : IModuleDiscoveryService
             if (parseResult.IsSuccess)
             {
                 AppManifest manifest = parseResult.Manifest!;
-                modules.Add(new AppModule(manifest.ModuleName, manifest.DisplayName, manifest.Enabled, subdir, manifest.Platforms, manifest.Links, manifest.Hooks, manifest.CleanFilter, manifest.Registry, manifest.GlobalPackages));
+                modules.Add(new AppModule(manifest.ModuleName, manifest.DisplayName, manifest.Enabled, subdir, manifest.Platforms, manifest.Links, manifest.Hooks, manifest.CleanFilter, manifest.Registry, manifest.GlobalPackages, manifest.VscodeExtensions, manifest.PsModules));
             }
             else
             {

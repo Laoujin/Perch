@@ -17,8 +17,10 @@ public sealed class DeployService : IDeployService
     private readonly IMachineProfileService _machineProfileService;
     private readonly IRegistryProvider _registryProvider;
     private readonly IGlobalPackageInstaller _globalPackageInstaller;
+    private readonly IVscodeExtensionInstaller _vscodeExtensionInstaller;
+    private readonly IPsModuleInstaller _psModuleInstaller;
 
-    public DeployService(IModuleDiscoveryService discoveryService, SymlinkOrchestrator orchestrator, IPlatformDetector platformDetector, IGlobResolver globResolver, ISnapshotProvider snapshotProvider, IHookRunner hookRunner, IMachineProfileService machineProfileService, IRegistryProvider registryProvider, IGlobalPackageInstaller globalPackageInstaller)
+    public DeployService(IModuleDiscoveryService discoveryService, SymlinkOrchestrator orchestrator, IPlatformDetector platformDetector, IGlobResolver globResolver, ISnapshotProvider snapshotProvider, IHookRunner hookRunner, IMachineProfileService machineProfileService, IRegistryProvider registryProvider, IGlobalPackageInstaller globalPackageInstaller, IVscodeExtensionInstaller vscodeExtensionInstaller, IPsModuleInstaller psModuleInstaller)
     {
         _discoveryService = discoveryService;
         _orchestrator = orchestrator;
@@ -29,6 +31,8 @@ public sealed class DeployService : IDeployService
         _machineProfileService = machineProfileService;
         _registryProvider = registryProvider;
         _globalPackageInstaller = globalPackageInstaller;
+        _vscodeExtensionInstaller = vscodeExtensionInstaller;
+        _psModuleInstaller = psModuleInstaller;
     }
 
     public async Task<int> DeployAsync(string configRepoPath, bool dryRun = false, IProgress<DeployResult>? progress = null, CancellationToken cancellationToken = default)
@@ -106,6 +110,14 @@ public sealed class DeployService : IDeployService
         bool moduleHadErrors = ProcessModuleLinks(module, currentPlatform, dryRun, progress);
         ProcessModuleRegistry(module, dryRun, progress);
         if (await ProcessModuleGlobalPackagesAsync(module, dryRun, progress, cancellationToken).ConfigureAwait(false))
+        {
+            moduleHadErrors = true;
+        }
+        if (await ProcessListAsync(module.VscodeExtensions, id => _vscodeExtensionInstaller.InstallAsync(module.DisplayName, id, dryRun, cancellationToken), progress, cancellationToken).ConfigureAwait(false))
+        {
+            moduleHadErrors = true;
+        }
+        if (await ProcessListAsync(module.PsModules, name => _psModuleInstaller.InstallAsync(module.DisplayName, name, dryRun, cancellationToken), progress, cancellationToken).ConfigureAwait(false))
         {
             moduleHadErrors = true;
         }
@@ -207,6 +219,28 @@ public sealed class DeployService : IDeployService
         {
             cancellationToken.ThrowIfCancellationRequested();
             DeployResult result = await _globalPackageInstaller.InstallAsync(module.DisplayName, module.GlobalPackages.Manager, package, dryRun, cancellationToken).ConfigureAwait(false);
+            progress?.Report(result);
+            if (result.Level == ResultLevel.Error)
+            {
+                hasErrors = true;
+            }
+        }
+
+        return hasErrors;
+    }
+
+    private static async Task<bool> ProcessListAsync(System.Collections.Immutable.ImmutableArray<string> items, Func<string, Task<DeployResult>> action, IProgress<DeployResult>? progress, CancellationToken cancellationToken)
+    {
+        if (items.IsDefaultOrEmpty)
+        {
+            return false;
+        }
+
+        bool hasErrors = false;
+        foreach (string item in items)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DeployResult result = await action(item).ConfigureAwait(false);
             progress?.Report(result);
             if (result.Level == ResultLevel.Error)
             {

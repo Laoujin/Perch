@@ -127,7 +127,7 @@ public sealed class ManifestParserTests
         var result = _parser.Parse(yaml, "nolinks");
 
         Assert.That(result.IsSuccess, Is.False);
-        Assert.That(result.Error, Does.Contain("links"));
+        Assert.That(result.Error, Does.Contain("actionable section"));
     }
 
     [Test]
@@ -492,15 +492,100 @@ public sealed class ManifestParserTests
     }
 
     [Test]
-    public void Parse_NoLinksNoRegistryNoGlobalPackages_Fails()
+    public void Parse_VscodeExtensions_ReturnsParsedList()
     {
         string yaml = """
-            display-name: Empty Module
+            vscode-extensions:
+              - ms-dotnettools.csharp
+              - esbenp.prettier-vscode
             """;
 
-        var result = _parser.Parse(yaml, "empty");
+        var result = _parser.Parse(yaml, "vscode");
 
-        Assert.That(result.IsSuccess, Is.False);
-        Assert.That(result.Error, Does.Contain("global-packages"));
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Manifest!.VscodeExtensions, Has.Length.EqualTo(2));
+            Assert.That(result.Manifest!.VscodeExtensions[0], Is.EqualTo("ms-dotnettools.csharp"));
+            Assert.That(result.Manifest!.VscodeExtensions[1], Is.EqualTo("esbenp.prettier-vscode"));
+        });
+    }
+
+    [Test]
+    public void Parse_VscodeExtensionsOnly_NoLinksRequired()
+    {
+        string yaml = """
+            vscode-extensions:
+              - ms-dotnettools.csharp
+            """;
+
+        var result = _parser.Parse(yaml, "vscode");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Manifest!.Links, Is.Empty);
+    }
+
+    [Test]
+    public void Parse_PsModules_ReturnsParsedList()
+    {
+        string yaml = """
+            ps-modules:
+              - posh-git
+              - PSReadLine
+            """;
+
+        var result = _parser.Parse(yaml, "powershell");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Manifest!.PsModules, Has.Length.EqualTo(2));
+            Assert.That(result.Manifest!.PsModules[0], Is.EqualTo("posh-git"));
+            Assert.That(result.Manifest!.PsModules[1], Is.EqualTo("PSReadLine"));
+        });
+    }
+
+    [Test]
+    public void Parse_PsModulesOnly_NoLinksRequired()
+    {
+        string yaml = """
+            ps-modules:
+              - posh-git
+            """;
+
+        var result = _parser.Parse(yaml, "powershell");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Manifest!.Links, Is.Empty);
+    }
+
+    [Test]
+    public void Parse_NoVscodeExtensions_ReturnsEmptyArray()
+    {
+        string yaml = """
+            links:
+              - source: settings.json
+                target: "%APPDATA%\\App\\settings.json"
+            """;
+
+        var result = _parser.Parse(yaml, "myapp");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Manifest!.VscodeExtensions, Is.Empty);
+    }
+
+    [Test]
+    public void Parse_NoPsModules_ReturnsEmptyArray()
+    {
+        string yaml = """
+            links:
+              - source: settings.json
+                target: "%APPDATA%\\App\\settings.json"
+            """;
+
+        var result = _parser.Parse(yaml, "myapp");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Manifest!.PsModules, Is.Empty);
     }
 }

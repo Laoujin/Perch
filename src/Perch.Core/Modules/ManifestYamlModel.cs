@@ -10,6 +10,8 @@ internal sealed class ManifestYamlModel
     public CleanFilterYamlModel? CleanFilter { get; set; }
     public List<RegistryYamlModel>? Registry { get; set; }
     public GlobalPackagesYamlModel? GlobalPackages { get; set; }
+    public List<string>? VscodeExtensions { get; set; }
+    public List<string>? PsModules { get; set; }
 }
 
 internal sealed class GlobalPackagesYamlModel
