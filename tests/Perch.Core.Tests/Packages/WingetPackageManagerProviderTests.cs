@@ -17,33 +17,57 @@ public sealed class WingetPackageManagerProviderTests
     }
 
     [Test]
-    public async Task ScanInstalled_WingetAvailable_ParsesPackages()
+    public async Task ScanInstalled_WingetAvailable_ParsesNamesAndIds()
     {
         string output =
-            "Name                           Id                     Version\r\n" +
-            "------------------------------  ---------------------  -------\r\n" +
-            "Git                            Git.Git                2.42.0\r\n" +
-            "7-Zip                          7zip.7zip              23.01\r\n";
+            "Name            Id         Version Available Source\r\n" +
+            "---------------------------------------------------\r\n" +
+            "Git             Git.Git    2.42.0  2.53.0    winget\r\n" +
+            "7-Zip 19 (x64)  7zip.7zip  19.00  26.00     winget\r\n";
 
-        _processRunner.RunAsync("winget", "list --source winget", cancellationToken: Arg.Any<CancellationToken>())
+        _processRunner.RunAsync("winget", "list --accept-source-agreements", cancellationToken: Arg.Any<CancellationToken>())
             .Returns(new ProcessRunResult(0, output, ""));
 
         var result = await _provider.ScanInstalledAsync();
 
         Assert.That(result.IsAvailable, Is.True);
+        string[] names = result.Packages.Select(p => p.Name).ToArray();
         Assert.Multiple(() =>
         {
-            Assert.That(result.Packages, Has.Length.EqualTo(2));
-            Assert.That(result.Packages[0].Name, Is.EqualTo("Git"));
-            Assert.That(result.Packages[1].Name, Is.EqualTo("7-Zip"));
+            Assert.That(names, Does.Contain("Git"));
+            Assert.That(names, Does.Contain("Git.Git"));
+            Assert.That(names, Does.Contain("7-Zip 19 (x64)"));
+            Assert.That(names, Does.Contain("7zip.7zip"));
             Assert.That(result.Packages.All(p => p.Source == PackageManager.Winget), Is.True);
+        });
+    }
+
+    [Test]
+    public async Task ScanInstalled_ArpEntries_ParsesBothNameAndId()
+    {
+        string output =
+            "Name                  Id                                 Version\r\n" +
+            "---------------------------------------------------------------------\r\n" +
+            "Beyond Compare 3.3.13 ARP\\Machine\\X86\\BeyondCompare3_is1 3.3.13.18981\r\n";
+
+        _processRunner.RunAsync("winget", "list --accept-source-agreements", cancellationToken: Arg.Any<CancellationToken>())
+            .Returns(new ProcessRunResult(0, output, ""));
+
+        var result = await _provider.ScanInstalledAsync();
+
+        Assert.That(result.IsAvailable, Is.True);
+        string[] names = result.Packages.Select(p => p.Name).ToArray();
+        Assert.Multiple(() =>
+        {
+            Assert.That(names, Does.Contain("Beyond Compare 3.3.13"));
+            Assert.That(names, Does.Contain("ARP\\Machine\\X86\\BeyondCompare3_is1"));
         });
     }
 
     [Test]
     public async Task ScanInstalled_WingetNotInstalled_ReturnsUnavailable()
     {
-        _processRunner.RunAsync("winget", "list --source winget", cancellationToken: Arg.Any<CancellationToken>())
+        _processRunner.RunAsync("winget", "list --accept-source-agreements", cancellationToken: Arg.Any<CancellationToken>())
             .Returns<ProcessRunResult>(_ => throw new Win32Exception("not found"));
 
         var result = await _provider.ScanInstalledAsync();
@@ -58,7 +82,7 @@ public sealed class WingetPackageManagerProviderTests
     [Test]
     public async Task ScanInstalled_WingetReturnsError_ReturnsUnavailable()
     {
-        _processRunner.RunAsync("winget", "list --source winget", cancellationToken: Arg.Any<CancellationToken>())
+        _processRunner.RunAsync("winget", "list --accept-source-agreements", cancellationToken: Arg.Any<CancellationToken>())
             .Returns(new ProcessRunResult(1, "", "error occurred"));
 
         var result = await _provider.ScanInstalledAsync();

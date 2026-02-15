@@ -19,7 +19,7 @@ public sealed class WingetPackageManagerProvider : IPackageManagerProvider
         ProcessRunResult result;
         try
         {
-            result = await _processRunner.RunAsync("winget", "list --source winget", cancellationToken: cancellationToken).ConfigureAwait(false);
+            result = await _processRunner.RunAsync("winget", "list --accept-source-agreements", cancellationToken: cancellationToken).ConfigureAwait(false);
         }
         catch (Win32Exception)
         {
@@ -40,41 +40,48 @@ public sealed class WingetPackageManagerProvider : IPackageManagerProvider
         var packages = new List<InstalledPackage>();
         string[] lines = output.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-        // Find the header separator line (dashes)
-        int separatorIndex = -1;
+        int headerIndex = -1;
         for (int i = 0; i < lines.Length; i++)
         {
             string trimmed = lines[i].TrimStart();
-            if (trimmed.StartsWith('-') && trimmed.Contains("--"))
+            if (trimmed.Contains("Name") && trimmed.Contains("Id") && trimmed.Contains("Version"))
             {
-                separatorIndex = i;
+                headerIndex = i;
                 break;
             }
         }
 
-        if (separatorIndex < 0 || separatorIndex + 1 >= lines.Length)
+        if (headerIndex < 0 || headerIndex + 2 >= lines.Length)
         {
             return ImmutableArray<InstalledPackage>.Empty;
         }
 
-        // Find the end of the first dash group = Name column width
-        string separator = lines[separatorIndex];
-        int nameColumnEnd = separator.IndexOf(' ');
-        if (nameColumnEnd < 0)
+        string header = lines[headerIndex];
+        int idStart = header.IndexOf("Id", StringComparison.Ordinal);
+        int versionStart = header.IndexOf("Version", StringComparison.Ordinal);
+
+        if (idStart < 0 || versionStart < 0)
         {
-            nameColumnEnd = separator.Length;
+            return ImmutableArray<InstalledPackage>.Empty;
         }
 
-        for (int i = separatorIndex + 1; i < lines.Length; i++)
+        for (int i = headerIndex + 2; i < lines.Length; i++)
         {
             string line = lines[i];
             if (string.IsNullOrWhiteSpace(line))
                 continue;
 
-            string name = (line.Length > nameColumnEnd ? line[..nameColumnEnd] : line).Trim();
+            string name = (line.Length > idStart ? line[..idStart] : line).Trim();
+            string id = (line.Length > versionStart ? line[idStart..versionStart] : line.Length > idStart ? line[idStart..] : "").Trim();
+
             if (!string.IsNullOrWhiteSpace(name))
             {
                 packages.Add(new InstalledPackage(name, PackageManager.Winget));
+            }
+
+            if (!string.IsNullOrWhiteSpace(id) && !string.Equals(name, id, StringComparison.OrdinalIgnoreCase))
+            {
+                packages.Add(new InstalledPackage(id, PackageManager.Winget));
             }
         }
 
