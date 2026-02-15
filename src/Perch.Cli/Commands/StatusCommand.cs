@@ -21,6 +21,10 @@ public sealed class StatusCommand : AsyncCommand<StatusCommand.Settings>
         [CommandOption("--output")]
         [Description("Output format (Pretty or Json)")]
         public OutputFormat Output { get; init; } = OutputFormat.Pretty;
+
+        [CommandOption("--drift-only")]
+        [Description("Only show items with drift, missing, or errors")]
+        public bool DriftOnly { get; init; }
     }
 
     public StatusCommand(IStatusService statusService, ISettingsProvider settingsProvider, IAnsiConsole console)
@@ -48,19 +52,24 @@ public sealed class StatusCommand : AsyncCommand<StatusCommand.Settings>
 
         if (settings.Output == OutputFormat.Json)
         {
-            return await ExecuteJsonAsync(configPath, cancellationToken);
+            return await ExecuteJsonAsync(configPath, settings.DriftOnly, cancellationToken);
         }
 
-        return await ExecutePrettyAsync(configPath, cancellationToken);
+        return await ExecutePrettyAsync(configPath, settings.DriftOnly, cancellationToken);
     }
 
-    private async Task<int> ExecutePrettyAsync(string configPath, CancellationToken cancellationToken)
+    private async Task<int> ExecutePrettyAsync(string configPath, bool driftOnly, CancellationToken cancellationToken)
     {
         _console.MarkupLine($"[blue]Checking status for:[/] {configPath.EscapeMarkup()}");
         _console.WriteLine();
 
         var progress = new SynchronousProgress<StatusResult>(result =>
         {
+            if (driftOnly && result.Level == DriftLevel.Ok)
+            {
+                return;
+            }
+
             string icon = result.Level switch
             {
                 DriftLevel.Ok => "[green]OK[/]",
@@ -89,10 +98,16 @@ public sealed class StatusCommand : AsyncCommand<StatusCommand.Settings>
         return exitCode;
     }
 
-    private async Task<int> ExecuteJsonAsync(string configPath, CancellationToken cancellationToken)
+    private async Task<int> ExecuteJsonAsync(string configPath, bool driftOnly, CancellationToken cancellationToken)
     {
         var results = new List<StatusResult>();
-        var progress = new SynchronousProgress<StatusResult>(results.Add);
+        var progress = new SynchronousProgress<StatusResult>(r =>
+        {
+            if (!driftOnly || r.Level != DriftLevel.Ok)
+            {
+                results.Add(r);
+            }
+        });
 
         int exitCode = await _statusService.CheckAsync(configPath, progress, cancellationToken);
 
