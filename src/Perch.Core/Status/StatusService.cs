@@ -1,4 +1,6 @@
+using Perch.Core.Machines;
 using Perch.Core.Modules;
+using Perch.Core.Registry;
 using Perch.Core.Symlinks;
 
 namespace Perch.Core.Status;
@@ -9,13 +11,17 @@ public sealed class StatusService : IStatusService
     private readonly ISymlinkProvider _symlinkProvider;
     private readonly IPlatformDetector _platformDetector;
     private readonly IGlobResolver _globResolver;
+    private readonly IMachineProfileService _machineProfileService;
+    private readonly IRegistryProvider _registryProvider;
 
-    public StatusService(IModuleDiscoveryService discoveryService, ISymlinkProvider symlinkProvider, IPlatformDetector platformDetector, IGlobResolver globResolver)
+    public StatusService(IModuleDiscoveryService discoveryService, ISymlinkProvider symlinkProvider, IPlatformDetector platformDetector, IGlobResolver globResolver, IMachineProfileService machineProfileService, IRegistryProvider registryProvider)
     {
         _discoveryService = discoveryService;
         _symlinkProvider = symlinkProvider;
         _platformDetector = platformDetector;
         _globResolver = globResolver;
+        _machineProfileService = machineProfileService;
+        _registryProvider = registryProvider;
     }
 
     public async Task<int> CheckAsync(string configRepoPath, IProgress<StatusResult>? progress = null, CancellationToken cancellationToken = default)
@@ -29,12 +35,23 @@ public sealed class StatusService : IStatusService
 
         bool hasDrift = discovery.Errors.Length > 0;
         Platform currentPlatform = _platformDetector.CurrentPlatform;
+        MachineProfile? machineProfile = await _machineProfileService.LoadAsync(configRepoPath, cancellationToken).ConfigureAwait(false);
 
         foreach (AppModule module in discovery.Modules)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             if (module.Platforms.Length > 0 && !module.Platforms.Contains(currentPlatform))
+            {
+                continue;
+            }
+
+            if (machineProfile?.IncludeModules.Length > 0 && !machineProfile.IncludeModules.Contains(module.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (machineProfile?.ExcludeModules.Length > 0 && machineProfile.ExcludeModules.Contains(module.Name, StringComparer.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -62,9 +79,42 @@ public sealed class StatusService : IStatusService
                     }
                 }
             }
+
+            if (!module.Registry.IsDefault)
+            {
+                foreach (RegistryEntryDefinition entry in module.Registry)
+                {
+                    StatusResult result = CheckRegistryEntry(module.DisplayName, entry);
+                    progress?.Report(result);
+
+                    if (result.Level is DriftLevel.Missing or DriftLevel.Drift or DriftLevel.Error)
+                    {
+                        hasDrift = true;
+                    }
+                }
+            }
         }
 
         return hasDrift ? 1 : 0;
+    }
+
+    private StatusResult CheckRegistryEntry(string moduleName, RegistryEntryDefinition entry)
+    {
+        string registryPath = $"{entry.Key}\\{entry.Name}";
+        object? currentValue = _registryProvider.GetValue(entry.Key, entry.Name);
+
+        if (currentValue == null)
+        {
+            return new StatusResult(moduleName, "", registryPath, DriftLevel.Missing, $"Registry value {entry.Name} does not exist");
+        }
+
+        if (!Equals(currentValue, entry.Value))
+        {
+            return new StatusResult(moduleName, "", registryPath, DriftLevel.Drift,
+                $"Registry {entry.Name} is {currentValue}, expected {entry.Value}");
+        }
+
+        return new StatusResult(moduleName, "", registryPath, DriftLevel.Ok, "OK");
     }
 
     private StatusResult CheckLink(string moduleName, string sourcePath, string targetPath)

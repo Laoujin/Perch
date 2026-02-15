@@ -1,5 +1,7 @@
 using Perch.Core.Backup;
+using Perch.Core.Machines;
 using Perch.Core.Modules;
+using Perch.Core.Registry;
 using Perch.Core.Symlinks;
 
 namespace Perch.Core.Deploy;
@@ -12,8 +14,10 @@ public sealed class DeployService : IDeployService
     private readonly IGlobResolver _globResolver;
     private readonly ISnapshotProvider _snapshotProvider;
     private readonly IHookRunner _hookRunner;
+    private readonly IMachineProfileService _machineProfileService;
+    private readonly IRegistryProvider _registryProvider;
 
-    public DeployService(IModuleDiscoveryService discoveryService, SymlinkOrchestrator orchestrator, IPlatformDetector platformDetector, IGlobResolver globResolver, ISnapshotProvider snapshotProvider, IHookRunner hookRunner)
+    public DeployService(IModuleDiscoveryService discoveryService, SymlinkOrchestrator orchestrator, IPlatformDetector platformDetector, IGlobResolver globResolver, ISnapshotProvider snapshotProvider, IHookRunner hookRunner, IMachineProfileService machineProfileService, IRegistryProvider registryProvider)
     {
         _discoveryService = discoveryService;
         _orchestrator = orchestrator;
@@ -21,6 +25,8 @@ public sealed class DeployService : IDeployService
         _globResolver = globResolver;
         _snapshotProvider = snapshotProvider;
         _hookRunner = hookRunner;
+        _machineProfileService = machineProfileService;
+        _registryProvider = registryProvider;
     }
 
     public async Task<int> DeployAsync(string configRepoPath, bool dryRun = false, IProgress<DeployResult>? progress = null, CancellationToken cancellationToken = default)
@@ -34,6 +40,7 @@ public sealed class DeployService : IDeployService
 
         bool hasErrors = discovery.Errors.Length > 0;
         Platform currentPlatform = _platformDetector.CurrentPlatform;
+        MachineProfile? machineProfile = await _machineProfileService.LoadAsync(configRepoPath, cancellationToken).ConfigureAwait(false);
 
         if (!dryRun)
         {
@@ -49,6 +56,18 @@ public sealed class DeployService : IDeployService
             {
                 progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok,
                     $"Skipped (not for {currentPlatform})"));
+                continue;
+            }
+
+            if (machineProfile?.IncludeModules.Length > 0 && !machineProfile.IncludeModules.Contains(module.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, "Skipped (not in machine profile)"));
+                continue;
+            }
+
+            if (machineProfile?.ExcludeModules.Length > 0 && machineProfile.ExcludeModules.Contains(module.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, "Skipped (excluded by machine profile)"));
                 continue;
             }
 
@@ -77,6 +96,7 @@ public sealed class DeployService : IDeployService
         }
 
         bool moduleHadErrors = ProcessModuleLinks(module, currentPlatform, dryRun, progress);
+        ProcessModuleRegistry(module, dryRun, progress);
         hasErrors = moduleHadErrors;
 
         if (!dryRun && module.Hooks?.PostDeploy != null && !moduleHadErrors)
@@ -131,6 +151,36 @@ public sealed class DeployService : IDeployService
         }
 
         return hasErrors;
+    }
+
+    private void ProcessModuleRegistry(AppModule module, bool dryRun, IProgress<DeployResult>? progress)
+    {
+        if (module.Registry.IsDefault || module.Registry.Length == 0)
+        {
+            return;
+        }
+
+        foreach (RegistryEntryDefinition entry in module.Registry)
+        {
+            if (dryRun)
+            {
+                progress?.Report(new DeployResult(module.DisplayName, "", $"{entry.Key}\\{entry.Name}",
+                    ResultLevel.Ok, $"Would set {entry.Key}\\{entry.Name} to {entry.Value}"));
+                continue;
+            }
+
+            object? currentValue = _registryProvider.GetValue(entry.Key, entry.Name);
+            if (Equals(currentValue, entry.Value))
+            {
+                progress?.Report(new DeployResult(module.DisplayName, "", $"{entry.Key}\\{entry.Name}",
+                    ResultLevel.Ok, $"Registry {entry.Name} already set to {entry.Value}"));
+                continue;
+            }
+
+            _registryProvider.SetValue(entry.Key, entry.Name, entry.Value, entry.Kind);
+            progress?.Report(new DeployResult(module.DisplayName, "", $"{entry.Key}\\{entry.Name}",
+                ResultLevel.Ok, $"Set {entry.Name} to {entry.Value}"));
+        }
     }
 
     private IReadOnlyList<string> CollectTargetPaths(System.Collections.Immutable.ImmutableArray<AppModule> modules, Platform currentPlatform)

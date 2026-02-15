@@ -7,6 +7,7 @@ internal sealed class ManifestYamlModel
     public List<LinkYamlModel>? Links { get; set; }
     public HooksYamlModel? Hooks { get; set; }
     public CleanFilterYamlModel? CleanFilter { get; set; }
+    public List<RegistryYamlModel>? Registry { get; set; }
 }
 
 internal sealed class HooksYamlModel
@@ -27,4 +28,12 @@ internal sealed class LinkYamlModel
     public string? Source { get; set; }
     public object? Target { get; set; }
     public string? LinkType { get; set; }
+}
+
+internal sealed class RegistryYamlModel
+{
+    public string? Key { get; set; }
+    public string? Name { get; set; }
+    public object? Value { get; set; }
+    public string? Type { get; set; }
 }

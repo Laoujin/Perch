@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Perch.Core;
+using Perch.Core.Registry;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -29,15 +30,17 @@ public sealed class ManifestParser
             return ManifestParseResult.Failure($"Invalid YAML: {ex.Message}");
         }
 
-        if (model?.Links == null || model.Links.Count == 0)
+        bool hasLinks = model?.Links != null && model.Links.Count > 0;
+        bool hasRegistry = model?.Registry != null && model.Registry.Count > 0;
+        if (!hasLinks && !hasRegistry)
         {
-            return ManifestParseResult.Failure("Manifest must contain at least one entry in 'links'.");
+            return ManifestParseResult.Failure("Manifest must contain at least one entry in 'links' or 'registry'.");
         }
 
         var links = new List<LinkEntry>();
-        for (int i = 0; i < model.Links.Count; i++)
+        for (int i = 0; i < (model!.Links?.Count ?? 0); i++)
         {
-            var link = model.Links[i];
+            var link = model.Links![i];
             if (string.IsNullOrWhiteSpace(link.Source))
             {
                 return ManifestParseResult.Failure($"Link [{i}] is missing 'source'.");
@@ -62,7 +65,8 @@ public sealed class ManifestParser
         var platforms = ParsePlatforms(model.Platforms);
         var hooks = ParseHooks(model.Hooks);
         var cleanFilter = ParseCleanFilter(model.CleanFilter);
-        var manifest = new AppManifest(moduleName, displayName, platforms, links.ToImmutableArray(), hooks, cleanFilter);
+        var registry = ParseRegistry(model.Registry);
+        var manifest = new AppManifest(moduleName, displayName, platforms, links.ToImmutableArray(), hooks, cleanFilter, registry);
         return ManifestParseResult.Success(manifest);
     }
 
@@ -141,6 +145,50 @@ public sealed class ManifestParser
 
         return new CleanFilterDefinition(model.Name!, model.Script!, model.Files.ToImmutableArray());
     }
+
+    private static ImmutableArray<RegistryEntryDefinition> ParseRegistry(List<RegistryYamlModel>? entries)
+    {
+        if (entries == null || entries.Count == 0)
+        {
+            return ImmutableArray<RegistryEntryDefinition>.Empty;
+        }
+
+        var result = new List<RegistryEntryDefinition>();
+        foreach (RegistryYamlModel entry in entries)
+        {
+            if (string.IsNullOrWhiteSpace(entry.Key) || string.IsNullOrWhiteSpace(entry.Name) || entry.Value == null)
+            {
+                continue;
+            }
+
+            RegistryValueType kind = ParseRegistryValueType(entry.Type);
+            object value = CoerceRegistryValue(entry.Value, kind);
+            result.Add(new RegistryEntryDefinition(entry.Key!, entry.Name!, value, kind));
+        }
+
+        return result.ToImmutableArray();
+    }
+
+    private static RegistryValueType ParseRegistryValueType(string? type) =>
+        type?.ToLowerInvariant() switch
+        {
+            "dword" => RegistryValueType.DWord,
+            "qword" => RegistryValueType.QWord,
+            "expandstring" => RegistryValueType.ExpandString,
+            _ => RegistryValueType.String,
+        };
+
+    private static object CoerceRegistryValue(object value, RegistryValueType kind) =>
+        kind switch
+        {
+            RegistryValueType.DWord when value is int i => i,
+            RegistryValueType.DWord when value is long l => (int)l,
+            RegistryValueType.DWord when value is string s && int.TryParse(s, out int parsed) => parsed,
+            RegistryValueType.QWord when value is long l => l,
+            RegistryValueType.QWord when value is int i => (long)i,
+            RegistryValueType.QWord when value is string s && long.TryParse(s, out long parsed) => parsed,
+            _ => value.ToString() ?? string.Empty,
+        };
 
     private static LinkType ParseLinkType(string? value) =>
         value?.ToLowerInvariant() switch

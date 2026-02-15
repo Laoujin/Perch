@@ -4,8 +4,10 @@ using Perch.Core.Config;
 using Perch.Core.Deploy;
 using Perch.Core.Diff;
 using Perch.Core.Git;
+using Perch.Core.Machines;
 using Perch.Core.Modules;
 using Perch.Core.Packages;
+using Perch.Core.Registry;
 using Perch.Core.Status;
 using Perch.Core.Symlinks;
 
@@ -23,16 +25,19 @@ public static class ServiceCollectionExtensions
         {
             services.AddSingleton<ISymlinkProvider, WindowsSymlinkProvider>();
             services.AddSingleton<IFileLockDetector, WindowsFileLockDetector>();
+            services.AddSingleton<IRegistryProvider, WindowsRegistryProvider>();
         }
         else
         {
             services.AddSingleton<ISymlinkProvider, UnixSymlinkProvider>();
             services.AddSingleton<IFileLockDetector, UnixFileLockDetector>();
+            services.AddSingleton<IRegistryProvider, NoOpRegistryProvider>();
         }
         services.AddSingleton<IFileBackupProvider, FileBackupProvider>();
         services.AddSingleton<ISnapshotProvider, SnapshotProvider>();
         services.AddSingleton<SymlinkOrchestrator>();
         services.AddSingleton<IHookRunner, HookRunner>();
+        services.AddSingleton<IMachineProfileService, MachineProfileService>();
         services.AddSingleton<ICleanFilterService, CleanFilterService>();
         services.AddSingleton<IDiffSnapshotService, DiffSnapshotService>();
         services.AddSingleton<IDeployService, DeployService>();

@@ -2,7 +2,9 @@ using System.Collections.Immutable;
 using Perch.Core;
 using Perch.Core.Backup;
 using Perch.Core.Deploy;
+using Perch.Core.Machines;
 using Perch.Core.Modules;
+using Perch.Core.Registry;
 using Perch.Core.Symlinks;
 using NSubstitute.ReceivedExtensions;
 
@@ -23,6 +25,8 @@ public sealed class DeployServiceTests
     private IGlobResolver _globResolver = null!;
     private ISnapshotProvider _snapshotProvider = null!;
     private IHookRunner _hookRunner = null!;
+    private IMachineProfileService _machineProfileService = null!;
+    private IRegistryProvider _registryProvider = null!;
     private DeployService _deployService = null!;
     private List<DeployResult> _reported = null!;
     private IProgress<DeployResult> _progress = null!;
@@ -43,7 +47,9 @@ public sealed class DeployServiceTests
         _hookRunner = Substitute.For<IHookRunner>();
         _hookRunner.RunAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
             .Returns(new DeployResult("", "", "", ResultLevel.Ok, "Hook completed"));
-        _deployService = new DeployService(_discoveryService, orchestrator, _platformDetector, _globResolver, _snapshotProvider, _hookRunner);
+        _machineProfileService = Substitute.For<IMachineProfileService>();
+        _registryProvider = Substitute.For<IRegistryProvider>();
+        _deployService = new DeployService(_discoveryService, orchestrator, _platformDetector, _globResolver, _snapshotProvider, _hookRunner, _machineProfileService, _registryProvider);
         _reported = new List<DeployResult>();
         _progress = new SynchronousProgress<DeployResult>(r => _reported.Add(r));
     }
@@ -641,6 +647,210 @@ public sealed class DeployServiceTests
             Assert.That(exitCode, Is.EqualTo(0));
             await _hookRunner.DidNotReceive().RunAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
             _symlinkProvider.Received(1).CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_IncludeModules_SkipsExcluded()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modAPath = Path.Combine(tempDir, "git");
+        string modBPath = Path.Combine(tempDir, "steam");
+        Directory.CreateDirectory(modAPath);
+        Directory.CreateDirectory(modBPath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            var profile = new MachineProfile(ImmutableArray.Create("git"), ImmutableArray<string>.Empty);
+            _machineProfileService.LoadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(profile);
+
+            var modules = ImmutableArray.Create(
+                new AppModule("git", "Git", modAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f", Path.Combine(targetDir, "a.txt"), LinkType.Symlink))),
+                new AppModule("steam", "Steam", modBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f", Path.Combine(targetDir, "b.txt"), LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, progress: _progress);
+
+            Assert.That(exitCode, Is.EqualTo(0));
+            Assert.That(_reported.Any(r => r.Message.Contains("not in machine profile")), Is.True);
+            _symlinkProvider.Received(1).CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_ExcludeModules_SkipsExcluded()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modAPath = Path.Combine(tempDir, "git");
+        string modBPath = Path.Combine(tempDir, "steam");
+        Directory.CreateDirectory(modAPath);
+        Directory.CreateDirectory(modBPath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            var profile = new MachineProfile(ImmutableArray<string>.Empty, ImmutableArray.Create("steam"));
+            _machineProfileService.LoadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(profile);
+
+            var modules = ImmutableArray.Create(
+                new AppModule("git", "Git", modAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f", Path.Combine(targetDir, "a.txt"), LinkType.Symlink))),
+                new AppModule("steam", "Steam", modBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f", Path.Combine(targetDir, "b.txt"), LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, progress: _progress);
+
+            Assert.That(exitCode, Is.EqualTo(0));
+            Assert.That(_reported.Any(r => r.Message.Contains("excluded by machine profile")), Is.True);
+            _symlinkProvider.Received(1).CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_NoProfile_ProcessesAll()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modAPath = Path.Combine(tempDir, "git");
+        string modBPath = Path.Combine(tempDir, "steam");
+        Directory.CreateDirectory(modAPath);
+        Directory.CreateDirectory(modBPath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            _machineProfileService.LoadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns((MachineProfile?)null);
+
+            var modules = ImmutableArray.Create(
+                new AppModule("git", "Git", modAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f", Path.Combine(targetDir, "a.txt"), LinkType.Symlink))),
+                new AppModule("steam", "Steam", modBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f", Path.Combine(targetDir, "b.txt"), LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, progress: _progress);
+
+            Assert.That(exitCode, Is.EqualTo(0));
+            _symlinkProvider.Received(2).CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_RegistryEntry_SetsValue()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            var registry = ImmutableArray.Create(
+                new RegistryEntryDefinition(@"HKCU\Software\Perch\Test", "Theme", 0, RegistryValueType.DWord));
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f.txt", Path.Combine(targetDir, "f.txt"), LinkType.Symlink)), Registry: registry));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            await _deployService.DeployAsync(tempDir, progress: _progress);
+
+            _registryProvider.Received(1).SetValue(@"HKCU\Software\Perch\Test", "Theme", 0, RegistryValueType.DWord);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_RegistryAlreadyCorrect_Skips()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            _registryProvider.GetValue(@"HKCU\Software\Perch\Test", "Theme").Returns(0);
+            var registry = ImmutableArray.Create(
+                new RegistryEntryDefinition(@"HKCU\Software\Perch\Test", "Theme", 0, RegistryValueType.DWord));
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f.txt", Path.Combine(targetDir, "f.txt"), LinkType.Symlink)), Registry: registry));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            await _deployService.DeployAsync(tempDir, progress: _progress);
+
+            _registryProvider.DidNotReceive().SetValue(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<object>(), Arg.Any<RegistryValueType>());
+            Assert.That(_reported.Any(r => r.Message.Contains("already set")), Is.True);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_DryRun_SkipsRegistryChanges()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            var registry = ImmutableArray.Create(
+                new RegistryEntryDefinition(@"HKCU\Software\Perch\Test", "Theme", 0, RegistryValueType.DWord));
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f.txt", Path.Combine(targetDir, "f.txt"), LinkType.Symlink)), Registry: registry));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            await _deployService.DeployAsync(tempDir, dryRun: true, _progress);
+
+            _registryProvider.DidNotReceive().SetValue(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<object>(), Arg.Any<RegistryValueType>());
+            _registryProvider.DidNotReceive().GetValue(Arg.Any<string>(), Arg.Any<string>());
+            Assert.That(_reported.Any(r => r.Message.Contains("Would set")), Is.True);
         }
         finally
         {
