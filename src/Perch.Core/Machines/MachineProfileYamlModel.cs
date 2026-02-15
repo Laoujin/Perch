@@ -4,4 +4,5 @@ internal sealed class MachineProfileYamlModel
 {
     public List<string>? IncludeModules { get; set; }
     public List<string>? ExcludeModules { get; set; }
+    public Dictionary<string, string>? Variables { get; set; }
 }
