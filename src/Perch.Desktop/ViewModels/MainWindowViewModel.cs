@@ -36,11 +36,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _scanner = scanner;
         _catalogService = catalogService;
 
+        var scanStep = new SystemScanStepViewModel(_state);
+
         _steps =
         [
             new WelcomeStepViewModel(_state),
             new RepoSetupStepViewModel(_state),
-            new SystemScanStepViewModel(scanner, _state),
+            scanStep,
             new DotfilesStepViewModel(_state),
             CreateAppCatalogStep(),
             new VsCodeExtensionsStepViewModel(_state),
@@ -52,6 +54,8 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
         TotalSteps = _steps.Count;
         _currentPage = _steps[0];
+
+        scanStep.BeginScan(scanner);
     }
 
     [RelayCommand]
@@ -97,10 +101,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         switch (_steps[index])
         {
             case SystemScanStepViewModel scan:
-                if (!scan.ScanComplete)
-                {
-                    await scan.RunScanAsync().ConfigureAwait(false);
-                }
+                await scan.WaitForScanAsync().ConfigureAwait(false);
                 break;
 
             case DotfilesStepViewModel dotfiles:
