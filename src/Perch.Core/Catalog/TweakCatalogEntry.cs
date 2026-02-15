@@ -1,0 +1,16 @@
+using System.Collections.Immutable;
+
+using Perch.Core.Modules;
+
+namespace Perch.Core.Catalog;
+
+public sealed record TweakCatalogEntry(
+    string Id,
+    string Name,
+    string Category,
+    ImmutableArray<string> Tags,
+    string? Description,
+    bool Reversible,
+    ImmutableArray<string> Profiles,
+    int Priority,
+    ImmutableArray<RegistryEntryDefinition> Registry);

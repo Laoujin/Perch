@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Perch.Core.Backup;
+using Perch.Core.Catalog;
 using Perch.Core.Config;
 using Perch.Core.Deploy;
 using Perch.Core.Diff;
@@ -8,6 +9,7 @@ using Perch.Core.Machines;
 using Perch.Core.Modules;
 using Perch.Core.Packages;
 using Perch.Core.Registry;
+using Perch.Core.Scanner;
 using Perch.Core.Status;
 using Perch.Core.Symlinks;
 
@@ -62,6 +64,12 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PackageManifestParser>();
         services.AddSingleton<IProcessRunner, DefaultProcessRunner>();
         services.AddSingleton<IAppScanService, AppScanService>();
+
+        services.AddSingleton<CatalogParser>();
+        services.AddSingleton<IDotfileScanner, DotfileScanner>();
+        services.AddSingleton<IFontScanner, FontScanner>();
+        services.AddSingleton<IVsCodeService, VsCodeService>();
+        services.AddSingleton<ISystemScanner, SystemScanner>();
         return services;
     }
 }
