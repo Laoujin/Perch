@@ -25,6 +25,11 @@ app.Configure(config =>
         git.AddCommand<GitSetupCommand>("setup")
             .WithDescription("Register git clean filters defined in module manifests");
     });
+    config.AddBranch("filter", filter =>
+    {
+        filter.AddCommand<FilterCleanCommand>("clean")
+            .WithDescription("Apply clean filter rules for a module (git clean filter protocol)");
+    });
     config.AddBranch("diff", diff =>
     {
         diff.AddCommand<DiffStartCommand>("start")
