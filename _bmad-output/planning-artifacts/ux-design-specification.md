@@ -1,5 +1,8 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+lastStep: 14
+status: 'complete'
+completedAt: '2026-02-16'
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/prd-validation-report.md'
@@ -729,3 +732,169 @@ flowchart TD
 - Card hover animations and transitions
 - `CardExpander` detail panels for advanced card actions
 - `SearchBar` integration with gallery filtering
+
+## UX Consistency Patterns
+
+### Action Hierarchy
+
+**Primary action (one per view):** Deploy, Next (wizard). WPF UI `Button` with `Appearance="Primary"`, accent green fill. Always the most visually prominent element.
+
+**Secondary actions:** Back, Skip, Toggle card, Expand card. WPF UI `Button` with `Appearance="Secondary"`, outline style. Visually subordinate to primary.
+
+**Destructive actions:** Unlink, Restore from repo, Remove. WPF UI `Button` with `Appearance="Danger"`, red text/outline. Always requires confirmation dialog before executing.
+
+**Inline actions:** Card toggle (ToggleSwitch), card expand (chevron click area). No button chrome — interaction affordance comes from the component itself (switch track, chevron icon).
+
+**Rules:**
+- Maximum one primary action visible per view at a time
+- Destructive actions never appear as primary
+- Card-level actions are contextual — visible on hover/expand, not cluttering the default card state
+
+### Feedback Patterns
+
+**Transient success:** `Snackbar` at bottom of content area, auto-dismiss after 3s. "Symlink created for .gitconfig". Green appearance.
+
+**Persistent status:** `InfoBar` inline within the view. Used for deploy results that need review: "3 items linked, 1 failed". Stays until dismissed.
+
+**Card-level feedback:** `StatusRibbon` updates immediately on action. Toggle a card on → ribbon changes to "Selected". Deploy completes → ribbon changes to "Linked" (green). No separate notification needed for per-card state changes — the card IS the feedback.
+
+**Error feedback:** `InfoBar` with `Severity="Error"` for view-level errors (gallery unavailable, config repo not found). Card-level errors show as red `StatusRibbon` + expanded detail with explanation and recovery action.
+
+**Progress feedback:** `ProgressRing` (indeterminate) for system scan. Per-card `ProgressRing` (determinate) during deploy. Never a single global progress bar — always scoped to the unit of work.
+
+**Rules:**
+- Transient for confirmations ("done"), persistent for results that need review
+- Errors always include a recovery path — never just "something went wrong"
+- Card status changes are self-evident — no toast notification for individual card actions
+
+### Navigation Patterns
+
+**Dashboard navigation:** WPF UI `NavigationView` sidebar. Icon-only when collapsed, icon + label when expanded. Sections: Home, Dotfiles (Developer profiles only), Apps, System Tweaks, Settings. Footer: Settings.
+
+**Wizard navigation:** HandyControl `StepBar` at top. Back/Next/Skip buttons in footer. Steps are dynamic based on profile selection — skipped steps don't appear in the stepper, they're omitted entirely.
+
+**Card-to-detail navigation:** Click card body → `CardExpander` opens inline (no page navigation). Card stays in context within the grid. Close expander → card returns to compact state.
+
+**View transitions:** Dashboard sidebar switches swap the content area (page navigation via `NavigationView.TargetPageType`). No slide animations between pages — instant swap, consistent with Windows 11 Fluent behavior.
+
+**Rules:**
+- Sidebar is always visible in dashboard mode (collapsed or expanded)
+- Wizard mode hides sidebar entirely — `StepBar` is the only navigation
+- Back button in `NavigationView` navigates page history, not in-page state
+- Card expansion is always inline, never a separate page or modal
+
+### Empty States
+
+**No config repo:** Full-page empty state with illustration. Message: "Welcome to Perch. Point us to your config repository to get started." Action: "Select config folder" button.
+
+**No detected apps:** View-level message within card grid area. "No apps detected on your system. Browse the gallery below to get started." Gallery tier still visible below.
+
+**No drift (dashboard):** Hero banner in calm/healthy state. "Everything looks good. All configs are linked and up to date." Not empty — the "nothing to report" IS the content.
+
+**Search no results:** Inline message replacing card grid. "No apps matching '[query]'. Try a different search or browse by category."
+
+**Rules:**
+- Empty states always include a next action — never a dead end
+- Use illustrations/icons sparingly — one per empty state, not decorative clutter
+- "No drift" is a success state, not an empty state — design it as reassurance
+
+### Loading States
+
+**App launch:** Splash screen with Perch logo while modules load from filesystem. Brief — target under 2 seconds.
+
+**System scan:** Indeterminate `ProgressRing` on the section being scanned. Card grid area shows skeleton placeholders (gray card shapes) that are replaced as results arrive. Cards populate progressively, not all at once after a loading gate.
+
+**Deploy:** Per-card determinate `ProgressRing` overlay. Cards being deployed show progress. Already-completed cards show green status. Not-yet-started cards remain unchanged. Progress is visually scoped to the individual card.
+
+**Gallery load:** Skeleton cards in Suggested/Other tiers while gallery data downloads. "Your Apps" tier (local detection) loads independently and first.
+
+**Rules:**
+- Never block the entire UI for a loading operation — always show what's available while the rest loads
+- Skeleton placeholders over spinner-only screens
+- Progressive population over batch reveal
+
+### Confirmation Patterns
+
+**No confirmation needed:** Safe operations — link a file, toggle a card, accept detected changes. These are non-destructive and easily reversible.
+
+**Brief confirmation:** Destructive operations — unlink a managed file, restore from repo (overwrites local changes). Simple dialog: "Unlink .gitconfig? The symlink will be removed and the file will be copied back." [Cancel] [Unlink].
+
+**Summary confirmation:** Batch deploy from wizard. Review step shows full summary of what will happen. This isn't a dialog — it's a dedicated wizard step.
+
+**Rules:**
+- Default to no confirmation — trust the user for safe, reversible actions
+- Confirmation dialogs are terse — one sentence explaining what happens, two buttons
+- Never confirm-on-confirm (no "Are you sure you're sure?")
+
+## Responsive Design & Accessibility
+
+### Window Layout Strategy
+
+This is a WPF desktop application, not a web app. No mobile/tablet breakpoints. The relevant responsive concerns are window resizing and DPI scaling.
+
+**Minimum window size:** 900x600px — ensures sidebar + card grid renders at least 2 columns.
+
+**Window resize behavior:**
+- **Sidebar:** Collapses from expanded (icon + label, 200px) to compact (icon-only, 56px) when window width drops below 1100px. User can manually toggle at any width.
+- **Card grid:** `WrapPanel` reflows cards automatically. Minimum card width 180px. At 900px content width (~844px minus sidebar), fits 4 compact cards. At 1400px+, fits 6-7 cards.
+- **Three-tier layout:** Tiers stack vertically and each reflows independently. Section headers span full width.
+- **Hero banner:** Stretches to full content width. Status counts reflow from horizontal row to wrapped layout at narrow widths.
+- **Wizard:** StepBar truncates step labels to icons at narrow widths. Content area reflows normally.
+
+**DPI scaling:** WPF handles DPI scaling natively via device-independent pixels. All custom components use DIP values. No special handling needed beyond avoiding raster assets at fixed pixel sizes — Midjourney hero images should be high-res (2x) and profile card images sized for worst-case 200% scaling.
+
+### Accessibility Strategy
+
+**Target: WCAG AA equivalent.** This is a WPF desktop app, not a web site — WCAG doesn't directly apply, but its principles (perceivable, operable, understandable, robust) are the right standard.
+
+**Color & contrast:**
+- All text meets 4.5:1 contrast ratio against dark backgrounds (already verified in Visual Design Foundation)
+- Status communicated via text labels + color, never color alone (StatusRibbon includes text)
+- High Contrast mode: WPF UI Fluent theme supports Windows High Contrast themes natively
+
+**Keyboard navigation:**
+- All interactive elements reachable via Tab key
+- Card grid: Tab moves between cards, Enter/Space toggles, arrow keys navigate within expanded card
+- Sidebar: Tab/arrow keys navigate items, Enter activates
+- Wizard: Tab between Back/Next buttons and card grid, Enter on Next advances step
+- Focus indicators: WPF UI provides built-in Fluent focus rectangles on all controls
+- No keyboard traps — Escape closes expanded cards and dialogs
+
+**Screen reader support:**
+- WPF UI Automation peers provide screen reader compatibility out of the box for standard controls
+- Custom components (`StatusRibbon`, `ProfileCard`, `AppCard`) need explicit `AutomationProperties.Name` and `AutomationProperties.HelpText`
+- Card status announced: "Git config, status: linked" not just "Git config"
+- Deploy progress announced: live region updates for completion counts
+- Wizard step announced: "Step 2 of 4: Dotfiles"
+
+**Hit targets:**
+- Minimum 36x36px for all interactive elements (already defined in Visual Design Foundation)
+- Card toggle area: entire card header is clickable, not just the small toggle switch
+- Sidebar items: full-width clickable area, not just the icon
+
+### Testing Strategy
+
+**Automated:**
+- Accessibility Insights for Windows — automated scan of WPF automation tree
+- Verify all custom components expose correct automation peers and properties
+
+**Manual:**
+- Keyboard-only navigation walkthrough of all three journeys (wizard, dashboard, app discovery)
+- Windows Narrator screen reader test — verify all cards, status, and actions are announced correctly
+- Windows High Contrast mode — verify all content remains visible and functional
+- 200% DPI scaling — verify no clipped text or overlapping elements
+
+**Window sizes to test:**
+- 900x600 (minimum)
+- 1280x720 (common laptop)
+- 1920x1080 (common desktop)
+- 2560x1440 (high-res desktop)
+- Each at 100%, 125%, 150%, 200% scaling
+
+### Implementation Guidelines
+
+- Use `AutomationProperties.Name` on all custom components — WPF UI controls handle this automatically, custom ones need explicit attributes
+- Use `AutomationProperties.LiveSetting="Polite"` on status areas that update dynamically (hero banner counts, deploy progress)
+- Bind sidebar collapse to `SystemParameters.HighContrastMode` — auto-expand sidebar in High Contrast for better label visibility
+- Test `ToggleSwitch` keyboard behavior — ensure Space toggles, Tab moves to next element
+- Profile card images: include `AutomationProperties.Name="Developer profile"` — screen readers need the semantic meaning, not the image filename
