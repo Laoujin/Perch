@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5, 6]
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/prd-validation-report.md'
@@ -256,3 +256,360 @@ This is a **themeable established system** approach: WPF UI provides the Fluent 
 - **Typography:** Inter or Segoe UI Variable (Windows 11 system font) — clean, modern, readable at small sizes for card descriptions.
 - **Status colors:** Green (linked/OK), Yellow (exists but not linked / needs attention), Red (broken/error), Blue (not installed / informational). Consistent across all views.
 - **Logo:** Bird silhouette concept (perching bird on a branch or wire). Dark-theme-friendly, works at sidebar icon size (~24px) through splash screen size. Midjourney for concepts, vectorized for final asset.
+
+## Defining Experience
+
+### The Core Interaction
+
+> "I opened it, it found all my configs, I toggled the ones I wanted, and hit deploy. Done."
+
+The **detection-first card grid** is Perch Desktop's defining experience. The moment users see their system reflected back as visual cards with toggles — that's the interaction that makes everything else follow. It's the "this is better" moment that separates Perch from every other dotfiles tool.
+
+### User Mental Model
+
+**"App store for my configs."** Browse cards, toggle what you want, deploy. Users already understand this pattern from every app marketplace they've ever used. No new interaction patterns to learn — the core experience is immediately familiar.
+
+**How existing solutions work (and fail):**
+- Chezmoi: "Add files manually, run apply." User must know what and where.
+- Dotbot: "Write a YAML config." User must understand the config format.
+- Old Avalonia prototype: "Here are 10 steps of checkboxes." Functional but lifeless.
+
+**How Perch Desktop works:** "Here's what you have. What do you want us to manage?" The system does the discovery; the user makes choices. The cognitive load shifts from "figure out what to configure" to "pick from what we found."
+
+### Success Criteria
+
+- **Instant recognition:** Cards appear for detected configs within seconds of reaching the view. No loading screen dominating the experience.
+- **Self-explanatory cards:** Users understand what each card represents (app name, icon, brief description) without reading documentation.
+- **One-click toggle:** Toggling a card on/off is a single click with immediate visual feedback (status ribbon changes, subtle animation).
+- **Always-visible deploy:** Deploy button appears once at least one card is toggled. Always accessible, never hidden behind navigation.
+- **Conclusive completion:** After deploy, a clear summary of what happened. The user feels "done" — not "now go check something else."
+
+### Novel vs. Established Patterns
+
+**Primarily established patterns, combined innovatively:**
+- Card grid browsing → established (app stores, VS Code extensions)
+- Toggle to select → established (settings panels, onboarding wizards)
+- System detection populating a view → less common, but familiar from tools like Windows Update or driver installers
+- Three-tier layout (detected → suggested → search) → novel combination of established patterns
+
+**The innovation is the combination:** No dotfiles tool presents configs as a browsable, toggleable card grid populated by system detection. Each individual pattern is familiar; the composition is new.
+
+**No user education needed** for the core interaction. Users know how to browse cards and flip toggles. The only concept that might need a brief explanation is what "linking" means — and even that can be handled with a one-line tooltip: "Perch keeps this file in sync across your machines."
+
+### Experience Mechanics
+
+**1. Initiation:**
+- Wizard: user completes profile selection, view transitions to card grid (dotfiles or apps depending on profile)
+- Dashboard: user clicks "Apps" or "Dotfiles" in sidebar
+
+**2. Interaction:**
+- Cards populate from system detection (detected items prominent, gallery items below)
+- User scans cards visually — icons and names provide instant recognition
+- Toggle a card: single click, status ribbon updates, card subtly highlights
+- Expand a card (click detail area): see config files, target paths, options (link/unlink, view in explorer)
+- Search bar filters across all tiers (detected + suggested + gallery)
+
+**3. Feedback:**
+- Toggle on: card gets a checkmark or "selected" ribbon, joins the "will be deployed" set
+- Toggle off: card returns to neutral state
+- Running count visible: "5 items selected for deploy"
+- Deploy button pulses or highlights when items are selected
+
+**4. Completion:**
+- Deploy button click → progress indicator per card (deploying → done)
+- Summary screen: "X configs linked, X apps configured, X items skipped"
+- For wizard: transition to completion view with option to open dashboard or close
+- For dashboard: cards update to show new status (green = linked)
+
+## Visual Design Foundation
+
+### Color System
+
+**Accent Color:** Forest Green #10B981
+- Hover: #059669
+- Pressed: #047857
+- Subtle: rgba(16, 185, 129, 0.15) with #10B981 text
+- Used for: buttons, active sidebar items, selected card borders, links, deploy CTA
+
+**Status Colors:**
+- OK/Linked: #34D399 text on rgba(52, 211, 153, 0.15) background — shifted lighter than accent to maintain distinction
+- Warning/Attention: #F59E0B text on rgba(245, 158, 11, 0.15) background
+- Error/Broken: #EF4444 text on rgba(239, 68, 68, 0.15) background
+- Info/Not installed: #3B82F6 text on rgba(59, 130, 246, 0.15) background
+
+**Surface Colors:**
+- Background: #1A1A2E (deep navy-black)
+- Sidebar: #111128 (slightly lighter than background)
+- Cards: #1A1A2E with #2A2A3E border
+- Elevated surfaces: #16162A
+
+**Text Colors:**
+- Primary: #FFFFFF
+- Secondary: #E0E0E0
+- Muted: #888888
+
+**Accent/Status distinction:** Accent green appears as solid fills (buttons, active nav). OK status appears as subtle badges (text + translucent background). Same hue family, different visual weight — accent commands action, status communicates state.
+
+### Typography System
+
+**Primary Font:** Segoe UI Variable (Windows 11 system font, ships with WPF UI Fluent theme)
+
+**Type Scale:**
+- Page title: 20px, SemiBold (600)
+- Section header: 16px, SemiBold (600)
+- Card name: 13px, SemiBold (600)
+- Body/description: 13px, Regular (400)
+- Card description: 11px, Regular (400), muted color
+- Status badge: 10px, SemiBold (600)
+- Caption/label: 10px, Regular (400), muted color
+
+**Line heights:** 1.4 for body text, 1.2 for headings and labels.
+
+**Principle:** Compact but readable. Cards carry dense information — every pixel of text must be legible at a glance. SemiBold for names and actions, Regular for descriptions, muted color for secondary info.
+
+### Spacing & Layout Foundation
+
+**Base unit:** 4px. All spacing derives from multiples of 4.
+
+**Component spacing:**
+- Card padding: 12px (3 units)
+- Card grid gap: 12px
+- Section gap: 24px (6 units)
+- Sidebar width: 56px (collapsed, icon-only) / 200px (expanded, icon + label)
+- Sidebar item: 36x36px hit target with 8px gap
+- Page padding: 20px (5 units)
+
+**Layout structure:**
+- Sidebar + content area (sidebar fixed, content scrollable)
+- Content area uses card grid: responsive columns, minimum card width ~180px
+- Three-tier vertical layout in card views: detected apps → suggested → other (with search)
+- Dashboard hero section: drift summary at top, attention cards below
+
+**Card dimensions:**
+- Minimum width: 180px
+- Fixed height per row (cards in a row align)
+- Icon: 24px, status badge: inline, action menu: revealed on hover or click
+
+### Accessibility Considerations
+
+- **Contrast ratios:** All text on dark backgrounds exceeds WCAG AA (4.5:1 for normal text, 3:1 for large text). White (#FFF) on #1A1A2E = 13.5:1. Muted (#888) on #1A1A2E = 4.6:1.
+- **Status colors are not color-only:** Status badges include text labels ("Linked", "Not linked", "Broken", "Not installed") — never color alone.
+- **Focus indicators:** WPF UI Fluent theme provides built-in keyboard focus rectangles. All interactive elements reachable via Tab.
+- **Hit targets:** Minimum 36x36px for all clickable elements (sidebar items, card toggles, buttons).
+
+## Design Direction Decision
+
+### Design Directions Explored
+
+Four complementary visual directions were explored as HTML mockups (`ux-design-directions.html`):
+
+**Direction A: Hero Dashboard** — Drift-focused overview with a large hero banner showing aggregate health metrics (linked/broken/missing/attention counts), icon-only collapsed sidebar, and status-grouped cards below the hero. Optimized for returning users who want instant config health at a glance.
+
+**Direction B: Compact List** — Data-dense table/list layout with expanded sidebar (icon + label). Each row shows module name, status badge, source/target paths, and action buttons. Maximizes information density for power users who prefer scanning lists over browsing cards.
+
+**Direction C: Card Gallery** — App-store browsing experience with large cards featuring hero image areas, category tabs (All / Detected / Linked / Attention), search bar, and the three-tier layout (Your Apps / Suggested for You / Other Apps). Optimized for the discovery and onboarding experience.
+
+**Direction D: Wizard Flow** — Stepper header with step indicators, multi-select profile cards with Midjourney hero images, and wizard footer navigation (Back / Skip / Next). Purpose-built for the first-run onboarding experience.
+
+### Chosen Direction
+
+**All four directions are complementary views within one application**, not competing alternatives:
+
+- **Wizard (Direction D):** First-run onboarding. Profile selection, guided card browsing, deploy.
+- **Card Gallery (Direction C):** The Apps and Dotfiles views — used both as wizard steps and as standalone dashboard sections via sidebar.
+- **Hero Dashboard (Direction A):** The Home/Dashboard view for returning users. Drift summary front and center.
+- **Compact List (Direction B):** Optional density mode — available as a list/table toggle on any card view for users who prefer scanning over browsing.
+
+### Design Rationale
+
+- The wizard is a standalone experience for one-time users. It must feel complete without ever seeing the dashboard.
+- The dashboard is drift-focused — a config health control center. The hero banner provides instant reassurance or highlights issues.
+- Card gallery views are the shared building block — identical UserControls in both wizard steps and sidebar-navigated dashboard sections.
+- Compact list mode respects power users who find cards wasteful for large module counts.
+
+### Implementation Approach
+
+**Shell structure:**
+- WPF UI `NavigationView` as the sidebar (icon-only collapsed / expanded with labels)
+- Wizard presented in a dedicated view with HandyControl `StepBar` header, replacing sidebar navigation
+- Dashboard uses sidebar navigation to switch between Home (hero + drift), Dotfiles (card gallery), Apps (card gallery), System Tweaks, Settings
+
+**View reuse:**
+- `DotfilesView` / `AppsView` / `SystemTweaksView` are UserControls used in both wizard content area and dashboard content area
+- Each view supports card grid (default) and compact list (toggle) display modes
+- Three-tier layout (Detected / Suggested / Other) with search bar is consistent across card gallery views
+
+**Density toggle:**
+- Grid/list icon toggle in view toolbar switches between card gallery and compact list within any view
+- User preference persisted in settings
+
+## User Journey Flows
+
+### Journey 1: Wizard Onboarding
+
+The first-run experience. User launches Perch Desktop for the first time and is guided through profile selection, system detection, and initial deploy.
+
+**Entry:** App launch (no prior config detected)
+**Exit:** Deploy complete, option to open dashboard or close
+
+```mermaid
+flowchart TD
+    A[Launch Perch Desktop] --> B{First run?}
+    B -->|Yes| C[Wizard: Welcome Screen]
+    B -->|No| D[Dashboard: Home]
+
+    C --> E[Step 1: Profile Selection]
+    E --> F[Multi-select profile cards<br/>Developer / Power User / Gamer / Casual]
+    F --> G{Selected profiles<br/>include Developer?}
+
+    G -->|Yes| H[Step 2: Dotfiles]
+    G -->|No| I[Step 3: Applications]
+
+    H --> H1[System scan: detect .gitconfig,<br/>.vimrc, shell configs, etc.]
+    H1 --> H2[Card grid: detected dotfiles<br/>+ suggested + gallery]
+    H2 --> H3[User toggles cards on/off]
+    H3 --> I
+
+    I --> I1[System scan: detect installed apps<br/>+ match against gallery]
+    I1 --> I2[Three-tier card grid:<br/>Your Apps / Suggested / Other]
+    I2 --> I3[User toggles cards on/off]
+    I3 --> J{Profiles include<br/>system tweaks?}
+
+    J -->|Yes| K[Step 4: System Tweaks]
+    J -->|No| L[Step 5: Review & Deploy]
+
+    K --> K1[Windows settings cards:<br/>dark mode, context menu, etc.]
+    K1 --> K2[User toggles cards on/off]
+    K2 --> L
+
+    L --> L1[Summary: X dotfiles, Y apps,<br/>Z tweaks selected]
+    L1 --> L2[Deploy button]
+    L2 --> L3[Progress: per-card status updates]
+    L3 --> L4[Completion: X linked,<br/>Y configured, Z applied]
+
+    L4 --> M{User choice}
+    M -->|Open Dashboard| D
+    M -->|Close| N[Exit app]
+```
+
+**Key decisions:**
+- Profile selection drives which wizard steps appear (Dotfiles hidden for Casual/Gamer)
+- System detection runs silently as background task while user reads step intro
+- Each step shows a running count: "5 items selected"
+- Deploy shows per-card progress, not a single progress bar
+- Completion screen is conclusive — wizard can end here without feeling incomplete
+
+### Journey 2: Dashboard Drift Resolution
+
+The returning-user experience. User opens Perch to check config health and resolve any drift.
+
+**Entry:** App launch (config exists, previous deploy completed)
+**Exit:** All drift resolved, or user acknowledges remaining items
+
+```mermaid
+flowchart TD
+    A[Launch Perch Desktop] --> B[Load module state<br/>from filesystem]
+    B --> C[Dashboard: Home]
+
+    C --> D[Hero banner: drift summary<br/>12 linked · 2 attention · 1 broken]
+
+    D --> E{Any issues?}
+    E -->|All green| F[Calm reassurance:<br/>Everything is as expected]
+    E -->|Issues found| G[Attention cards below hero]
+
+    G --> H[Card: .gitconfig<br/>Status: File exists but not linked]
+    G --> I[Card: VS Code settings<br/>Status: Symlink target missing]
+    G --> J[Card: Terminal config<br/>Status: File modified outside Perch]
+
+    H --> H1[Click card → expand]
+    H1 --> H2[Action: Link this file]
+    H2 --> H3[Instant status update:<br/>ribbon → green]
+
+    I --> I1[Click card → expand]
+    I1 --> I2[Shows: expected target path missing]
+    I2 --> I3[Action: Re-deploy / Ignore]
+
+    J --> J1[Click card → expand]
+    J1 --> J2[Shows: diff between<br/>linked file and repo]
+    J2 --> J3[Action: Accept changes /<br/>Restore from repo]
+
+    H3 --> K[Hero updates:<br/>13 linked · 1 attention · 0 broken]
+    I3 --> K
+    J3 --> K
+
+    K --> L{More issues?}
+    L -->|Yes| G
+    L -->|No| F
+```
+
+**Key decisions:**
+- Hero banner is the first thing seen — instant health assessment
+- Cards are grouped by severity: broken (red) > attention (yellow) > info (blue)
+- Each card expands to show context (paths, diffs) and actions
+- Actions are one-click for safe operations (link, accept)
+- Destructive actions (restore from repo, unlink) show a brief confirmation
+- Hero counter updates live as issues are resolved
+
+### Journey 3: App Discovery & Onboarding
+
+User wants to start managing a new app's settings through Perch. No AI involved — detection is filesystem-based using known config paths from the gallery.
+
+**Entry:** Sidebar → Apps (or wizard Apps step)
+**Exit:** New app card toggled on and deployed
+
+```mermaid
+flowchart TD
+    A[Navigate to Apps view] --> B[Three-tier card grid loads]
+
+    B --> C[Tier 1: Your Apps<br/>Detected on system, status ribbons]
+    B --> D[Tier 2: Suggested for You<br/>Based on profile + detected tools]
+    B --> E[Tier 3: Other Apps<br/>Full gallery, searchable]
+
+    C --> C1[Card: Obsidian<br/>Detected · Not managed]
+    C1 --> C2[Click → expand card]
+    C2 --> C3[Shows: config files found<br/>at %AppData%/Obsidian/]
+    C3 --> C4[Toggle: Manage this app]
+    C4 --> C5[Card ribbon → Selected]
+
+    E --> E1[Search: 'fiddler']
+    E1 --> E2[Card: Fiddler<br/>In gallery · Not detected]
+    E2 --> E3[Click → expand card]
+    E3 --> E4[Shows: gallery description,<br/>known config paths]
+    E4 --> E5{App installed?}
+    E5 -->|Yes, detected| E6[Toggle: Manage this app]
+    E5 -->|Not found| E7[Card shows: Not installed<br/>Install first, then return]
+
+    C5 --> F[Deploy bar appears:<br/>1 new item to deploy]
+    E6 --> F
+
+    F --> G[Click Deploy]
+    G --> H[Backup existing files<br/>→ Create symlinks<br/>→ Update status]
+    H --> I[Card ribbon → Linked]
+    I --> J[Deploy bar: Done!<br/>1 app linked successfully]
+```
+
+**Key decisions:**
+- Detection is filesystem-based — gallery provides known config paths per app, desktop app matches against the filesystem
+- Three-tier layout ensures detected apps are always visible first
+- "Suggested" tier uses profile selection + sibling detection (has VS Code → suggest VS Code extensions module)
+- Gallery search filters across all tiers simultaneously
+- Undetected gallery apps show as informational — no false promise of managing something that isn't installed
+- Onboarding an app not in the gallery is manual: create module folder + manifest in perch-config (outside the desktop app for now)
+
+### Journey Patterns
+
+**Detection-then-Action:** Every journey starts with the system showing what it found (profiles → detected configs → drift status), followed by user choices. The system proposes; the user disposes.
+
+**Card-as-Unit-of-Work:** The card is the atomic interaction element across all journeys. Whether in wizard, dashboard, or gallery — click a card, see details, take action. Consistent interaction model regardless of context.
+
+**Progressive Severity:** Information is layered by urgency. Dashboard hero → attention cards → detail expansion. Wizard summary → individual step cards → card expansion. Users control their depth of engagement.
+
+**Contextual Deploy:** Deploy isn't a global action hidden in a menu. It appears contextually when there's something to deploy — in the wizard as a step, in the dashboard as a floating action for selected items.
+
+### Flow Optimization Principles
+
+1. **Minimize time-to-value:** System scan runs during transitions (profile selection → loading → card grid). Users never wait on an explicit "scanning" step.
+2. **No dead ends:** Every error state includes a recovery action. Broken symlink → re-link. Missing target → re-deploy. Unrecognized app → add to gallery (future).
+3. **Batch operations:** Users can toggle multiple cards before deploying once. No per-card deploy friction.
+4. **Remember choices:** Profile selection and density toggle preferences persist across sessions. Returning users skip straight to dashboard.
+5. **Exit at any point:** Wizard supports closing mid-flow — already-deployed items remain linked. No "must complete all steps" lock-in.

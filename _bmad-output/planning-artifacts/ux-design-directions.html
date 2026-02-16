@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perch Desktop — Design Direction Mockups</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif; background: #0a0a14; color: #e0e0e0; }
+
+  /* Navigation */
+  .top-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: #111128; border-bottom: 1px solid #2a2a3e; padding: 12px 32px; display: flex; align-items: center; gap: 16px; }
+  .top-nav h1 { font-size: 16px; font-weight: 600; color: #fff; white-space: nowrap; }
+  .top-nav .tabs { display: flex; gap: 4px; margin-left: 24px; }
+  .top-nav .tab { padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; color: #888; border: none; background: none; font-family: inherit; transition: all 0.2s; }
+  .top-nav .tab:hover { color: #e0e0e0; background: rgba(255,255,255,0.05); }
+  .top-nav .tab.active { color: #10B981; background: rgba(16,185,129,0.1); }
+
+  .content { padding-top: 60px; }
+  .direction { display: none; min-height: calc(100vh - 60px); }
+  .direction.active { display: block; }
+  .direction-header { padding: 32px 32px 16px; }
+  .direction-header h2 { font-size: 22px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .direction-header p { font-size: 14px; color: #888; max-width: 700px; }
+  .direction-header .tags { display: flex; gap: 8px; margin-top: 12px; }
+  .direction-header .tag { font-size: 11px; padding: 3px 10px; border-radius: 4px; background: rgba(16,185,129,0.1); color: #10B981; }
+
+  /* Shared mockup styles */
+  .mockup-frame { margin: 16px 32px 48px; border: 1px solid #2a2a3e; border-radius: 12px; overflow: hidden; background: #0d0d1a; }
+  .mockup-titlebar { background: #111128; padding: 8px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #2a2a3e; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot-r { background: #ef4444; }
+  .dot-y { background: #f59e0b; }
+  .dot-g { background: #10b981; }
+  .mockup-titlebar span { font-size: 12px; color: #888; margin-left: 8px; }
+
+  /* ===== DIRECTION A: Hero Dashboard ===== */
+  .dir-a-layout { display: grid; grid-template-columns: 56px 1fr; min-height: 600px; }
+  .sidebar-narrow { background: #111128; padding: 16px 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .sidebar-narrow .logo { width: 36px; height: 36px; border-radius: 10px; background: #10B981; display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 12px; }
+  .sidebar-narrow .item { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #666; cursor: pointer; transition: all 0.2s; }
+  .sidebar-narrow .item:hover { background: rgba(255,255,255,0.06); color: #aaa; }
+  .sidebar-narrow .item.active { color: #10B981; background: rgba(16,185,129,0.1); }
+  .sidebar-narrow .spacer { flex: 1; }
+
+  .main-area { padding: 24px; overflow-y: auto; }
+
+  /* Hero banner */
+  .hero-banner { background: linear-gradient(135deg, #0d2818 0%, #1a1a2e 60%, #111128 100%); border-radius: 12px; padding: 32px; margin-bottom: 24px; position: relative; overflow: hidden; }
+  .hero-banner::after { content: ''; position: absolute; top: -50%; right: -10%; width: 300px; height: 300px; border-radius: 50%; background: rgba(16,185,129,0.06); }
+  .hero-banner h2 { font-size: 24px; font-weight: 600; color: #fff; margin-bottom: 8px; position: relative; z-index: 1; }
+  .hero-stats { display: flex; gap: 32px; position: relative; z-index: 1; }
+  .hero-stat { display: flex; flex-direction: column; }
+  .hero-stat .number { font-size: 32px; font-weight: 700; }
+  .hero-stat .label { font-size: 12px; color: #888; }
+  .hero-stat.ok .number { color: #34d399; }
+  .hero-stat.warn .number { color: #f59e0b; }
+  .hero-stat.err .number { color: #ef4444; }
+
+  /* Section headers */
+  .section-head { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .section-head .count { font-size: 11px; color: #888; font-weight: 400; }
+
+  /* Card grids */
+  .card-grid-3 { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .card-grid-4 { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
+
+  /* Standard card */
+  .app-card { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 10px; padding: 16px; transition: all 0.2s; cursor: pointer; position: relative; }
+  .app-card:hover { border-color: #3a3a4e; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .app-card .card-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .app-card .app-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; background: #111128; flex-shrink: 0; }
+  .app-card .app-info { flex: 1; min-width: 0; }
+  .app-card .app-name { font-size: 14px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .app-card .app-desc { font-size: 11px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .app-card .status { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px; display: inline-block; }
+  .s-ok { background: rgba(52,211,153,0.12); color: #34d399; }
+  .s-warn { background: rgba(245,158,11,0.12); color: #f59e0b; }
+  .s-err { background: rgba(239,68,68,0.12); color: #ef4444; }
+  .s-info { background: rgba(59,130,246,0.12); color: #3b82f6; }
+
+  /* Action button on card hover */
+  .app-card .card-action { position: absolute; top: 12px; right: 12px; opacity: 0; transition: opacity 0.2s; background: #10B981; color: #fff; border: none; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .app-card:hover .card-action { opacity: 1; }
+
+  /* ===== DIRECTION B: Compact List Dashboard ===== */
+  .dir-b-layout { display: grid; grid-template-columns: 200px 1fr; min-height: 600px; }
+  .sidebar-wide { background: #111128; padding: 16px 0; }
+  .sidebar-wide .logo-area { display: flex; align-items: center; gap: 10px; padding: 0 16px; margin-bottom: 20px; }
+  .sidebar-wide .logo-area .logo-icon { width: 32px; height: 32px; border-radius: 8px; background: #10B981; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .sidebar-wide .logo-area .logo-text { font-size: 16px; font-weight: 700; color: #fff; }
+  .sidebar-wide .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-size: 13px; color: #888; cursor: pointer; transition: all 0.15s; border-left: 3px solid transparent; }
+  .sidebar-wide .nav-item:hover { color: #e0e0e0; background: rgba(255,255,255,0.03); }
+  .sidebar-wide .nav-item.active { color: #10B981; background: rgba(16,185,129,0.06); border-left-color: #10B981; }
+  .sidebar-wide .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+  .sidebar-wide .nav-section { font-size: 10px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 1px; padding: 16px 16px 6px; }
+
+  /* Compact drift list */
+  .drift-bar { display: flex; align-items: center; gap: 16px; padding: 16px 20px; background: #16162a; border-radius: 8px; margin-bottom: 20px; }
+  .drift-bar .drift-chip { font-size: 12px; padding: 4px 12px; border-radius: 12px; font-weight: 600; }
+  .drift-bar .chip-ok { background: rgba(52,211,153,0.12); color: #34d399; }
+  .drift-bar .chip-warn { background: rgba(245,158,11,0.12); color: #f59e0b; }
+  .drift-bar .chip-err { background: rgba(239,68,68,0.12); color: #ef4444; }
+
+  /* List row */
+  .list-row { display: grid; grid-template-columns: 40px 1fr 120px 100px 80px; align-items: center; padding: 10px 12px; border-radius: 6px; transition: background 0.15s; cursor: pointer; gap: 12px; }
+  .list-row:hover { background: rgba(255,255,255,0.03); }
+  .list-row .row-icon { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: #111128; }
+  .list-row .row-name { font-size: 13px; font-weight: 600; color: #fff; }
+  .list-row .row-desc { font-size: 11px; color: #888; }
+  .list-row .row-path { font-size: 11px; color: #555; font-family: 'Cascadia Code', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list-row .row-status { font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px; text-align: center; }
+  .list-row .row-action { font-size: 11px; color: #10B981; font-weight: 600; opacity: 0; transition: opacity 0.15s; cursor: pointer; text-align: center; }
+  .list-row:hover .row-action { opacity: 1; }
+  .list-header { display: grid; grid-template-columns: 40px 1fr 120px 100px 80px; padding: 6px 12px; gap: 12px; border-bottom: 1px solid #2a2a3e; margin-bottom: 4px; }
+  .list-header span { font-size: 10px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* ===== DIRECTION C: Card-Heavy with Categories ===== */
+  .dir-c-layout { display: grid; grid-template-columns: 56px 1fr; min-height: 600px; }
+
+  .category-tabs { display: flex; gap: 4px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #2a2a3e; }
+  .cat-tab { padding: 6px 16px; border-radius: 6px; font-size: 12px; color: #888; cursor: pointer; border: none; background: none; font-family: inherit; transition: all 0.15s; }
+  .cat-tab:hover { color: #e0e0e0; background: rgba(255,255,255,0.05); }
+  .cat-tab.active { color: #10B981; background: rgba(16,185,129,0.1); }
+
+  /* Large cards */
+  .card-large { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 12px; overflow: hidden; transition: all 0.2s; cursor: pointer; }
+  .card-large:hover { border-color: #3a3a4e; transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+  .card-large .card-hero { height: 80px; background: linear-gradient(135deg, #111128, #1a1a2e); display: flex; align-items: center; justify-content: center; font-size: 36px; }
+  .card-large .card-body { padding: 14px 16px; }
+  .card-large .card-body .name { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 2px; }
+  .card-large .card-body .desc { font-size: 11px; color: #888; margin-bottom: 10px; }
+  .card-large .card-body .bottom { display: flex; align-items: center; justify-content: space-between; }
+  .card-large .card-body .btn-sm { padding: 5px 14px; border-radius: 5px; font-size: 11px; font-weight: 600; border: none; cursor: pointer; font-family: inherit; }
+  .btn-accent { background: #10B981; color: #fff; }
+  .btn-ghost { background: transparent; color: #10B981; border: 1px solid rgba(16,185,129,0.3) !important; }
+
+  /* Search bar */
+  .search-bar { display: flex; align-items: center; gap: 8px; background: #16162a; border: 1px solid #2a2a3e; border-radius: 8px; padding: 8px 14px; margin-bottom: 20px; max-width: 400px; }
+  .search-bar input { background: none; border: none; color: #e0e0e0; font-size: 13px; font-family: inherit; outline: none; flex: 1; }
+  .search-bar .search-icon { color: #555; font-size: 14px; }
+
+  /* ===== DIRECTION D: Wizard View ===== */
+  .dir-d-layout { min-height: 600px; display: flex; flex-direction: column; }
+
+  .wizard-header { padding: 24px 32px; background: #111128; border-bottom: 1px solid #2a2a3e; }
+  .wizard-header .wizard-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .wizard-header .wizard-logo .logo-icon { width: 28px; height: 28px; border-radius: 6px; background: #10B981; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .wizard-header .wizard-logo span { font-size: 15px; font-weight: 700; color: #fff; }
+
+  /* Stepper */
+  .stepper { display: flex; align-items: center; gap: 0; }
+  .step { display: flex; align-items: center; gap: 0; }
+  .step-circle { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; border: 2px solid #2a2a3e; color: #555; transition: all 0.3s; }
+  .step-circle.done { background: #10B981; border-color: #10B981; color: #fff; }
+  .step-circle.current { border-color: #10B981; color: #10B981; }
+  .step-label { font-size: 11px; color: #555; margin-left: 6px; margin-right: 16px; }
+  .step-label.done { color: #888; }
+  .step-label.current { color: #10B981; }
+  .step-line { width: 40px; height: 2px; background: #2a2a3e; margin: 0 4px; }
+  .step-line.done { background: #10B981; }
+
+  .wizard-content { flex: 1; padding: 32px; overflow-y: auto; }
+  .wizard-content h2 { font-size: 22px; font-weight: 600; color: #fff; margin-bottom: 6px; }
+  .wizard-content .subtitle { font-size: 13px; color: #888; margin-bottom: 24px; }
+
+  /* Profile cards for wizard */
+  .profile-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; max-width: 900px; }
+  .profile-card { border-radius: 12px; overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: all 0.25s; position: relative; }
+  .profile-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+  .profile-card.selected { border-color: #10B981; }
+  .profile-card .card-bg { height: 140px; background-size: cover; background-position: center; position: relative; }
+  .profile-card .card-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, rgba(0,0,0,0.1) 100%); }
+  .profile-card .card-label { position: absolute; bottom: 0; left: 0; right: 0; padding: 14px 16px; z-index: 1; }
+  .profile-card .card-label .pname { font-size: 15px; font-weight: 700; color: #fff; }
+  .profile-card .card-label .pdesc { font-size: 11px; color: #aaa; margin-top: 2px; }
+  .profile-card .check { position: absolute; top: 10px; right: 10px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; z-index: 1; transition: all 0.2s; }
+  .profile-card.selected .check { background: #10B981; border-color: #10B981; }
+
+  .wizard-footer { padding: 16px 32px; background: #111128; border-top: 1px solid #2a2a3e; display: flex; justify-content: space-between; align-items: center; }
+  .wizard-footer .btn { padding: 10px 24px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; border: none; transition: all 0.15s; }
+  .btn-back { background: transparent; color: #888; }
+  .btn-back:hover { color: #e0e0e0; }
+  .btn-next { background: #10B981; color: #fff; }
+  .btn-next:hover { background: #059669; }
+  .btn-next:disabled { background: #2a2a3e; color: #555; cursor: not-allowed; }
+
+  /* Comparison section */
+  .comparison { padding: 32px; background: #0d0d1a; }
+  .comparison h3 { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 16px; }
+  .comparison table { width: 100%; border-collapse: collapse; }
+  .comparison th, .comparison td { text-align: left; padding: 10px 16px; font-size: 13px; border-bottom: 1px solid #1a1a2e; }
+  .comparison th { color: #888; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .comparison td { color: #e0e0e0; }
+  .comparison .label { color: #888; }
+</style>
+</head>
+<body>
+
+<nav class="top-nav">
+  <h1>Perch Desktop — Design Directions</h1>
+  <div class="tabs">
+    <button class="tab active" onclick="show('a')">A: Hero Dashboard</button>
+    <button class="tab" onclick="show('b')">B: Compact List</button>
+    <button class="tab" onclick="show('c')">C: Card Gallery</button>
+    <button class="tab" onclick="show('d')">D: Wizard Flow</button>
+    <button class="tab" onclick="show('compare')">Compare</button>
+  </div>
+</nav>
+
+<div class="content">
+
+<!-- ========== DIRECTION A: Hero Dashboard ========== -->
+<div id="dir-a" class="direction active">
+  <div class="direction-header">
+    <h2>Direction A: Hero Dashboard</h2>
+    <p>Large hero banner with drift stats front and center. Icon-only sidebar. Cards below grouped by status priority (attention first, then OK). Armoury Crate-inspired gradient hero.</p>
+    <div class="tags"><span class="tag">Bold</span><span class="tag">Status-focused</span><span class="tag">Visual impact</span></div>
+  </div>
+  <div class="mockup-frame">
+    <div class="mockup-titlebar"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div><span>Perch Desktop</span></div>
+    <div class="dir-a-layout">
+      <div class="sidebar-narrow">
+        <div class="logo">🐦</div>
+        <div class="item active">🏠</div>
+        <div class="item">📄</div>
+        <div class="item">📦</div>
+        <div class="item">🔧</div>
+        <div class="spacer"></div>
+        <div class="item">⚙️</div>
+      </div>
+      <div class="main-area">
+        <div class="hero-banner">
+          <h2>Your Config Health</h2>
+          <div class="hero-stats">
+            <div class="hero-stat ok"><span class="number">47</span><span class="label">All good</span></div>
+            <div class="hero-stat warn"><span class="number">2</span><span class="label">Need attention</span></div>
+            <div class="hero-stat err"><span class="number">1</span><span class="label">Broken</span></div>
+          </div>
+        </div>
+
+        <div class="section-head">Needs Attention <span class="count">3 items</span></div>
+        <div class="card-grid-3">
+          <div class="app-card">
+            <div class="card-top"><div class="app-icon">💻</div><div class="app-info"><div class="app-name">VS Code</div><div class="app-desc">Settings & keybindings</div></div></div>
+            <div class="status s-warn">File exists, not linked</div>
+            <button class="card-action">Link now</button>
+          </div>
+          <div class="app-card">
+            <div class="card-top"><div class="app-icon">📟</div><div class="app-info"><div class="app-name">Windows Terminal</div><div class="app-desc">settings.json</div></div></div>
+            <div class="status s-err">Symlink broken</div>
+            <button class="card-action">Fix</button>
+          </div>
+          <div class="app-card">
+            <div class="card-top"><div class="app-icon">🔌</div><div class="app-info"><div class="app-name">PowerShell</div><div class="app-desc">Profile script</div></div></div>
+            <div class="status s-warn">Not linked</div>
+            <button class="card-action">Link now</button>
+          </div>
+        </div>
+
+        <div class="section-head">All Good <span class="count">47 items</span></div>
+        <div class="card-grid-4">
+          <div class="app-card"><div class="card-top"><div class="app-icon">🔧</div><div class="app-info"><div class="app-name">Git</div><div class="app-desc">.gitconfig</div></div></div><div class="status s-ok">Linked</div></div>
+          <div class="app-card"><div class="card-top"><div class="app-icon">📝</div><div class="app-info"><div class="app-name">Vim</div><div class="app-desc">.vimrc</div></div></div><div class="status s-ok">Linked</div></div>
+          <div class="app-card"><div class="card-top"><div class="app-icon">🐍</div><div class="app-info"><div class="app-name">Python</div><div class="app-desc">pip.ini</div></div></div><div class="status s-ok">Linked</div></div>
+          <div class="app-card"><div class="card-top"><div class="app-icon">📦</div><div class="app-info"><div class="app-name">npm</div><div class="app-desc">.npmrc</div></div></div><div class="status s-ok">Linked</div></div>
+          <div class="app-card"><div class="card-top"><div class="app-icon">🎨</div><div class="app-info"><div class="app-name">Greenshot</div><div class="app-desc">Preferences</div></div></div><div class="status s-ok">Linked</div></div>
+          <div class="app-card"><div class="card-top"><div class="app-icon">🔑</div><div class="app-info"><div class="app-name">SSH</div><div class="app-desc">config</div></div></div><div class="status s-ok">Linked</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== DIRECTION B: Compact List ========== -->
+<div id="dir-b" class="direction">
+  <div class="direction-header">
+    <h2>Direction B: Compact List Dashboard</h2>
+    <p>Expanded sidebar with labels and sections. Table/list layout for maximum information density. Drift summary as a compact bar. Developer-oriented — shows file paths, more data per row.</p>
+    <div class="tags"><span class="tag">Dense</span><span class="tag">Data-rich</span><span class="tag">Developer-first</span></div>
+  </div>
+  <div class="mockup-frame">
+    <div class="mockup-titlebar"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div><span>Perch Desktop</span></div>
+    <div class="dir-b-layout">
+      <div class="sidebar-wide">
+        <div class="logo-area">
+          <div class="logo-icon">🐦</div>
+          <div class="logo-text">Perch</div>
+        </div>
+        <div class="nav-item active"><span class="icon">🏠</span> Dashboard</div>
+        <div class="nav-section">Manage</div>
+        <div class="nav-item"><span class="icon">📄</span> Dotfiles</div>
+        <div class="nav-item"><span class="icon">📦</span> Applications</div>
+        <div class="nav-item"><span class="icon">🔧</span> System Tweaks</div>
+        <div class="nav-section">Tools</div>
+        <div class="nav-item"><span class="icon">🔄</span> Run Wizard</div>
+        <div class="nav-item"><span class="icon">⚙️</span> Settings</div>
+      </div>
+      <div class="main-area">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <h2 style="font-size: 18px; font-weight: 600; color: #fff;">Dashboard</h2>
+          <button class="btn-sm btn-accent" style="padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; color: #fff; background: #10B981;">Deploy All</button>
+        </div>
+
+        <div class="drift-bar">
+          <span style="font-size: 12px; color: #888;">Status:</span>
+          <span class="drift-chip chip-ok">47 Linked</span>
+          <span class="drift-chip chip-warn">2 Attention</span>
+          <span class="drift-chip chip-err">1 Broken</span>
+        </div>
+
+        <div class="section-head">Needs Attention</div>
+        <div class="list-header">
+          <span></span><span>Name</span><span>Path</span><span>Status</span><span></span>
+        </div>
+        <div class="list-row"><div class="row-icon">💻</div><div><div class="row-name">VS Code</div><div class="row-desc">Settings & keybindings</div></div><div class="row-path">%AppData%\Code\User\</div><div class="row-status s-warn">Not linked</div><div class="row-action">Link</div></div>
+        <div class="list-row"><div class="row-icon">📟</div><div><div class="row-name">Windows Terminal</div><div class="row-desc">settings.json</div></div><div class="row-path">%LocalAppData%\Packages\...</div><div class="row-status s-err">Broken</div><div class="row-action">Fix</div></div>
+        <div class="list-row"><div class="row-icon">🔌</div><div><div class="row-name">PowerShell</div><div class="row-desc">Profile script</div></div><div class="row-path">$HOME\Documents\PowerShell\</div><div class="row-status s-warn">Not linked</div><div class="row-action">Link</div></div>
+
+        <div class="section-head" style="margin-top: 20px;">All Good <span class="count">Showing 6 of 47</span></div>
+        <div class="list-header">
+          <span></span><span>Name</span><span>Path</span><span>Status</span><span></span>
+        </div>
+        <div class="list-row"><div class="row-icon">🔧</div><div><div class="row-name">Git</div><div class="row-desc">.gitconfig</div></div><div class="row-path">%UserProfile%\.gitconfig</div><div class="row-status s-ok">Linked</div><div class="row-action">Details</div></div>
+        <div class="list-row"><div class="row-icon">📝</div><div><div class="row-name">Vim</div><div class="row-desc">.vimrc</div></div><div class="row-path">%UserProfile%\.vimrc</div><div class="row-status s-ok">Linked</div><div class="row-action">Details</div></div>
+        <div class="list-row"><div class="row-icon">🐍</div><div><div class="row-name">Python</div><div class="row-desc">pip.ini</div></div><div class="row-path">%AppData%\pip\pip.ini</div><div class="row-status s-ok">Linked</div><div class="row-action">Details</div></div>
+        <div class="list-row"><div class="row-icon">📦</div><div><div class="row-name">npm</div><div class="row-desc">.npmrc</div></div><div class="row-path">%UserProfile%\.npmrc</div><div class="row-status s-ok">Linked</div><div class="row-action">Details</div></div>
+        <div class="list-row"><div class="row-icon">🎨</div><div><div class="row-name">Greenshot</div><div class="row-desc">Preferences</div></div><div class="row-path">%AppData%\Greenshot\</div><div class="row-status s-ok">Linked</div><div class="row-action">Details</div></div>
+        <div class="list-row"><div class="row-icon">🔑</div><div><div class="row-name">SSH</div><div class="row-desc">config</div></div><div class="row-path">%UserProfile%\.ssh\config</div><div class="row-status s-ok">Linked</div><div class="row-action">Details</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== DIRECTION C: Card Gallery ========== -->
+<div id="dir-c" class="direction">
+  <div class="direction-header">
+    <h2>Direction C: Card Gallery (Apps View)</h2>
+    <p>App-store-like browsing experience. Larger cards with hero areas. Category tabs for filtering. Search bar prominent. Three tiers: detected on top, suggested, then search. This is the wizard's apps step AND the dashboard's apps view.</p>
+    <div class="tags"><span class="tag">Visual</span><span class="tag">Browsable</span><span class="tag">App-store feel</span></div>
+  </div>
+  <div class="mockup-frame">
+    <div class="mockup-titlebar"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div><span>Perch Desktop</span></div>
+    <div class="dir-c-layout">
+      <div class="sidebar-narrow">
+        <div class="logo">🐦</div>
+        <div class="item">🏠</div>
+        <div class="item">📄</div>
+        <div class="item active">📦</div>
+        <div class="item">🔧</div>
+        <div class="spacer"></div>
+        <div class="item">⚙️</div>
+      </div>
+      <div class="main-area">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+          <h2 style="font-size: 18px; font-weight: 600; color: #fff;">Applications</h2>
+          <div class="search-bar"><span class="search-icon">🔍</span><input type="text" placeholder="Search apps..."></div>
+        </div>
+
+        <div class="category-tabs">
+          <button class="cat-tab active">All</button>
+          <button class="cat-tab">Editors</button>
+          <button class="cat-tab">Terminals</button>
+          <button class="cat-tab">Dev Tools</button>
+          <button class="cat-tab">System</button>
+          <button class="cat-tab">Media</button>
+        </div>
+
+        <div class="section-head">Found on Your System <span class="count">6 apps detected</span></div>
+        <div class="card-grid-3">
+          <div class="card-large"><div class="card-hero" style="background: linear-gradient(135deg, #1e3050, #0d1b2a);">💻</div><div class="card-body"><div class="name">VS Code</div><div class="desc">Editor settings, keybindings, snippets</div><div class="bottom"><span class="status s-warn">Not linked</span><button class="btn-sm btn-accent">Link</button></div></div></div>
+          <div class="card-large"><div class="card-hero" style="background: linear-gradient(135deg, #1a2e1a, #0d1a0d);">📟</div><div class="card-body"><div class="name">Windows Terminal</div><div class="desc">Profiles, color schemes, settings</div><div class="bottom"><span class="status s-ok">Linked</span><button class="btn-sm btn-ghost">Details</button></div></div></div>
+          <div class="card-large"><div class="card-hero" style="background: linear-gradient(135deg, #2e1a2e, #1a0d1a);">🔌</div><div class="card-body"><div class="name">PowerShell</div><div class="desc">Profile, modules, PSReadLine</div><div class="bottom"><span class="status s-ok">Linked</span><button class="btn-sm btn-ghost">Details</button></div></div></div>
+          <div class="card-large"><div class="card-hero" style="background: linear-gradient(135deg, #2e2a1a, #1a150d);">🔧</div><div class="card-body"><div class="name">Git</div><div class="desc">.gitconfig, aliases, hooks</div><div class="bottom"><span class="status s-ok">Linked</span><button class="btn-sm btn-ghost">Details</button></div></div></div>
+          <div class="card-large"><div class="card-hero" style="background: linear-gradient(135deg, #1a1a3e, #0d0d2e);">📝</div><div class="card-body"><div class="name">Vim</div><div class="desc">.vimrc, plugins</div><div class="bottom"><span class="status s-ok">Linked</span><button class="btn-sm btn-ghost">Details</button></div></div></div>
+          <div class="card-large"><div class="card-hero" style="background: linear-gradient(135deg, #3e2a1a, #2e1a0d);">🐍</div><div class="card-body"><div class="name">Python</div><div class="desc">pip.ini, virtual env config</div><div class="bottom"><span class="status s-ok">Linked</span><button class="btn-sm btn-ghost">Details</button></div></div></div>
+        </div>
+
+        <div class="section-head">Suggested For You <span class="count">Based on your profile</span></div>
+        <div class="card-grid-3">
+          <div class="card-large" style="opacity: 0.7;"><div class="card-hero" style="background: linear-gradient(135deg, #1a2a3e, #0d1a2e);">🐳</div><div class="card-body"><div class="name">Docker</div><div class="desc">daemon.json, contexts</div><div class="bottom"><span class="status s-info">Not installed</span><button class="btn-sm btn-ghost">Add</button></div></div></div>
+          <div class="card-large" style="opacity: 0.7;"><div class="card-hero" style="background: linear-gradient(135deg, #2a1a1a, #1a0d0d);">📮</div><div class="card-body"><div class="name">Postman</div><div class="desc">Collections, environments</div><div class="bottom"><span class="status s-info">Not installed</span><button class="btn-sm btn-ghost">Add</button></div></div></div>
+          <div class="card-large" style="opacity: 0.7;"><div class="card-hero" style="background: linear-gradient(135deg, #1a3e3e, #0d2e2e);">🔐</div><div class="card-body"><div class="name">GPG</div><div class="desc">gpg.conf, keys config</div><div class="bottom"><span class="status s-info">Not installed</span><button class="btn-sm btn-ghost">Add</button></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== DIRECTION D: Wizard ========== -->
+<div id="dir-d" class="direction">
+  <div class="direction-header">
+    <h2>Direction D: Wizard — Profile Selection</h2>
+    <p>The first-run wizard experience. Step indicator at top, aspirational profile cards with hero images (Midjourney placeholders). Multi-select profiles. Clean footer with navigation. This is most users' only interaction with Perch.</p>
+    <div class="tags"><span class="tag">First impression</span><span class="tag">Aspirational</span><span class="tag">Multi-select</span></div>
+  </div>
+  <div class="mockup-frame">
+    <div class="mockup-titlebar"><div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div><span>Perch Desktop — Setup</span></div>
+    <div class="dir-d-layout">
+      <div class="wizard-header">
+        <div class="wizard-logo"><div class="logo-icon">🐦</div><span>Perch</span></div>
+        <div class="stepper">
+          <div class="step"><div class="step-circle current">1</div><span class="step-label current">Profile</span></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-circle">2</div><span class="step-label">Dotfiles</span></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-circle">3</div><span class="step-label">Apps</span></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-circle">4</div><span class="step-label">System</span></div>
+          <div class="step-line"></div>
+          <div class="step"><div class="step-circle">5</div><span class="step-label">Deploy</span></div>
+        </div>
+      </div>
+
+      <div class="wizard-content">
+        <h2>Who are you?</h2>
+        <p class="subtitle">Select all that apply. This helps us show you relevant configurations.</p>
+
+        <div class="profile-grid">
+          <div class="profile-card selected" onclick="this.classList.toggle('selected')">
+            <div class="check">✓</div>
+            <div class="card-bg" style="background: linear-gradient(135deg, #0d2040 0%, #1a3060 50%, #0d1020 100%);"></div>
+            <div class="card-label"><div class="pname">Developer</div><div class="pdesc">Code, dotfiles, dev tools</div></div>
+          </div>
+          <div class="profile-card selected" onclick="this.classList.toggle('selected')">
+            <div class="check">✓</div>
+            <div class="card-bg" style="background: linear-gradient(135deg, #201030 0%, #302050 50%, #100820 100%);"></div>
+            <div class="card-label"><div class="pname">Power User</div><div class="pdesc">System tweaks, automation</div></div>
+          </div>
+          <div class="profile-card" onclick="this.classList.toggle('selected')">
+            <div class="check"></div>
+            <div class="card-bg" style="background: linear-gradient(135deg, #301010 0%, #502020 50%, #200808 100%);"></div>
+            <div class="card-label"><div class="pname">Gamer</div><div class="pdesc">Gaming configs, RGB, mods</div></div>
+          </div>
+          <div class="profile-card" onclick="this.classList.toggle('selected')">
+            <div class="check"></div>
+            <div class="card-bg" style="background: linear-gradient(135deg, #102010 0%, #1a3020 50%, #081a08 100%);"></div>
+            <div class="card-label"><div class="pname">Casual</div><div class="pdesc">App settings, preferences</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wizard-footer">
+        <button class="btn btn-back" disabled>Back</button>
+        <span style="font-size: 12px; color: #555;">2 profiles selected</span>
+        <button class="btn btn-next">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== COMPARE ========== -->
+<div id="dir-compare" class="direction">
+  <div class="direction-header">
+    <h2>Comparison</h2>
+    <p>Side-by-side evaluation of design directions across key criteria.</p>
+  </div>
+  <div class="comparison" style="margin: 0 32px;">
+    <table>
+      <thead>
+        <tr><th>Criteria</th><th>A: Hero Dashboard</th><th>B: Compact List</th><th>C: Card Gallery</th><th>D: Wizard</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="label">Primary use</td><td>Dashboard home</td><td>Dashboard home</td><td>Apps/Dotfiles view</td><td>First-run onboarding</td></tr>
+        <tr><td class="label">Sidebar</td><td>Icon-only (56px)</td><td>Expanded + labels (200px)</td><td>Icon-only (56px)</td><td>No sidebar (wizard mode)</td></tr>
+        <tr><td class="label">Information density</td><td>Medium — cards</td><td>High — table rows</td><td>Low — large cards</td><td>Low — focused choice</td></tr>
+        <tr><td class="label">Visual impact</td><td>High (hero banner)</td><td>Low (data-first)</td><td>High (card heroes)</td><td>Highest (profile art)</td></tr>
+        <tr><td class="label">Best for</td><td>Drift overview</td><td>Power users, many modules</td><td>Browsing & discovery</td><td>Profile selection</td></tr>
+        <tr><td class="label">Status visibility</td><td>Hero stats + card badges</td><td>Chips + row badges</td><td>Card badges + buttons</td><td>N/A (pre-deploy)</td></tr>
+        <tr><td class="label">Armoury Crate feel</td><td>Strong</td><td>Weak</td><td>Medium</td><td>Medium</td></tr>
+        <tr><td class="label">Recommendation</td><td style="color: #10B981;">Dashboard home screen</td><td style="color: #888;">Optional view toggle</td><td style="color: #10B981;">Apps & Dotfiles view</td><td style="color: #10B981;">Wizard step 1</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top: 20px; font-size: 13px; color: #888;">
+      <strong style="color: #e0e0e0;">Recommendation:</strong> These are not competing directions — they're different views within one app.
+      <strong style="color: #10B981;">A</strong> is the dashboard home.
+      <strong style="color: #10B981;">C</strong> is the apps/dotfiles browsing view (used in both wizard and dashboard).
+      <strong style="color: #10B981;">D</strong> is the wizard shell.
+      <strong style="color: #888;">B</strong> could be an optional list/compact toggle for users who prefer density.
+    </p>
+  </div>
+</div>
+
+</div>
+
+<script>
+function show(id) {
+  document.querySelectorAll('.direction').forEach(d => d.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('dir-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+
+</body>
+</html>

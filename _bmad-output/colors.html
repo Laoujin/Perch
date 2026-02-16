@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perch Desktop — Accent Color Explorer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 32px; }
+  h1 { font-size: 28px; font-weight: 600; margin-bottom: 8px; color: #fff; }
+  .subtitle { font-size: 14px; color: #888; margin-bottom: 40px; }
+
+  .theme-section { margin-bottom: 48px; border: 1px solid #2a2a3e; border-radius: 12px; padding: 24px; background: #16162a; }
+  .theme-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+  .theme-name { font-size: 20px; font-weight: 600; }
+  .theme-hex { font-size: 13px; color: #888; font-family: 'Cascadia Code', 'Consolas', monospace; }
+  .accent-dot { width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Mini dashboard mockup */
+  .mockup { display: grid; grid-template-columns: 56px 1fr; gap: 0; border-radius: 8px; overflow: hidden; background: #0d0d1a; height: 380px; }
+
+  .sidebar { background: #111128; padding: 12px 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .sidebar .logo { width: 32px; height: 32px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .sidebar .nav-item { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: background 0.2s; }
+  .sidebar .nav-item:hover { background: rgba(255,255,255,0.08); }
+  .sidebar .nav-item.active { background: rgba(255,255,255,0.12); }
+
+  .main-content { padding: 20px; overflow: hidden; }
+  .main-content h2 { font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .main-content .drift-summary { font-size: 13px; margin-bottom: 16px; }
+
+  .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .card { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 8px; padding: 12px; position: relative; overflow: hidden; }
+  .card-icon { font-size: 24px; margin-bottom: 8px; }
+  .card-name { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 2px; }
+  .card-desc { font-size: 11px; color: #888; margin-bottom: 8px; }
+  .card-status { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; display: inline-block; }
+  .status-ok { background: rgba(16,185,129,0.15); color: #10b981; }
+  .status-warn { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .status-error { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .status-info { background: rgba(59,130,246,0.15); color: #3b82f6; }
+
+  .deploy-btn { margin-top: 16px; padding: 8px 20px; border: none; border-radius: 6px; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+  /* Profile cards row */
+  .profile-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 24px; }
+  .profile-card { border-radius: 8px; padding: 16px; text-align: center; cursor: pointer; border: 2px solid transparent; transition: border-color 0.2s; position: relative; overflow: hidden; }
+  .profile-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%); }
+  .profile-card > * { position: relative; z-index: 1; }
+  .profile-card .icon { font-size: 28px; margin-bottom: 8px; }
+  .profile-card .label { font-size: 12px; font-weight: 600; color: #fff; }
+  .profile-card.selected { border-width: 2px; }
+
+  /* Swatch row */
+  .swatches { display: flex; gap: 8px; margin-top: 16px; }
+  .swatch { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; font-weight: 600; }
+  .swatch-label { font-size: 10px; color: #888; margin-top: 4px; text-align: center; }
+  .swatch-group { display: flex; flex-direction: column; align-items: center; }
+</style>
+</head>
+<body>
+
+<h1>Perch Desktop — Accent Color Explorer</h1>
+<p class="subtitle">Compare how each accent color feels in a dark Fluent theme context</p>
+
+<!-- TEAL/CYAN -->
+<div class="theme-section">
+  <div class="theme-header">
+    <div class="accent-dot" style="background: #0EA5E9;"></div>
+    <div>
+      <div class="theme-name">Teal / Cyan</div>
+      <div class="theme-hex">#0EA5E9 — Tech-forward, clean, GitHub-adjacent</div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="sidebar">
+      <div class="logo" style="background: #0EA5E9;">🐦</div>
+      <div class="nav-item active" style="color: #0EA5E9;">🏠</div>
+      <div class="nav-item">📄</div>
+      <div class="nav-item">📦</div>
+      <div class="nav-item">⚙️</div>
+    </div>
+    <div class="main-content">
+      <h2>Dashboard</h2>
+      <div class="drift-summary"><span style="color: #10b981;">47 OK</span> · <span style="color: #f59e0b;">2 need attention</span> · <span style="color: #ef4444;">1 broken</span></div>
+      <div class="card-grid">
+        <div class="card"><div class="card-icon">🔧</div><div class="card-name">Git</div><div class="card-desc">.gitconfig</div><div class="card-status status-ok">Linked</div></div>
+        <div class="card"><div class="card-icon">💻</div><div class="card-name">VS Code</div><div class="card-desc">Settings & extensions</div><div class="card-status status-warn">Not linked</div></div>
+        <div class="card"><div class="card-icon">📟</div><div class="card-name">Terminal</div><div class="card-desc">Windows Terminal</div><div class="card-status status-error">Broken</div></div>
+        <div class="card"><div class="card-icon">🐍</div><div class="card-name">Python</div><div class="card-desc">pip.ini</div><div class="card-status status-ok">Linked</div></div>
+        <div class="card"><div class="card-icon">📝</div><div class="card-name">Vim</div><div class="card-desc">.vimrc</div><div class="card-status status-ok">Linked</div></div>
+        <div class="card"><div class="card-icon">🎵</div><div class="card-name">Spotify</div><div class="card-desc">Preferences</div><div class="card-status status-info">Not installed</div></div>
+      </div>
+      <button class="deploy-btn" style="background: #0EA5E9;">Deploy 2 changes</button>
+    </div>
+  </div>
+  <div class="profile-cards">
+    <div class="profile-card selected" style="background: linear-gradient(135deg, #1e3a5f, #0d1b2a); border-color: #0EA5E9;"><div class="icon">👨‍💻</div><div class="label">Developer</div></div>
+    <div class="profile-card" style="background: linear-gradient(135deg, #2a1a3e, #1a0d2e);"><div class="icon">⚡</div><div class="label">Power User</div></div>
+    <div class="profile-card" style="background: linear-gradient(135deg, #3e1a1a, #2e0d0d);"><div class="icon">🎮</div><div class="label">Gamer</div></div>
+    <div class="profile-card" style="background: linear-gradient(135deg, #1a3e2a, #0d2e1a);"><div class="icon">🌿</div><div class="label">Casual</div></div>
+  </div>
+  <div class="swatches">
+    <div class="swatch-group"><div class="swatch" style="background: #0EA5E9;">Acc</div><div class="swatch-label">Accent</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #0284C7;">Hov</div><div class="swatch-label">Hover</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #0369A1;">Prs</div><div class="swatch-label">Pressed</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: rgba(14,165,233,0.15); color: #0EA5E9;">Sub</div><div class="swatch-label">Subtle</div></div>
+    <div class="swatch-group" style="margin-left: 16px;"><div class="swatch" style="background: #10b981;">✓</div><div class="swatch-label">OK</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #f59e0b;">!</div><div class="swatch-label">Warn</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #ef4444;">✕</div><div class="swatch-label">Error</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #3b82f6;">i</div><div class="swatch-label">Info</div></div>
+  </div>
+</div>
+
+<!-- WARM AMBER -->
+<div class="theme-section">
+  <div class="theme-header">
+    <div class="accent-dot" style="background: #F59E0B;"></div>
+    <div>
+      <div class="theme-name">Warm Amber / Gold</div>
+      <div class="theme-hex">#F59E0B — Nature-inspired, distinctive, bird's eye</div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="sidebar">
+      <div class="logo" style="background: #F59E0B; color: #1a1a2e;">🐦</div>
+      <div class="nav-item active" style="color: #F59E0B;">🏠</div>
+      <div class="nav-item">📄</div>
+      <div class="nav-item">📦</div>
+      <div class="nav-item">⚙️</div>
+    </div>
+    <div class="main-content">
+      <h2>Dashboard</h2>
+      <div class="drift-summary"><span style="color: #10b981;">47 OK</span> · <span style="color: #f59e0b;">2 need attention</span> · <span style="color: #ef4444;">1 broken</span></div>
+      <div class="card-grid">
+        <div class="card"><div class="card-icon">🔧</div><div class="card-name">Git</div><div class="card-desc">.gitconfig</div><div class="card-status status-ok">Linked</div></div>
+        <div class="card"><div class="card-icon">💻</div><div class="card-name">VS Code</div><div class="card-desc">Settings & extensions</div><div class="card-status status-warn">Not linked</div></div>
+        <div class="card"><div class="card-icon">📟</div><div class="card-name">Terminal</div><div class="card-desc">Windows Terminal</div><div class="card-status status-error">Broken</div></div>
+        <div class="card"><div class="card-icon">🐍</div><div class="card-name">Python</div><div class="card-desc">pip.ini</div><div class="card-status status-ok">Linked</div></div>
+        <div class="card"><div class="card-icon">📝</div><div class="card-name">Vim</div><div class="card-desc">.vimrc</div><div class="card-status status-ok">Linked</div></div>
+        <div class="card"><div class="card-icon">🎵</div><div class="card-name">Spotify</div><div class="card-desc">Preferences</div><div class="card-status status-info">Not installed</div></div>
+      </div>
+      <button class="deploy-btn" style="background: #F59E0B; color: #1a1a2e;">Deploy 2 changes</button>
+    </div>
+  </div>
+  <div class="profile-cards">
+    <div class="profile-card selected" style="background: linear-gradient(135deg, #3e2a0d, #2e1a00); border-color: #F59E0B;"><div class="icon">👨‍💻</div><div class="label">Developer</div></div>
+    <div class="profile-card" style="background: linear-gradient(135deg, #2a1a3e, #1a0d2e);"><div class="icon">⚡</div><div class="label">Power User</div></div>
+    <div class="profile-card" style="background: linear-gradient(135deg, #3e1a1a, #2e0d0d);"><div class="icon">🎮</div><div class="label">Gamer</div></div>
+    <div class="profile-card" style="background: linear-gradient(135deg, #1a3e2a, #0d2e1a);"><div class="icon">🌿</div><div class="label">Casual</div></div>
+  </div>
+  <div class="swatches">
+    <div class="swatch-group"><div class="swatch" style="background: #F59E0B; color: #1a1a2e;">Acc</div><div class="swatch-label">Accent</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #D97706; color: #1a1a2e;">Hov</div><div class="swatch-label">Hover</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #B45309;">Prs</div><div class="swatch-label">Pressed</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: rgba(245,158,11,0.15); color: #F59E0B;">Sub</div><div class="swatch-label">Subtle</div></div>
+    <div class="swatch-group" style="margin-left: 16px;"><div class="swatch" style="background: #10b981;">✓</div><div class="swatch-label">OK</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #fb923c;">!</div><div class="swatch-label">Warn*</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #ef4444;">✕</div><div class="swatch-label">Error</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #3b82f6;">i</div><div class="swatch-label">Info</div></div>
+  </div>
+  <p style="font-size: 11px; color: #888; margin-top: 8px;">⚠️ Note: Amber accent conflicts with yellow/warning status. Warning shifted to orange (#fb923c) to maintain distinction.</p>
+</div>
+
+<!-- FOREST GREEN -->
+<div class="theme-section">
+  <div class="theme-header">
+    <div class="accent-dot" style="background: #10B981;"></div>
+    <div>
+      <div class="theme-name">Forest Green</div>
+      <div class="theme-hex">#10B981 — Nature-direct, healthy, organic</div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="sidebar">
+      <div class="logo" style="background: #10B981; color: #1a1a2e;">🐦</div>
+      <div class="nav-item active" style="color: #10B981;">🏠</div>
+      <div class="nav-item">📄</div>
+      <div class="nav-item">📦</div>
+      <div class="nav-item">⚙️</div>
+    </div>
+    <div class="main-content">
+      <h2>Dashboard</h2>
+      <div class="drift-summary"><span style="color: #34d399;">47 OK</span> · <span style="color: #f59e0b;">2 need attention</span> · <span style="color: #ef4444;">1 broken</span></div>
+      <div class="card-grid">
+        <div class="card"><div class="card-icon">🔧</div><div class="card-name">Git</div><div class="card-desc">.gitconfig</div><div class="card-status status-ok">Linked</div></div>
+        <div class="card"><div class="card-icon">💻</div><div class="card-name">VS Code</div><div class="card-desc">Settings & extensions</div><div class="card-status status-warn">Not linked</div></div>
+        <div class="card"><div class="card-icon">📟</div><div class="card-name">Terminal</div><div class="card-desc">Windows Terminal</div><div class="card-status status-error">Broken</div></div>
+        <div class="card"><div class="card-icon">🐍</div><div class="card-name">Python</div><div class="card-desc">pip.ini</div><div class="card-status status-ok">Linked</div></div>
+        <div class="card"><div class="card-icon">📝</div><div class="card-name">Vim</div><div class="card-desc">.vimrc</div><div class="card-status status-ok">Linked</div></div>
+        <div class="card"><div class="card-icon">🎵</div><div class="card-name">Spotify</div><div class="card-desc">Preferences</div><div class="card-status status-info">Not installed</div></div>
+      </div>
+      <button class="deploy-btn" style="background: #10B981; color: #1a1a2e;">Deploy 2 changes</button>
+    </div>
+  </div>
+  <div class="profile-cards">
+    <div class="profile-card selected" style="background: linear-gradient(135deg, #0d3e2a, #002e1a); border-color: #10B981;"><div class="icon">👨‍💻</div><div class="label">Developer</div></div>
+    <div class="profile-card" style="background: linear-gradient(135deg, #2a1a3e, #1a0d2e);"><div class="icon">⚡</div><div class="label">Power User</div></div>
+    <div class="profile-card" style="background: linear-gradient(135deg, #3e1a1a, #2e0d0d);"><div class="icon">🎮</div><div class="label">Gamer</div></div>
+    <div class="profile-card" style="background: linear-gradient(135deg, #1a3e2a, #0d2e1a);"><div class="icon">🌿</div><div class="label">Casual</div></div>
+  </div>
+  <div class="swatches">
+    <div class="swatch-group"><div class="swatch" style="background: #10B981; color: #1a1a2e;">Acc</div><div class="swatch-label">Accent</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #059669;">Hov</div><div class="swatch-label">Hover</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #047857;">Prs</div><div class="swatch-label">Pressed</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: rgba(16,185,129,0.15); color: #10B981;">Sub</div><div class="swatch-label">Subtle</div></div>
+    <div class="swatch-group" style="margin-left: 16px;"><div class="swatch" style="background: #10b981;">✓</div><div class="swatch-label">OK*</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #f59e0b;">!</div><div class="swatch-label">Warn</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #ef4444;">✕</div><div class="swatch-label">Error</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #3b82f6;">i</div><div class="swatch-label">Info</div></div>
+  </div>
+  <p style="font-size: 11px; color: #888; margin-top: 8px;">⚠️ Note: Green accent is identical to OK/success status color — hard to distinguish interactive elements from status indicators.</p>
+</div>
+
+<!-- SOFT VIOLET -->
+<div class="theme-section">
+  <div class="theme-header">
+    <div class="accent-dot" style="background: #8B5CF6;"></div>
+    <div>
+      <div class="theme-name">Soft Violet</div>
+      <div class="theme-hex">#8B5CF6 — Distinctive, premium, zero status conflict</div>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="sidebar">
+      <div class="logo" style="background: #8B5CF6;">🐦</div>
+      <div class="nav-item active" style="color: #8B5CF6;">🏠</div>
+      <div class="nav-item">📄</div>
+      <div class="nav-item">📦</div>
+      <div class="nav-item">⚙️</div>
+    </div>
+    <div class="main-content">
+      <h2>Dashboard</h2>
+      <div class="drift-summary"><span style="color: #10b981;">47 OK</span> · <span style="color: #f59e0b;">2 need attention</span> · <span style="color: #ef4444;">1 broken</span></div>
+      <div class="card-grid">
+        <div class="card"><div class="card-icon">🔧</div><div class="card-name">Git</div><div class="card-desc">.gitconfig</div><div class="card-status status-ok">Linked</div></div>
+        <div class="card"><div class="card-icon">💻</div><div class="card-name">VS Code</div><div class="card-desc">Settings & extensions</div><div class="card-status status-warn">Not linked</div></div>
+        <div class="card"><div class="card-icon">📟</div><div class="card-name">Terminal</div><div class="card-desc">Windows Terminal</div><div class="card-status status-error">Broken</div></div>
+        <div class="card"><div class="card-icon">🐍</div><div class="card-name">Python</div><div class="card-desc">pip.ini</div><div class="card-status status-ok">Linked</div></div>
+        <div class="card"><div class="card-icon">📝</div><div class="card-name">Vim</div><div class="card-desc">.vimrc</div><div class="card-status status-ok">Linked</div></div>
+        <div class="card"><div class="card-icon">🎵</div><div class="card-name">Spotify</div><div class="card-desc">Preferences</div><div class="card-status status-info">Not installed</div></div>
+      </div>
+      <button class="deploy-btn" style="background: #8B5CF6;">Deploy 2 changes</button>
+    </div>
+  </div>
+  <div class="profile-cards">
+    <div class="profile-card selected" style="background: linear-gradient(135deg, #2a1a4e, #1a0d3e); border-color: #8B5CF6;"><div class="icon">👨‍💻</div><div class="label">Developer</div></div>
+    <div class="profile-card" style="background: linear-gradient(135deg, #1e3a5f, #0d1b2a);"><div class="icon">⚡</div><div class="label">Power User</div></div>
+    <div class="profile-card" style="background: linear-gradient(135deg, #3e1a1a, #2e0d0d);"><div class="icon">🎮</div><div class="label">Gamer</div></div>
+    <div class="profile-card" style="background: linear-gradient(135deg, #1a3e2a, #0d2e1a);"><div class="icon">🌿</div><div class="label">Casual</div></div>
+  </div>
+  <div class="swatches">
+    <div class="swatch-group"><div class="swatch" style="background: #8B5CF6;">Acc</div><div class="swatch-label">Accent</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #7C3AED;">Hov</div><div class="swatch-label">Hover</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #6D28D9;">Prs</div><div class="swatch-label">Pressed</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: rgba(139,92,246,0.15); color: #8B5CF6;">Sub</div><div class="swatch-label">Subtle</div></div>
+    <div class="swatch-group" style="margin-left: 16px;"><div class="swatch" style="background: #10b981;">✓</div><div class="swatch-label">OK</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #f59e0b;">!</div><div class="swatch-label">Warn</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #ef4444;">✕</div><div class="swatch-label">Error</div></div>
+    <div class="swatch-group"><div class="swatch" style="background: #3b82f6;">i</div><div class="swatch-label">Info</div></div>
+  </div>
+</div>
+
+</body>
+</html>
