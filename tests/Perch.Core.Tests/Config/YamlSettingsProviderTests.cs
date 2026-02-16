@@ -68,4 +68,50 @@ public sealed class YamlSettingsProviderTests
 
         Assert.That(result.ConfigRepoPath, Is.Null);
     }
+
+    [Test]
+    public async Task LoadAsync_NoGallerySettings_ReturnsDefaults()
+    {
+        PerchSettings result = await _provider.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.GalleryUrl, Is.EqualTo("https://laoujin.github.io/perch-gallery/"));
+            Assert.That(result.GalleryLocalPath, Is.Null);
+        });
+    }
+
+    [Test]
+    public async Task Roundtrip_GallerySettings_PreservesValues()
+    {
+        var settings = new PerchSettings
+        {
+            ConfigRepoPath = "C:\\config",
+            GalleryUrl = "https://custom.gallery/",
+            GalleryLocalPath = "C:\\gallery-local"
+        };
+
+        await _provider.SaveAsync(settings);
+        PerchSettings loaded = await _provider.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(loaded.GalleryUrl, Is.EqualTo("https://custom.gallery/"));
+            Assert.That(loaded.GalleryLocalPath, Is.EqualTo("C:\\gallery-local"));
+        });
+    }
+
+    [Test]
+    public async Task LoadAsync_GalleryLocalPathOnly_UrlKeepsDefault()
+    {
+        await File.WriteAllTextAsync(_settingsPath, "gallery-local-path: C:\\local-gallery\n");
+
+        PerchSettings result = await _provider.LoadAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.GalleryUrl, Is.EqualTo("https://laoujin.github.io/perch-gallery/"));
+            Assert.That(result.GalleryLocalPath, Is.EqualTo("C:\\local-gallery"));
+        });
+    }
 }
