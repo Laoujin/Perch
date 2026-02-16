@@ -1,0 +1,147 @@
+# generated: 2026-02-16
+# project: dotfiles
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-02-16
+project: dotfiles
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # Epic 1: Deploy Managed Configs (Scope 1 — MVP)
+  epic-1: backlog
+  1-1-initialize-project-structure: backlog
+  1-2-define-and-parse-app-manifests: backlog
+  1-3-discover-app-modules: backlog
+  1-4-create-symlinks-with-backup: backlog
+  1-5-persist-engine-configuration: backlog
+  1-6-deploy-command-with-console-output: backlog
+  1-7-powershell-module-auto-loader: backlog
+  epic-1-retrospective: optional
+
+  # Epic 2: Cross-Platform Deploy (Scope 2)
+  epic-2: backlog
+  2-1-platform-aware-manifest-paths: backlog
+  2-2-platform-specific-module-filtering: backlog
+  2-3-dynamic-path-resolution: backlog
+  2-4-dotnet-tool-packaging: backlog
+  epic-2-retrospective: optional
+
+  # Epic 3: Deploy Safety & Observability (Scope 2)
+  epic-3: backlog
+  3-1-dry-run-mode: backlog
+  3-2-drift-detection: backlog
+  3-3-file-locking-detection: backlog
+  3-4-pre-deploy-backup-snapshots: backlog
+  3-5-structured-json-output: backlog
+  3-6-live-progress-table: backlog
+  3-7-ci-pipeline-setup: backlog
+  epic-3-retrospective: optional
+
+  # Epic 4: Package & App Awareness (Scope 2)
+  epic-4: backlog
+  4-1-package-manifest-definition: backlog
+  4-2-installed-app-detection: backlog
+  4-3-missing-config-module-reporting: backlog
+  epic-4-retrospective: optional
+
+  # Epic 5: Git Integration & Deploy Hooks (Scope 2)
+  epic-5: backlog
+  5-1-per-app-git-clean-filters: backlog
+  5-2-before-after-filesystem-diffing: backlog
+  5-3-pre-post-deploy-lifecycle-hooks: backlog
+  epic-5-retrospective: optional
+
+  # Epic 6: Multi-Machine & Registry Management (Scope 3)
+  epic-6: backlog
+  6-1-per-machine-overrides: backlog
+  6-2-module-to-machine-filtering: backlog
+  6-3-declarative-registry-management: backlog
+  6-4-registry-state-reporting: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Secrets Management (Scope 3)
+  epic-7: backlog
+  7-1-secret-placeholder-syntax: backlog
+  7-2-password-manager-integration: backlog
+  7-3-generated-file-management: backlog
+  epic-7-retrospective: optional
+
+  # Epic 8: Advanced Usability (Scope 3)
+  epic-8: backlog
+  8-1-restore-from-backup: backlog
+  8-2-interactive-deploy-mode: backlog
+  8-3-shell-tab-completion: backlog
+  8-4-cross-platform-package-definitions: backlog
+  epic-8-retrospective: optional
+
+  # Epic 9: App Onboarding & Discovery (Scope 3)
+  epic-9: backlog
+  9-1-version-range-aware-manifest-paths: backlog
+  9-2-ai-config-path-lookup: backlog
+  9-3-windows-sandbox-discovery: backlog
+  9-4-interactive-manifest-generation: backlog
+  9-5-manifest-template-gallery: backlog
+  epic-9-retrospective: optional
+
+  # Epic 10: Desktop Wizard & Onboarding (Scope 3)
+  epic-10: backlog
+  10-1-initialize-desktop-project-and-shell: backlog
+  10-2-profile-selection: backlog
+  10-3-card-based-config-views: backlog
+  10-4-wizard-flow-and-deploy: backlog
+  epic-10-retrospective: optional
+
+  # Epic 11: Desktop Dashboard & Drift (Scope 3)
+  epic-11: backlog
+  11-1-dashboard-home-and-drift-summary: backlog
+  11-2-dashboard-card-pages: backlog
+  11-3-settings-and-configuration: backlog
+  epic-11-retrospective: optional
+
+  # Epic 12: Migration Tools (Scope 4)
+  epic-12: backlog
+  12-1-chezmoi-import: backlog
+  12-2-dotbot-and-dotter-import: backlog
+  12-3-export-to-other-formats: backlog
+  epic-12-retrospective: optional
+
+  # Epic 13: Scoop Integration (Scope 5)
+  epic-13: backlog
+  13-1-scoop-app-manifest: backlog
+  13-2-declarative-bucket-and-app-installation: backlog
+  13-3-scoop-app-export-and-sync: backlog
+  13-4-scoop-path-based-config-discovery: backlog
+  epic-13-retrospective: optional
