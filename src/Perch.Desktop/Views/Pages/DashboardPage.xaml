@@ -22,7 +22,8 @@
             Grid.Row="0"
             CornerRadius="8"
             ClipToBounds="True"
-            MinHeight="120">
+            MinHeight="180"
+            MaxHeight="240">
             <Border.Background>
                 <ImageBrush
                     ImageSource="/Assets/hero.png"
@@ -32,7 +33,7 @@
             </Border.Background>
 
             <!-- Dark overlay for text readability -->
-            <Border Background="#CC000000" Padding="24,20">
+            <Border Background="#99000000" Padding="24,20">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />

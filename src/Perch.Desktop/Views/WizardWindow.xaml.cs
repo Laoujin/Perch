@@ -37,6 +37,9 @@ public partial class WizardWindow : FluentWindow
                 case "Casual":
                     ViewModel.ProfileSelection.IsCasual = !ViewModel.ProfileSelection.IsCasual;
                     break;
+                case "Creative":
+                    ViewModel.ProfileSelection.IsCreative = !ViewModel.ProfileSelection.IsCreative;
+                    break;
             }
         }
     }
@@ -46,4 +49,7 @@ public partial class WizardWindow : FluentWindow
         WizardCompleted?.Invoke();
         Close();
     }
+
+    private void OnModuleChecked(object sender, RoutedEventArgs e) => ViewModel.NotifySelectionCounts();
+    private void OnModuleUnchecked(object sender, RoutedEventArgs e) => ViewModel.NotifySelectionCounts();
 }

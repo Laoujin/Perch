@@ -5,7 +5,9 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:pages="clr-namespace:Perch.Desktop.Views.Pages"
     Title="Perch"
-    Width="1024" Height="768"
+    Icon="/Assets/logo.png"
+    Width="1200" Height="850"
+    MinWidth="900" MinHeight="600"
     WindowStartupLocation="CenterScreen"
     ExtendsContentIntoTitleBar="True"
     WindowBackdropType="Mica">
