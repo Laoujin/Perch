@@ -114,6 +114,7 @@ This document provides the complete epic and story breakdown for Perch, decompos
 - NFR10: No dependency on specific shell (PowerShell, cmd, bash, zsh all work)
 - NFR11: Config repo format: plain files + YAML manifests — no binary formats, no database, no proprietary encoding
 - NFR12: `dotnet tool install perch -g` works on all supported platforms [Scope 2]
+- NFR13: WPF Desktop app is Windows-only; CLI remains cross-platform [Scope 3]
 
 ### Additional Requirements
 
@@ -181,7 +182,7 @@ This document provides the complete epic and story breakdown for Perch, decompos
 | FR32 | 6 | Module-to-machine filtering |
 | FR33 | 6 | Declarative registry management |
 | FR34 | 6 | Registry state reporting |
-| FR35 | 11 | Desktop drift dashboard |
+| FR35 | 11 | Desktop drift dashboard with hero banner, attention cards, one-click fix |
 | FR36 | 11 | Desktop filesystem explorer (future) |
 | FR37 | 11 | Desktop manifest editor (future) |
 | FR38 | 5 | Pre/post-deploy lifecycle hooks |
@@ -195,6 +196,11 @@ This document provides the complete epic and story breakdown for Perch, decompos
 | FR46 | 12 | Chezmoi import/conversion |
 | FR47 | 12 | Dotbot/Dotter import/export |
 | FR48 | 8 | Cross-platform package managers |
+| FR49 | 10 | Desktop wizard with profile selection and dynamic steps |
+| FR50 | 10 | Desktop detection-first three-tier card layout |
+| FR51 | 10+11 | Shared card-based view components (wizard + dashboard) |
+| FR52 | 10+11 | Desktop deploy with per-card progress and deploy bar |
+| FR53 | 10+11 | Desktop card grid and compact list density toggle |
 | FR54 | 13 | Scoop app manifest in config repo |
 | FR55 | 13 | Declarative Scoop bucket management |
 | FR56 | 13 | Declarative Scoop app installation |
@@ -244,12 +250,13 @@ Developer can discover config locations for new apps via AI lookup and Windows S
 
 ### Epic 10: Desktop Wizard & Onboarding (Scope 3)
 User launches Perch Desktop for the first time and is guided through a wizard: profile selection, system detection of installed apps and dotfiles, card-based browsing and toggling, and deploy. The wizard is a complete standalone experience — many users will run it once and never open the app again. Built with WPF UI + HandyControl on the shared Perch.Core engine.
-**FRs covered:** FR35 (partial — wizard deploy + status), UX Design Specification
-**NFRs addressed:** NFR4-5 (Core interfaces, MVVM testability)
+**FRs covered:** FR35 (partial — wizard deploy + status), FR49, FR50, FR51 (partial), FR52 (partial), FR53 (partial)
+**NFRs addressed:** NFR4-5 (Core interfaces, MVVM testability), NFR13
 
 ### Epic 11: Desktop Dashboard & Drift (Scope 3)
 Returning user opens Perch Desktop and sees a drift-focused dashboard: hero banner with config health summary, attention cards for broken/missing/drifted configs, one-click fix actions. Sidebar navigation into card gallery views (Dotfiles, Apps, System Tweaks) for deeper management. Same shared card views used in wizard.
-**FRs covered:** FR35, FR36 (future), FR37 (future)
+**Requires:** Epic 3 (drift detection via FR10) — dashboard drift summary depends on Core-level status checking to determine linked/attention/broken state per module.
+**FRs covered:** FR35, FR36 (future), FR37 (future), FR51 (partial), FR52 (partial), FR53 (partial)
 
 ### Epic 12: Migration Tools (Scope 4)
 Users of chezmoi, Dotbot, or Dotter can import their dotfiles repo into Perch format, and Perch users can export back — enabling two-way migration.
@@ -945,6 +952,8 @@ Developer can restore files from backups, run deploy interactively with step-lev
 As a developer,
 I want to restore files from a previous backup snapshot or from `.backup` files,
 So that I can undo a deploy if something went wrong.
+
+**Dependencies:** Snapshot restore (`--snapshot`, `--list`) requires Epic 3 Story 3.4 (pre-deploy backup snapshots). Per-module `.backup` restore requires only Epic 1.
 
 **Acceptance Criteria:**
 
