@@ -3,6 +3,7 @@ stepsCompleted: [step-01-validate-prerequisites, step-02-design-epics, step-03-c
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/architecture.md'
+  - '_bmad-output/planning-artifacts/ux-design-specification.md'
 ---
 
 # Perch - Epic Breakdown
@@ -71,7 +72,7 @@ This document provides the complete epic and story breakdown for Perch, decompos
 - FR44: User can define secret placeholders in config templates that are resolved from a configured password manager during deploy [Scope 3]
 - FR45: System manages any config file containing secret placeholders as a generated (non-symlinked) file [Scope 3]
 
-**MAUI UI**
+**Desktop UI (WPF)**
 - FR35: User can view sync status of all managed modules in a visual dashboard [Scope 3]
 - FR36: User can interactively explore an app's filesystem to find config locations [Scope 3]
 - FR37: User can generate and edit module manifests via a visual interface [Scope 3]
@@ -122,6 +123,18 @@ This document provides the complete epic and story breakdown for Perch, decompos
 - DI lifetime rules: Singleton for stateless services, Transient for stateful/per-operation objects
 - Exit codes: 0 success, 1 partial failure, 2 fatal
 - Result level semantics: Info (normal), Warning (notable but completed), Error (could not complete)
+- Desktop UI: WPF (not MAUI) with WPF UI 4.2.0, HandyControl 3.5.1, CommunityToolkit.Mvvm 8.4.0
+- Desktop MVVM: `ObservableObject` base, `[ObservableProperty]`, `[RelayCommand]`, `INavigableView<T>` for pages
+- Desktop DI: Generic Host in App.xaml.cs, same `AddPerchCore()` registration as CLI
+- Desktop modes: Wizard (first-run, StepBar) + Dashboard (ongoing, NavigationView sidebar), shared card-based UserControls
+- Desktop rendering boundary: WPF/XAML only in Perch.Desktop, never in Core. Core returns data; Desktop renders via bindings
+
+**From UX Design Specification:**
+- Custom components: StatusRibbon, ProfileCard, AppCard, DriftHeroBanner, DeployBar, TierSectionHeader
+- Design system: WPF UI Fluent 2 dark theme, forest green (#10B981) accent, status colors (green/yellow/red/blue)
+- Card-based interaction model: detection-first, three-tier layout (detected/suggested/other), card toggle + expand
+- Wizard steps: Profile Selection → Dotfiles → Apps → System Tweaks → Review & Deploy (dynamic based on profile)
+- Dashboard: Drift hero banner + attention cards on Home, card gallery views on sidebar pages
 
 ### FR Coverage Map
 
@@ -161,9 +174,9 @@ This document provides the complete epic and story breakdown for Perch, decompos
 | FR32 | 6 | Module-to-machine filtering |
 | FR33 | 6 | Declarative registry management |
 | FR34 | 6 | Registry state reporting |
-| FR35 | 10 | MAUI sync status dashboard |
-| FR36 | 10 | MAUI filesystem explorer |
-| FR37 | 10 | MAUI manifest editor |
+| FR35 | 11 | Desktop drift dashboard |
+| FR36 | 11 | Desktop filesystem explorer (future) |
+| FR37 | 11 | Desktop manifest editor (future) |
 | FR38 | 5 | Pre/post-deploy lifecycle hooks |
 | FR39 | 1 | Config repo path via CLI argument |
 | FR40 | 1 | Persisted config repo path |
@@ -172,8 +185,8 @@ This document provides the complete epic and story breakdown for Perch, decompos
 | FR43 | 7 | Secret injection from password manager |
 | FR44 | 7 | Secret placeholder syntax |
 | FR45 | 7 | Generated files for secret configs |
-| FR46 | 11 | Chezmoi import/conversion |
-| FR47 | 11 | Dotbot/Dotter import/export |
+| FR46 | 12 | Chezmoi import/conversion |
+| FR47 | 12 | Dotbot/Dotter import/export |
 | FR48 | 8 | Cross-platform package managers |
 
 ## Epic List
@@ -217,11 +230,16 @@ Developer can restore files from backups, run deploy interactively with step-lev
 Developer can discover config locations for new apps via AI lookup and Windows Sandbox isolation, generate manifests interactively, use version-range-aware paths, and pull templates from a community gallery.
 **FRs covered:** FR5, FR6, FR28, FR29, FR30
 
-### Epic 10: MAUI Desktop App (Scope 3)
-Non-CLI users can view sync status of all modules in a visual dashboard, explore app filesystem to find config locations, and generate/edit manifests via a GUI.
-**FRs covered:** FR35, FR36, FR37
+### Epic 10: Desktop Wizard & Onboarding (Scope 3)
+User launches Perch Desktop for the first time and is guided through a wizard: profile selection, system detection of installed apps and dotfiles, card-based browsing and toggling, and deploy. The wizard is a complete standalone experience — many users will run it once and never open the app again. Built with WPF UI + HandyControl on the shared Perch.Core engine.
+**FRs covered:** FR35 (partial — wizard deploy + status), UX Design Specification
+**NFRs addressed:** NFR4-5 (Core interfaces, MVVM testability)
 
-### Epic 11: Migration Tools (Scope 4)
+### Epic 11: Desktop Dashboard & Drift (Scope 3)
+Returning user opens Perch Desktop and sees a drift-focused dashboard: hero banner with config health summary, attention cards for broken/missing/drifted configs, one-click fix actions. Sidebar navigation into card gallery views (Dotfiles, Apps, System Tweaks) for deeper management. Same shared card views used in wizard.
+**FRs covered:** FR35, FR36 (future), FR37 (future)
+
+### Epic 12: Migration Tools (Scope 4)
 Users of chezmoi, Dotbot, or Dotter can import their dotfiles repo into Perch format, and Perch users can export back — enabling two-way migration.
 **FRs covered:** FR46, FR47
 
@@ -1085,71 +1103,219 @@ So that I can onboard popular apps without configuring paths manually.
 **When** the user attempts to list or pull templates
 **Then** an error indicates the gallery is unavailable and suggests manual manifest creation
 
-## Epic 10: MAUI Desktop App
+## Epic 10: Desktop Wizard & Onboarding
 
-Non-CLI users can view sync status of all modules in a visual dashboard, explore app filesystem to find config locations, and generate/edit manifests via a GUI.
+User launches Perch Desktop for the first time and is guided through a wizard: profile selection, system detection of installed apps and dotfiles, card-based browsing and toggling, and deploy. The wizard is a complete standalone experience. Built with WPF UI + HandyControl on the shared Perch.Core engine.
 
-### Story 10.1: Sync Status Dashboard
+### Story 10.1: Initialize Desktop Project & Shell
 
-As a user,
-I want to view the sync status of all managed modules in a visual dashboard,
-So that I can see at a glance which configs are linked, drifted, or missing.
-
-**Acceptance Criteria:**
-
-**Given** the MAUI app is launched with a configured config repo
-**When** the dashboard loads
-**Then** all managed modules are displayed with their current status (linked, drift, missing, error) using color-coded indicators
-
-**Given** a module's status changes (e.g., symlink is broken)
-**When** the user refreshes or the dashboard auto-refreshes
-**Then** the updated status is reflected
-
-**Given** the user clicks on a module in the dashboard
-**When** the detail view opens
-**Then** source path, target path, link type, and last deploy result are shown
-
-### Story 10.2: Filesystem Explorer for Config Discovery
-
-As a user,
-I want to interactively browse an app's filesystem to find its config locations,
-So that I can visually identify which files to manage without using the command line.
+As a developer,
+I want the Perch.Desktop WPF project scaffolded with all dependencies, DI host, and main window shell,
+So that I have a buildable foundation for the desktop app with navigation infrastructure in place.
 
 **Acceptance Criteria:**
 
-**Given** the user opens the filesystem explorer and selects a root directory (e.g., `%AppData%\SomeApp`)
-**When** the directory tree loads
-**Then** files and folders are displayed in a tree view with file sizes and modification dates
+**Given** the existing Perch solution
+**When** the Desktop project is initialized
+**Then** `Perch.Desktop` (WPF, net10.0-windows) and `Perch.Desktop.Tests` (NUnit) are added to the solution
+**And** `Perch.Desktop` references `Perch.Core`
+**And** `Perch.Desktop` has WPF-UI (4.2.0), HandyControl (3.5.1), CommunityToolkit.Mvvm (8.4.0), and Microsoft.Extensions.Hosting packages
+**And** `App.xaml.cs` sets up Generic Host with DI: WPF UI services (`INavigationService`, `ISnackbarService`, `IContentDialogService`, `IThemeService`), Core services via `AddPerchCore()`, all pages + ViewModels
+**And** `MainWindow.xaml` contains a WPF UI `NavigationView` sidebar with placeholder items (Home, Dotfiles, Apps, System Tweaks, Settings) and a content frame
+**And** Dark Fluent theme is applied with forest green (#10B981) accent color
+**And** `dotnet build` succeeds with zero warnings
+**And** Startup routing logic checks for existing deploy state: first run → wizard, returning user → dashboard (placeholder pages for now)
 
-**Given** the user selects files in the explorer
-**When** they click "Add to module"
-**Then** the selected files are staged for manifest generation with their paths pre-populated
-
-### Story 10.3: Visual Manifest Editor
+### Story 10.2: Profile Selection
 
 As a user,
-I want to create and edit module manifests via a form-based visual interface,
-So that I can manage modules without writing YAML by hand.
+I want to select my user profile(s) on first launch to personalize which wizard steps and content I see,
+So that the experience is relevant to me (developer, power user, gamer, casual).
 
 **Acceptance Criteria:**
 
-**Given** the user opens the manifest editor for a new module
-**When** the form loads
-**Then** fields for app name, source files, target paths (per platform), link type, platforms, and hooks are available
+**Given** the wizard launches on first run
+**When** the Profile Selection step loads
+**Then** profile cards are displayed in a grid: Developer, Power User, Gamer, Casual
+**And** each `ProfileCard` shows a Midjourney hero image background, profile name, and brief tagline
+**And** cards support multi-select (user can pick multiple profiles)
 
-**Given** the user fills in all required fields and clicks Save
-**When** the manifest is saved
-**Then** a valid `manifest.yaml` is written to the module folder in the config repo
+**Given** the user selects Developer + Gamer profiles
+**When** they click Next
+**Then** the wizard shows steps for Dotfiles, Apps, and System Tweaks (union of selected profiles)
+**And** the StepBar header reflects only the included steps
 
-**Given** the user opens an existing module's manifest
-**When** the editor loads
-**Then** all current values are populated in the form for editing
+**Given** the user selects only Casual
+**When** they click Next
+**Then** the Dotfiles step is skipped (not shown in StepBar) — wizard goes directly to Apps
 
-## Epic 11: Migration Tools
+**Given** no profiles are selected
+**When** the user tries to proceed
+**Then** the Next button is disabled
+
+### Story 10.3: Card-Based Config Views
+
+As a user,
+I want to see my detected apps and dotfiles as visual cards that I can toggle on/off,
+So that I can choose which configs to manage through an intuitive browsing experience.
+
+**Acceptance Criteria:**
+
+**Given** the Dotfiles or Apps wizard step loads
+**When** the view populates
+**Then** detected items appear as `AppCard` controls in a card grid with: app icon (24-32px), name, one-line description, and `StatusRibbon` showing detection status
+**And** cards are organized in three tiers via `TierSectionHeader`: "Your Apps" (detected), "Suggested for You" (profile-based), "Other Apps" (gallery)
+
+**Given** detected configs on the filesystem (e.g., `.gitconfig` exists at `%UserProfile%`)
+**When** the detection service scans
+**Then** matching cards appear in the "Your Apps" tier with status "Detected - Not managed"
+
+**Given** the user clicks a card's toggle
+**When** the toggle activates
+**Then** the card's `StatusRibbon` changes to "Selected" (accent green border)
+**And** a running count is visible: "5 items selected"
+
+**Given** the user clicks a card body (not the toggle)
+**When** the card expands via `CardExpander`
+**Then** config file paths, target paths, and options are shown inline
+
+**Given** a search term is entered in the search bar
+**When** the filter applies
+**Then** all three tiers are filtered simultaneously by name/description match
+
+**Given** the user toggles the density control (grid/list icon)
+**When** the view mode switches
+**Then** cards switch between grid layout (icon-prominent) and compact list layout (horizontal rows)
+
+**Given** the `AppsView` and `DotfilesView` UserControls
+**When** used in wizard steps
+**Then** the same controls can also be hosted in dashboard pages without modification
+
+### Story 10.4: Wizard Flow & Deploy
+
+As a user,
+I want to progress through the wizard steps, review my selections, and deploy all chosen configs in one action,
+So that my machine is configured and I feel a sense of completion.
+
+**Acceptance Criteria:**
+
+**Given** the wizard is active
+**When** the user navigates between steps
+**Then** a HandyControl `StepBar` at the top shows current progress with step labels
+**And** Back/Next/Skip buttons appear in the footer
+**And** step count and labels are dynamic based on profile selection (e.g., 4 steps for Developer, 3 for Casual)
+
+**Given** the user reaches the Review & Deploy step
+**When** the review page loads
+**Then** a summary shows all selected items across all steps: "X dotfiles, Y apps, Z tweaks selected"
+**And** a Deploy button is prominently displayed (WPF UI Primary appearance, accent green)
+
+**Given** the user clicks Deploy
+**When** the deploy executes via `IDeployService.DeployAsync()` with `IProgress<DeployResult>`
+**Then** each card shows a `ProgressRing` overlay during its deploy
+**And** cards update to show results as they complete (green StatusRibbon = linked, red = error)
+**And** the `DeployBar` at the bottom shows aggregate progress
+
+**Given** the deploy completes
+**When** the completion page loads
+**Then** a summary shows: "X configs linked, Y apps configured, Z items skipped"
+**And** two options are presented: "Open Dashboard" or "Close"
+
+**Given** the user closes the wizard (including mid-flow via window close)
+**When** some items were already deployed
+**Then** already-deployed items remain linked — no rollback on incomplete wizard
+
+## Epic 11: Desktop Dashboard & Drift
+
+Returning user opens Perch Desktop and sees a drift-focused dashboard: hero banner with config health summary, attention cards for broken/missing/drifted configs, one-click fix actions. Sidebar navigation into card gallery views for deeper management.
+
+### Story 11.1: Dashboard Home & Drift Summary
+
+As a returning user,
+I want to see a drift-focused dashboard when I open Perch Desktop,
+So that I can instantly assess my config health and resolve any issues.
+
+**Acceptance Criteria:**
+
+**Given** the user has previously completed the wizard (deploy state exists)
+**When** Perch Desktop launches
+**Then** the app opens to the Dashboard Home page (not the wizard)
+**And** module state is loaded from the filesystem at startup
+
+**Given** the Dashboard Home loads
+**When** the drift check completes
+**Then** a `DriftHeroBanner` spans the top showing aggregate counts: "X linked - Y attention - Z broken"
+**And** the banner state reflects health: all green = calm ("Everything looks good"), issues = attention/critical styling
+
+**Given** modules with issues exist
+**When** the Dashboard Home loads
+**Then** attention cards appear below the hero, grouped by severity: broken (red) > attention (yellow) > info (blue)
+**And** each card shows the module name, status, and a one-click action (Link / Fix / Re-deploy)
+
+**Given** the user clicks a one-click action on an attention card
+**When** the action executes
+**Then** the card's `StatusRibbon` updates immediately (e.g., red → green)
+**And** the hero banner counter updates ("Z broken" decreases)
+
+**Given** destructive actions (Unlink, Restore from repo)
+**When** the user clicks the action
+**Then** a brief confirmation dialog appears: one sentence explaining what happens, Cancel / Confirm buttons
+
+### Story 11.2: Dashboard Card Pages
+
+As a returning user,
+I want to navigate to dedicated Apps, Dotfiles, and System Tweaks pages from the sidebar,
+So that I can browse and manage specific config categories in detail.
+
+**Acceptance Criteria:**
+
+**Given** the dashboard is active
+**When** the user clicks "Apps" in the NavigationView sidebar
+**Then** the `AppsPage` loads, hosting the shared `AppsView` UserControl (same component used in wizard)
+**And** cards show current status (linked/not linked/drifted) via `StatusRibbon`
+
+**Given** the user clicks "Dotfiles" in the sidebar
+**When** the `DotfilesPage` loads
+**Then** the shared `DotfilesView` UserControl is displayed with detection-first three-tier layout
+**And** "Dotfiles" only appears in the sidebar if a Developer profile was selected during wizard
+
+**Given** the user toggles cards on in a dashboard card page
+**When** items are selected
+**Then** a `DeployBar` slides up at the bottom: "N items selected" with a Deploy button
+**And** clicking Deploy runs `IDeployService.DeployAsync()` with the same progress/feedback pattern as the wizard
+
+**Given** sidebar navigation between pages
+**When** the user switches from Apps to Dotfiles and back
+**Then** page state is preserved (scroll position, expanded cards, selections) via Singleton page lifetime
+
+### Story 11.3: Settings & Configuration
+
+As a user,
+I want to access settings for Perch Desktop including config repo path, profile, and display preferences,
+So that I can reconfigure the app without starting over.
+
+**Acceptance Criteria:**
+
+**Given** the user navigates to Settings via the sidebar footer item
+**When** the Settings page loads
+**Then** config repo path is displayed and editable (same setting as CLI's `--config-path`)
+**And** current profile selection is shown with an option to change it
+**And** display density preference (grid/list) is shown with a toggle
+
+**Given** the user changes the config repo path
+**When** the change is saved
+**Then** the settings are persisted to `%APPDATA%/perch/settings.yaml` (same file as CLI)
+**And** the app reloads module state from the new path
+
+**Given** the user wants to re-run the wizard
+**When** they click "Re-run Setup Wizard" in Settings
+**Then** the wizard launches from the Profile Selection step
+
+## Epic 12: Migration Tools
 
 Users of chezmoi, Dotbot, or Dotter can import their dotfiles repo into Perch format, and Perch users can export back — enabling two-way migration.
 
-### Story 11.1: Chezmoi Import
+### Story 12.1: Chezmoi Import
 
 As a developer migrating from chezmoi,
 I want to import my chezmoi-managed dotfiles repo into Perch format,
@@ -1167,7 +1333,7 @@ So that I can switch to Perch without manually recreating all my module manifest
 **When** the user runs `perch deploy`
 **Then** the imported modules deploy correctly
 
-### Story 11.2: Dotbot and Dotter Import
+### Story 12.2: Dotbot and Dotter Import
 
 As a developer migrating from Dotbot or Dotter,
 I want to import my dotfiles repo into Perch format,
@@ -1184,7 +1350,7 @@ So that I can switch tools without losing my configuration.
 **When** the import processes the Dotter config
 **Then** file mappings are converted to Perch module manifests
 
-### Story 11.3: Export to Other Formats
+### Story 12.3: Export to Other Formats
 
 As a developer,
 I want to export my Perch config repo to chezmoi, Dotbot, or Dotter format,
