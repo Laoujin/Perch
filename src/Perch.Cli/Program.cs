@@ -44,6 +44,11 @@ app.Configure(config =>
         restore.AddCommand<RestoreApplyCommand>("apply")
             .WithDescription("Restore files from a pre-deploy snapshot");
     });
+    config.AddBranch("registry", registry =>
+    {
+        registry.AddCommand<RegistryCaptureCommand>("capture")
+            .WithDescription("Capture current registry values for a module");
+    });
     config.AddCommand<CompletionCommand>("completion")
         .WithDescription("Generate shell completion script");
 });
