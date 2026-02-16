@@ -15,8 +15,8 @@ public sealed class GalleryRoundTripTests
     {
         _parser = new CatalogParser();
 
-        Assume.That(Directory.Exists(GalleryRoot), Is.True,
-            $"Gallery not found at {GalleryRoot}. Clone perch-gallery alongside perch-2.");
+        Assume.That(File.Exists(Path.Combine(GalleryRoot, "index.yaml")), Is.True,
+            $"Gallery not found at {GalleryRoot}. Clone perch-gallery alongside this repo.");
     }
 
     [Test]
