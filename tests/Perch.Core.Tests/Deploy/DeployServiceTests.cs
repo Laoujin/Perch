@@ -946,4 +946,206 @@ public sealed class DeployServiceTests
             Directory.Delete(tempDir, true);
         }
     }
+
+    [Test]
+    public async Task DeployAsync_ApprovalApprove_ProcessesModule()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("file.txt", Path.Combine(targetDir, "file.txt"), LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, progress: _progress, approvalCallback: _ => ModuleApproval.Approve);
+
+            Assert.That(exitCode, Is.EqualTo(0));
+            _symlinkProvider.Received(1).CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_ApprovalSkip_SkipsModule()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("file.txt", Path.Combine(targetDir, "file.txt"), LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, progress: _progress, approvalCallback: _ => ModuleApproval.Skip);
+
+            Assert.That(exitCode, Is.EqualTo(0));
+            Assert.That(_reported.Any(r => r.Message.Contains("Skipped (user)")), Is.True);
+            _symlinkProvider.DidNotReceive().CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_ApprovalApproveAll_SkipsRemainingCallbacks()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modAPath = Path.Combine(tempDir, "a");
+        string modBPath = Path.Combine(tempDir, "b");
+        Directory.CreateDirectory(modAPath);
+        Directory.CreateDirectory(modBPath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            var modules = ImmutableArray.Create(
+                new AppModule("a", "A", true, modAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f", Path.Combine(targetDir, "a.txt"), LinkType.Symlink))),
+                new AppModule("b", "B", true, modBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f", Path.Combine(targetDir, "b.txt"), LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int callbackCount = 0;
+            int exitCode = await _deployService.DeployAsync(tempDir, progress: _progress, approvalCallback: _ =>
+            {
+                callbackCount++;
+                return ModuleApproval.ApproveAll;
+            });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(callbackCount, Is.EqualTo(1));
+            });
+            _symlinkProvider.Received(2).CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_ApprovalQuit_HaltsWithCode130()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modAPath = Path.Combine(tempDir, "a");
+        string modBPath = Path.Combine(tempDir, "b");
+        Directory.CreateDirectory(modAPath);
+        Directory.CreateDirectory(modBPath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            var modules = ImmutableArray.Create(
+                new AppModule("a", "A", true, modAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f", Path.Combine(targetDir, "a.txt"), LinkType.Symlink))),
+                new AppModule("b", "B", true, modBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f", Path.Combine(targetDir, "b.txt"), LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, progress: _progress, approvalCallback: _ => ModuleApproval.Quit);
+
+            Assert.That(exitCode, Is.EqualTo(130));
+            _symlinkProvider.DidNotReceive().CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_DisabledModule_NotSentToCallback()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        try
+        {
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", false, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f.txt", Path.Combine(tempDir, "f.txt"), LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            bool callbackInvoked = false;
+            int exitCode = await _deployService.DeployAsync(tempDir, progress: _progress, approvalCallback: _ =>
+            {
+                callbackInvoked = true;
+                return ModuleApproval.Approve;
+            });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(callbackInvoked, Is.False);
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_NullCallback_ProcessesAll()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modAPath = Path.Combine(tempDir, "a");
+        string modBPath = Path.Combine(tempDir, "b");
+        Directory.CreateDirectory(modAPath);
+        Directory.CreateDirectory(modBPath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            var modules = ImmutableArray.Create(
+                new AppModule("a", "A", true, modAPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f", Path.Combine(targetDir, "a.txt"), LinkType.Symlink))),
+                new AppModule("b", "B", true, modBPath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("f", Path.Combine(targetDir, "b.txt"), LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, progress: _progress, approvalCallback: null);
+
+            Assert.That(exitCode, Is.EqualTo(0));
+            _symlinkProvider.Received(2).CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
 }

@@ -31,7 +31,7 @@ public sealed class DeployService : IDeployService
         _globalPackageInstaller = globalPackageInstaller;
     }
 
-    public async Task<int> DeployAsync(string configRepoPath, bool dryRun = false, IProgress<DeployResult>? progress = null, CancellationToken cancellationToken = default)
+    public async Task<int> DeployAsync(string configRepoPath, bool dryRun = false, IProgress<DeployResult>? progress = null, Func<AppModule, ModuleApproval>? approvalCallback = null, CancellationToken cancellationToken = default)
     {
         DiscoveryResult discovery = await _discoveryService.DiscoverAsync(configRepoPath, cancellationToken).ConfigureAwait(false);
 
@@ -50,33 +50,35 @@ public sealed class DeployService : IDeployService
             _snapshotProvider.CreateSnapshot(allTargetPaths, cancellationToken);
         }
 
+        bool approveAll = false;
+
         foreach (AppModule module in discovery.Modules)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (!module.Enabled)
+            string? skipReason = GetSkipReason(module, currentPlatform, machineProfile);
+            if (skipReason != null)
             {
-                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, "Skipped (disabled)"));
+                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, skipReason));
                 continue;
             }
 
-            if (module.Platforms.Length > 0 && !module.Platforms.Contains(currentPlatform))
+            if (approvalCallback != null && !approveAll)
             {
-                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok,
-                    $"Skipped (not for {currentPlatform})"));
-                continue;
-            }
-
-            if (machineProfile?.IncludeModules.Length > 0 && !machineProfile.IncludeModules.Contains(module.Name, StringComparer.OrdinalIgnoreCase))
-            {
-                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, "Skipped (not in machine profile)"));
-                continue;
-            }
-
-            if (machineProfile?.ExcludeModules.Length > 0 && machineProfile.ExcludeModules.Contains(module.Name, StringComparer.OrdinalIgnoreCase))
-            {
-                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, "Skipped (excluded by machine profile)"));
-                continue;
+                ModuleApproval approval = approvalCallback(module);
+                switch (approval)
+                {
+                    case ModuleApproval.Skip:
+                        progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, "Skipped (user)"));
+                        continue;
+                    case ModuleApproval.Quit:
+                        return 130;
+                    case ModuleApproval.ApproveAll:
+                        approveAll = true;
+                        break;
+                    case ModuleApproval.Approve:
+                        break;
+                }
             }
 
             if (await DeployModuleAsync(module, currentPlatform, dryRun, progress, cancellationToken).ConfigureAwait(false))
@@ -86,6 +88,31 @@ public sealed class DeployService : IDeployService
         }
 
         return hasErrors ? 1 : 0;
+    }
+
+    private static string? GetSkipReason(AppModule module, Platform currentPlatform, MachineProfile? machineProfile)
+    {
+        if (!module.Enabled)
+        {
+            return "Skipped (disabled)";
+        }
+
+        if (module.Platforms.Length > 0 && !module.Platforms.Contains(currentPlatform))
+        {
+            return $"Skipped (not for {currentPlatform})";
+        }
+
+        if (machineProfile?.IncludeModules.Length > 0 && !machineProfile.IncludeModules.Contains(module.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            return "Skipped (not in machine profile)";
+        }
+
+        if (machineProfile?.ExcludeModules.Length > 0 && machineProfile.ExcludeModules.Contains(module.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            return "Skipped (excluded by machine profile)";
+        }
+
+        return null;
     }
 
     private async Task<bool> DeployModuleAsync(AppModule module, Platform currentPlatform, bool dryRun, IProgress<DeployResult>? progress, CancellationToken cancellationToken)

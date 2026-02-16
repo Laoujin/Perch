@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Perch.Core.Config;
 using Perch.Core.Deploy;
+using Perch.Core.Modules;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -25,6 +26,10 @@ public sealed class DeployCommand : AsyncCommand<DeployCommand.Settings>
         [CommandOption("--output")]
         [Description("Output format (Pretty or Json)")]
         public OutputFormat Output { get; init; } = OutputFormat.Pretty;
+
+        [CommandOption("--interactive")]
+        [Description("Prompt before deploying each module")]
+        public bool Interactive { get; init; }
     }
 
     public DeployCommand(IDeployService deployService, ISettingsProvider settingsProvider, IAnsiConsole console)
@@ -50,12 +55,82 @@ public sealed class DeployCommand : AsyncCommand<DeployCommand.Settings>
             return 2;
         }
 
+        if (settings.Interactive && settings.Output == OutputFormat.Json)
+        {
+            _console.MarkupLine("[red]Error:[/] --interactive cannot be combined with --output json.");
+            return 2;
+        }
+
+        if (settings.Interactive)
+        {
+            return await ExecuteInteractiveAsync(configPath, settings.DryRun, cancellationToken);
+        }
+
         if (settings.Output == OutputFormat.Json)
         {
             return await ExecuteJsonAsync(configPath, settings.DryRun, cancellationToken);
         }
 
         return await ExecutePrettyAsync(configPath, settings.DryRun, cancellationToken);
+    }
+
+    private async Task<int> ExecuteInteractiveAsync(string configPath, bool dryRun, CancellationToken cancellationToken)
+    {
+        if (dryRun)
+        {
+            _console.MarkupLine("[yellow]DRY RUN[/] — no changes will be made.");
+        }
+
+        _console.MarkupLine($"[blue]Deploying from:[/] {configPath.EscapeMarkup()}");
+        _console.WriteLine();
+
+        var progress = new SynchronousProgress<DeployResult>(result =>
+        {
+            string status = result.Level switch
+            {
+                ResultLevel.Ok => "[green]OK[/]",
+                ResultLevel.Warning => "[yellow]WARN[/]",
+                ResultLevel.Error => "[red]FAIL[/]",
+                _ => "[grey]??[/]",
+            };
+
+            _console.MarkupLine($"  {status} [{GetColor(result.Level)}]{result.ModuleName.EscapeMarkup()}[/] {result.Message.EscapeMarkup()}");
+        });
+
+        ModuleApproval PromptForApproval(AppModule module)
+        {
+            string choice = _console.Prompt(
+                new SelectionPrompt<string>()
+                    .Title($"Deploy [green]{module.DisplayName.EscapeMarkup()}[/]?")
+                    .AddChoices("Yes", "Skip", "All", "Quit"));
+
+            return choice switch
+            {
+                "Yes" => ModuleApproval.Approve,
+                "Skip" => ModuleApproval.Skip,
+                "All" => ModuleApproval.ApproveAll,
+                "Quit" => ModuleApproval.Quit,
+                _ => ModuleApproval.Approve,
+            };
+        }
+
+        int exitCode = await _deployService.DeployAsync(configPath, dryRun, progress, PromptForApproval, cancellationToken);
+
+        _console.WriteLine();
+        if (exitCode == 130)
+        {
+            _console.MarkupLine("[yellow]Deploy aborted by user.[/]");
+        }
+        else if (exitCode == 0)
+        {
+            _console.MarkupLine("[green]Deploy complete.[/]");
+        }
+        else
+        {
+            _console.MarkupLine("[red]Deploy finished with errors.[/]");
+        }
+
+        return exitCode;
     }
 
     private async Task<int> ExecutePrettyAsync(string configPath, bool dryRun, CancellationToken cancellationToken)
@@ -96,7 +171,7 @@ public sealed class DeployCommand : AsyncCommand<DeployCommand.Settings>
                     ctx.Refresh();
                 });
 
-                exitCode = await _deployService.DeployAsync(configPath, dryRun, progress, cancellationToken);
+                exitCode = await _deployService.DeployAsync(configPath, dryRun, progress, cancellationToken: cancellationToken);
             });
 
         _console.WriteLine();
@@ -117,7 +192,7 @@ public sealed class DeployCommand : AsyncCommand<DeployCommand.Settings>
         var results = new List<DeployResult>();
         var progress = new SynchronousProgress<DeployResult>(results.Add);
 
-        int exitCode = await _deployService.DeployAsync(configPath, dryRun, progress, cancellationToken);
+        int exitCode = await _deployService.DeployAsync(configPath, dryRun, progress, cancellationToken: cancellationToken);
 
         var output = new
         {
