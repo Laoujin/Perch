@@ -25,8 +25,9 @@ public sealed class DeployService : IDeployService
     private readonly ISystemPackageInstaller _systemPackageInstaller;
     private readonly ITemplateProcessor _templateProcessor;
     private readonly IReferenceResolver _referenceResolver;
+    private readonly IVariableResolver _variableResolver;
 
-    public DeployService(IModuleDiscoveryService discoveryService, SymlinkOrchestrator orchestrator, IPlatformDetector platformDetector, IGlobResolver globResolver, ISnapshotProvider snapshotProvider, IHookRunner hookRunner, IMachineProfileService machineProfileService, IRegistryProvider registryProvider, IGlobalPackageInstaller globalPackageInstaller, IVscodeExtensionInstaller vscodeExtensionInstaller, IPsModuleInstaller psModuleInstaller, PackageManifestParser packageManifestParser, ISystemPackageInstaller systemPackageInstaller, ITemplateProcessor templateProcessor, IReferenceResolver referenceResolver)
+    public DeployService(IModuleDiscoveryService discoveryService, SymlinkOrchestrator orchestrator, IPlatformDetector platformDetector, IGlobResolver globResolver, ISnapshotProvider snapshotProvider, IHookRunner hookRunner, IMachineProfileService machineProfileService, IRegistryProvider registryProvider, IGlobalPackageInstaller globalPackageInstaller, IVscodeExtensionInstaller vscodeExtensionInstaller, IPsModuleInstaller psModuleInstaller, PackageManifestParser packageManifestParser, ISystemPackageInstaller systemPackageInstaller, ITemplateProcessor templateProcessor, IReferenceResolver referenceResolver, IVariableResolver variableResolver)
     {
         _discoveryService = discoveryService;
         _orchestrator = orchestrator;
@@ -43,6 +44,7 @@ public sealed class DeployService : IDeployService
         _systemPackageInstaller = systemPackageInstaller;
         _templateProcessor = templateProcessor;
         _referenceResolver = referenceResolver;
+        _variableResolver = variableResolver;
     }
 
     public async Task<int> DeployAsync(string configRepoPath, DeployOptions? options = null, CancellationToken cancellationToken = default)
@@ -91,7 +93,7 @@ public sealed class DeployService : IDeployService
 
             if (beforeModule != null)
             {
-                IReadOnlyList<DeployResult> preview = await CollectModulePreviewAsync(module, currentPlatform, variables, !dryRun, cancellationToken).ConfigureAwait(false);
+                IReadOnlyList<DeployResult> preview = await CollectModulePreviewAsync(module, currentPlatform, variables, configRepoPath, !dryRun, cancellationToken).ConfigureAwait(false);
 
                 ModuleAction action = await beforeModule(module, preview).ConfigureAwait(false);
                 if (action == ModuleAction.Skip)
@@ -108,7 +110,7 @@ public sealed class DeployService : IDeployService
 
             progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, "", DeployEventType.ModuleStarted));
 
-            bool moduleHadErrors = await DeployModuleAsync(module, currentPlatform, variables, dryRun, progress, cancellationToken).ConfigureAwait(false);
+            bool moduleHadErrors = await DeployModuleAsync(module, currentPlatform, variables, configRepoPath, dryRun, progress, cancellationToken).ConfigureAwait(false);
 
             ResultLevel completionLevel = moduleHadErrors ? ResultLevel.Error : ResultLevel.Ok;
             progress?.Report(new DeployResult(module.DisplayName, "", "", completionLevel, "", DeployEventType.ModuleCompleted));
@@ -152,11 +154,11 @@ public sealed class DeployService : IDeployService
         return null;
     }
 
-    private async Task<IReadOnlyList<DeployResult>> CollectModulePreviewAsync(AppModule module, Platform currentPlatform, IReadOnlyDictionary<string, string>? variables, bool includePackages, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<DeployResult>> CollectModulePreviewAsync(AppModule module, Platform currentPlatform, IReadOnlyDictionary<string, string>? variables, string configRepoPath, bool includePackages, CancellationToken cancellationToken)
     {
         var results = new List<DeployResult>();
         var previewProgress = new SynchronousProgress<DeployResult>(results.Add);
-        await ProcessModuleLinksAsync(module, currentPlatform, variables, true, previewProgress, cancellationToken).ConfigureAwait(false);
+        await ProcessModuleLinksAsync(module, currentPlatform, variables, configRepoPath, true, previewProgress, cancellationToken).ConfigureAwait(false);
         ProcessModuleRegistry(module, true, previewProgress);
         if (includePackages)
         {
@@ -167,7 +169,7 @@ public sealed class DeployService : IDeployService
         return results;
     }
 
-    private async Task<bool> DeployModuleAsync(AppModule module, Platform currentPlatform, IReadOnlyDictionary<string, string>? variables, bool dryRun, IProgress<DeployResult>? progress, CancellationToken cancellationToken)
+    private async Task<bool> DeployModuleAsync(AppModule module, Platform currentPlatform, IReadOnlyDictionary<string, string>? variables, string configRepoPath, bool dryRun, IProgress<DeployResult>? progress, CancellationToken cancellationToken)
     {
         bool hasErrors = false;
 
@@ -182,7 +184,7 @@ public sealed class DeployService : IDeployService
             }
         }
 
-        bool moduleHadErrors = await ProcessModuleLinksAsync(module, currentPlatform, variables, dryRun, progress, cancellationToken).ConfigureAwait(false);
+        bool moduleHadErrors = await ProcessModuleLinksAsync(module, currentPlatform, variables, configRepoPath, dryRun, progress, cancellationToken).ConfigureAwait(false);
         ProcessModuleRegistry(module, dryRun, progress);
         if (await ProcessModuleGlobalPackagesAsync(module, dryRun, progress, cancellationToken).ConfigureAwait(false))
         {
@@ -252,7 +254,7 @@ public sealed class DeployService : IDeployService
     }
 
 
-    private async Task<bool> ProcessModuleLinksAsync(AppModule module, Platform currentPlatform, IReadOnlyDictionary<string, string>? variables, bool dryRun, IProgress<DeployResult>? progress, CancellationToken cancellationToken)
+    private async Task<bool> ProcessModuleLinksAsync(AppModule module, Platform currentPlatform, IReadOnlyDictionary<string, string>? variables, string configRepoPath, bool dryRun, IProgress<DeployResult>? progress, CancellationToken cancellationToken)
     {
         bool hasErrors = false;
 
@@ -279,19 +281,15 @@ public sealed class DeployService : IDeployService
 
             foreach (string resolvedTarget in resolvedTargets)
             {
-                if (File.Exists(sourcePath) && !Directory.Exists(sourcePath))
+                if (link.IsTemplate)
                 {
-                    string content = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
-                    if (_templateProcessor.ContainsPlaceholders(content))
+                    DeployResult templateResult = await ProcessTemplateAsync(module.Name, module.DisplayName, sourcePath, resolvedTarget, variables, configRepoPath, link.LinkType, dryRun, cancellationToken).ConfigureAwait(false);
+                    progress?.Report(templateResult);
+                    if (templateResult.Level == ResultLevel.Error)
                     {
-                        DeployResult templateResult = await ProcessTemplateAsync(module.DisplayName, sourcePath, resolvedTarget, content, dryRun, cancellationToken).ConfigureAwait(false);
-                        progress?.Report(templateResult);
-                        if (templateResult.Level == ResultLevel.Error)
-                        {
-                            hasErrors = true;
-                        }
-                        continue;
+                        hasErrors = true;
                     }
+                    continue;
                 }
 
                 DeployResult result = _orchestrator.ProcessLink(module.DisplayName, sourcePath, resolvedTarget, link.LinkType, dryRun);
@@ -307,14 +305,23 @@ public sealed class DeployService : IDeployService
         return hasErrors;
     }
 
-    private async Task<DeployResult> ProcessTemplateAsync(string moduleName, string sourcePath, string targetPath, string content, bool dryRun, CancellationToken cancellationToken)
+    private async Task<DeployResult> ProcessTemplateAsync(string moduleKey, string moduleName, string sourcePath, string targetPath, IReadOnlyDictionary<string, string>? variables, string configRepoPath, LinkType linkType, bool dryRun, CancellationToken cancellationToken)
     {
+        if (!File.Exists(sourcePath))
+        {
+            return new DeployResult(moduleName, sourcePath, targetPath, ResultLevel.Error,
+                "Template source file not found");
+        }
+
+        string content = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
         IReadOnlyList<string> references = _templateProcessor.FindReferences(content);
+        IReadOnlyList<string> variableNames = _templateProcessor.FindVariables(content);
+        string generatedPath = Path.Combine(configRepoPath, ".generated", moduleKey, Path.GetFileName(sourcePath));
 
         if (dryRun)
         {
             return new DeployResult(moduleName, sourcePath, targetPath, ResultLevel.Ok,
-                $"Would resolve {references.Count} reference(s) and write to {targetPath}");
+                $"Would resolve {references.Count} reference(s) and {variableNames.Count} variable(s), generate to {generatedPath}");
         }
 
         var resolvedValues = new Dictionary<string, string>();
@@ -334,24 +341,36 @@ public sealed class DeployService : IDeployService
             }
         }
 
+        foreach (string variable in variableNames)
+        {
+            string? resolved = _variableResolver.Resolve(variable, variables);
+            if (resolved != null)
+            {
+                resolvedValues[variable] = resolved;
+            }
+            else
+            {
+                errors.Add($"{variable}: unknown variable");
+            }
+        }
+
         if (errors.Count > 0)
         {
             return new DeployResult(moduleName, sourcePath, targetPath, ResultLevel.Error,
                 $"Failed to resolve: {string.Join("; ", errors)}");
         }
 
-        string resolved = _templateProcessor.ReplacePlaceholders(content, resolvedValues);
+        string resolvedContent = _templateProcessor.ReplacePlaceholders(content, resolvedValues);
 
-        string? targetDir = Path.GetDirectoryName(targetPath);
-        if (targetDir != null && !Directory.Exists(targetDir))
+        string? generatedDir = Path.GetDirectoryName(generatedPath);
+        if (generatedDir != null)
         {
-            return new DeployResult(moduleName, sourcePath, targetPath, ResultLevel.Error,
-                $"Parent directory does not exist: {targetDir}");
+            Directory.CreateDirectory(generatedDir);
         }
 
-        await File.WriteAllTextAsync(targetPath, resolved, cancellationToken).ConfigureAwait(false);
-        return new DeployResult(moduleName, sourcePath, targetPath, ResultLevel.Ok,
-            $"Resolved {references.Count} reference(s) and wrote generated file");
+        await File.WriteAllTextAsync(generatedPath, resolvedContent, cancellationToken).ConfigureAwait(false);
+
+        return _orchestrator.ProcessLink(moduleName, generatedPath, targetPath, linkType, dryRun);
     }
 
     private void ProcessModuleRegistry(AppModule module, bool dryRun, IProgress<DeployResult>? progress)

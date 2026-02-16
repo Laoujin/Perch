@@ -34,6 +34,7 @@ public sealed class DeployServiceTests
     private IPsModuleInstaller _psModuleInstaller = null!;
     private ISystemPackageInstaller _systemPackageInstaller = null!;
     private IReferenceResolver _referenceResolver = null!;
+    private IVariableResolver _variableResolver = null!;
     private SymlinkOrchestrator _orchestrator = null!;
     private DeployService _deployService = null!;
     private List<DeployResult> _reported = null!;
@@ -64,7 +65,8 @@ public sealed class DeployServiceTests
         _systemPackageInstaller.InstallAsync(Arg.Any<string>(), Arg.Any<PackageManager>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
             .Returns(x => new DeployResult("system-packages", "", x.ArgAt<string>(0), ResultLevel.Ok, $"Installed {x.ArgAt<string>(0)}"));
         _referenceResolver = Substitute.For<IReferenceResolver>();
-        _deployService = new DeployService(_discoveryService, _orchestrator, _platformDetector, _globResolver, _snapshotProvider, _hookRunner, _machineProfileService, _registryProvider, _globalPackageInstaller, _vscodeExtensionInstaller, _psModuleInstaller, new PackageManifestParser(), _systemPackageInstaller, new TemplateProcessor(), _referenceResolver);
+        _variableResolver = Substitute.For<IVariableResolver>();
+        _deployService = new DeployService(_discoveryService, _orchestrator, _platformDetector, _globResolver, _snapshotProvider, _hookRunner, _machineProfileService, _registryProvider, _globalPackageInstaller, _vscodeExtensionInstaller, _psModuleInstaller, new PackageManifestParser(), _systemPackageInstaller, new TemplateProcessor(), _referenceResolver, _variableResolver);
         _reported = new List<DeployResult>();
         _progress = new SynchronousProgress<DeployResult>(r => _reported.Add(r));
     }
@@ -1493,7 +1495,7 @@ public sealed class DeployServiceTests
     }
 
     [Test]
-    public async Task DeployAsync_TemplateSource_ResolvesAndWritesFile()
+    public async Task DeployAsync_TemplateSource_ResolvesAndWritesToGenerated()
     {
         string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
         Directory.CreateDirectory(tempDir);
@@ -1507,13 +1509,14 @@ public sealed class DeployServiceTests
             string sourceFile = Path.Combine(modulePath, "config.conf");
             File.WriteAllText(sourceFile, "token = {{op://vault/item/token}}");
             string targetFile = Path.Combine(targetDir, "config.conf");
+            string generatedFile = Path.Combine(tempDir, ".generated", "mod", "config.conf");
 
             _referenceResolver.ResolveAsync("op://vault/item/token", Arg.Any<CancellationToken>())
                 .Returns(new ReferenceResolveResult("abc123", null));
 
             var modules = ImmutableArray.Create(
                 new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
-                    new LinkEntry("config.conf", targetFile, LinkType.Symlink))));
+                    new LinkEntry("config.conf", targetFile, null, LinkType.Symlink, true))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
 
@@ -1522,10 +1525,10 @@ public sealed class DeployServiceTests
             Assert.Multiple(() =>
             {
                 Assert.That(exitCode, Is.EqualTo(0));
-                Assert.That(File.Exists(targetFile), Is.True);
-                Assert.That(File.ReadAllText(targetFile), Is.EqualTo("token = abc123"));
+                Assert.That(File.Exists(generatedFile), Is.True);
+                Assert.That(File.ReadAllText(generatedFile), Is.EqualTo("token = abc123"));
             });
-            _symlinkProvider.DidNotReceive().CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
+            _symlinkProvider.Received(1).CreateSymlink(targetFile, generatedFile);
         }
         finally
         {
@@ -1548,10 +1551,11 @@ public sealed class DeployServiceTests
             string sourceFile = Path.Combine(modulePath, "config.conf");
             File.WriteAllText(sourceFile, "token = {{op://vault/item/token}}");
             string targetFile = Path.Combine(targetDir, "config.conf");
+            string generatedFile = Path.Combine(tempDir, ".generated", "mod", "config.conf");
 
             var modules = ImmutableArray.Create(
                 new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
-                    new LinkEntry("config.conf", targetFile, LinkType.Symlink))));
+                    new LinkEntry("config.conf", targetFile, null, LinkType.Symlink, true))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
 
@@ -1559,10 +1563,11 @@ public sealed class DeployServiceTests
 
             Assert.Multiple(() =>
             {
-                Assert.That(File.Exists(targetFile), Is.False);
+                Assert.That(File.Exists(generatedFile), Is.False);
                 Assert.That(_reported.Any(r => r.Message.Contains("Would resolve")), Is.True);
             });
             await _referenceResolver.DidNotReceive().ResolveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+            _symlinkProvider.DidNotReceive().CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
         }
         finally
         {
@@ -1591,7 +1596,7 @@ public sealed class DeployServiceTests
 
             var modules = ImmutableArray.Create(
                 new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
-                    new LinkEntry("config.conf", targetFile, LinkType.Symlink))));
+                    new LinkEntry("config.conf", targetFile, null, LinkType.Symlink, true))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
 
@@ -1636,6 +1641,156 @@ public sealed class DeployServiceTests
 
             _symlinkProvider.Received(1).CreateSymlink(targetFile, Arg.Any<string>());
             await _referenceResolver.DidNotReceive().ResolveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_NonTemplateWithOpContent_CreatesSymlinkWithoutResolving()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            string sourceFile = Path.Combine(modulePath, "config.conf");
+            File.WriteAllText(sourceFile, "token = {{op://vault/item/token}}");
+            string targetFile = Path.Combine(targetDir, "config.conf");
+
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("config.conf", targetFile, LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            _symlinkProvider.Received(1).CreateSymlink(targetFile, Arg.Any<string>());
+            await _referenceResolver.DidNotReceive().ResolveAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_TemplateWithVariables_ResolvesVariables()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            string sourceFile = Path.Combine(modulePath, "config.conf");
+            File.WriteAllText(sourceFile, "host = {{machine.name}}\ntoken = {{op://vault/item/token}}");
+            string targetFile = Path.Combine(targetDir, "config.conf");
+            string generatedFile = Path.Combine(tempDir, ".generated", "mod", "config.conf");
+
+            _referenceResolver.ResolveAsync("op://vault/item/token", Arg.Any<CancellationToken>())
+                .Returns(new ReferenceResolveResult("abc123", null));
+            _variableResolver.Resolve("machine.name", Arg.Any<IReadOnlyDictionary<string, string>?>())
+                .Returns("WORKSTATION");
+
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("config.conf", targetFile, null, LinkType.Symlink, true))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(File.Exists(generatedFile), Is.True);
+                Assert.That(File.ReadAllText(generatedFile), Is.EqualTo("host = WORKSTATION\ntoken = abc123"));
+            });
+            _symlinkProvider.Received(1).CreateSymlink(targetFile, generatedFile);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_TemplateWithUnknownVariable_ReportsError()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            string sourceFile = Path.Combine(modulePath, "config.conf");
+            File.WriteAllText(sourceFile, "value = {{unknown.var}}");
+            string targetFile = Path.Combine(targetDir, "config.conf");
+
+            _variableResolver.Resolve("unknown.var", Arg.Any<IReadOnlyDictionary<string, string>?>())
+                .Returns((string?)null);
+
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("config.conf", targetFile, null, LinkType.Symlink, true))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(1));
+                Assert.That(_reported.Any(r => r.Level == ResultLevel.Error && r.Message.Contains("unknown.var")), Is.True);
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_TemplateMissingSourceFile_ReportsError()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
+
+        try
+        {
+            string targetFile = Path.Combine(targetDir, "config.conf");
+
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("config.conf", targetFile, null, LinkType.Symlink, true))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(1));
+                Assert.That(_reported.Any(r => r.Level == ResultLevel.Error && r.Message.Contains("Template source file not found")), Is.True);
+            });
         }
         finally
         {
