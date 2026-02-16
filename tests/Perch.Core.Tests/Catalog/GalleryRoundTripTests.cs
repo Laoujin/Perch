@@ -10,13 +10,17 @@ public sealed class GalleryRoundTripTests
 
     private CatalogParser _parser = null!;
 
+    [OneTimeSetUp]
+    public void OneTimeSetUp()
+    {
+        if (!File.Exists(Path.Combine(GalleryRoot, "index.yaml")))
+            Assert.Ignore($"Gallery not found at {GalleryRoot}. Clone perch-gallery alongside this repo.");
+    }
+
     [SetUp]
     public void SetUp()
     {
         _parser = new CatalogParser();
-
-        Assume.That(File.Exists(Path.Combine(GalleryRoot, "index.yaml")), Is.True,
-            $"Gallery not found at {GalleryRoot}. Clone perch-gallery alongside this repo.");
     }
 
     [Test]
