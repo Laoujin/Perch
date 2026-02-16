@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [1, 2, 3]
+stepsCompleted: [1, 2, 3, 4]
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/prd-validation-report.md'
@@ -98,3 +98,46 @@ Both experiences share the same card-based view components and the same Perch.Co
 3. **Visual over textual.** Cards with icons, status ribbons, and images over lists of file paths. The UI should feel like an app store, not a file manager.
 4. **Progressive disclosure.** Simple card toggles by default. Details, options, and advanced actions available on click — never in the way.
 5. **Respect the one-time user.** Every wizard step must earn its existence. No unnecessary steps, no "we'll use this later" justifications.
+
+## Desired Emotional Response
+
+### Primary Emotional Goals
+
+- **Confidence:** "My configs are handled. I don't need to worry about this." The wizard delivers this at completion; the dashboard sustains it on every return visit. This is the foundational emotion — Perch exists to eliminate config anxiety.
+- **Impressed:** "This is way more polished than I expected for a dotfiles tool." The visual quality (Midjourney cards, Fluent Design, app-store-like browsing) signals that this is a premium product in a space dominated by bare CLI tools. This is the emotion that makes users tell others about it.
+
+### Emotional Journey Mapping
+
+| Stage | Emotion | Trigger |
+|---|---|---|
+| Wizard launch | Curiosity + Trust | Professional visual design, polished UI — "this isn't hacked together" |
+| Profile selection | Identity + Empowerment | Aspirational hero images, multi-select — "it gets me, and I'm not being boxed in" |
+| System detection | Relief + Surprise | Cards appear for detected configs — "it already found my stuff without me doing anything" |
+| Card browsing | Familiarity + Comfort | App-store-like layout — browsing feels natural, not technical |
+| Deploy completion | Accomplishment + Closure | Clear success confirmation — "done, my machine is set up." Conclusive, not transitional |
+| Dashboard first load | Calm reassurance | Green status across modules — "everything is as expected" |
+| Drift detected | Clarity + Control | Yellow/red cards with obvious actions — "I see what's wrong and how to fix it" |
+| Error states | Understanding | Clear explanation + next steps — no anxiety, no dead ends |
+
+### Micro-Emotions
+
+- **Confidence over Confusion:** Every screen communicates what it is and what to do next. No ambiguous states.
+- **Trust over Skepticism:** Detection results are transparent — show what was found and where. Don't hide the technical details, just layer them behind progressive disclosure.
+- **Accomplishment over Frustration:** Deploy completion is celebrated, not buried. The wizard ending should feel like finishing something meaningful.
+- **Delight over mere Satisfaction:** The visual quality — profile card artwork, smooth animations, polished card layouts — elevates the experience beyond "it works" to "this is nice."
+
+### Design Implications
+
+- **Confidence** → Status ribbons on every card. Green/yellow/red at a glance. No ambiguous "unknown" states — always show a clear status.
+- **Impressed** → Midjourney hero images, real app icons, consistent Fluent Design styling. Every pixel should feel intentional. No default gray borders or unstyled controls.
+- **Relief (detection)** → System scan results appear naturally as cards populating the view. No "scanning..." modal blocking the UI — detection should feel effortless, almost instant.
+- **Closure (deploy)** → Wizard completion screen with clear summary: "X configs linked, X apps configured." A satisfying endpoint, not a redirect to another view.
+- **No anxiety** → Destructive actions (unlink, remove) require confirmation. Safe actions (link, fix) are one-click. Error messages always include a recovery path.
+
+### Emotional Design Principles
+
+1. **Status is always visible.** Users should never wonder "did it work?" Every action produces immediate visual feedback.
+2. **Celebrate completion.** The wizard end and deploy success are achievement moments — design them as such.
+3. **Errors are guidance, not dead ends.** Every error state tells users what happened, why, and what to do next.
+4. **Visual quality is the trust signal.** In a space of terminal tools, the polish of the UI is itself a feature — it communicates "this was built with care."
+5. **Never make users feel dumb.** Technical concepts (symlinks, dotfiles, registry) are presented through familiar metaphors (cards, toggles, status indicators) — not jargon.
