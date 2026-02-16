@@ -1,14 +1,20 @@
 using System.Collections.Immutable;
 
+using Perch.Core.Catalog;
+
 namespace Perch.Core.Modules;
 
 public sealed class ModuleDiscoveryService : IModuleDiscoveryService
 {
     private readonly ManifestParser _parser;
+    private readonly ICatalogService? _catalogService;
+    private readonly IGalleryOverlayService? _overlayService;
 
-    public ModuleDiscoveryService(ManifestParser parser)
+    public ModuleDiscoveryService(ManifestParser parser, ICatalogService? catalogService = null, IGalleryOverlayService? overlayService = null)
     {
         _parser = parser;
+        _catalogService = catalogService;
+        _overlayService = overlayService;
     }
 
     public async Task<DiscoveryResult> DiscoverAsync(string configRepoPath, CancellationToken cancellationToken = default)
@@ -42,6 +48,7 @@ public sealed class ModuleDiscoveryService : IModuleDiscoveryService
             if (parseResult.IsSuccess)
             {
                 AppManifest manifest = parseResult.Manifest!;
+                manifest = await ApplyGalleryOverlayAsync(manifest, errors, cancellationToken).ConfigureAwait(false);
                 modules.Add(new AppModule(manifest.ModuleName, manifest.DisplayName, manifest.Enabled, subdir, manifest.Platforms, manifest.Links, manifest.Hooks, manifest.CleanFilter, manifest.Registry, manifest.GlobalPackages, manifest.VscodeExtensions, manifest.PsModules));
             }
             else
@@ -51,5 +58,30 @@ public sealed class ModuleDiscoveryService : IModuleDiscoveryService
         }
 
         return new DiscoveryResult(modules.ToImmutableArray(), errors.ToImmutableArray());
+    }
+
+    private async Task<AppManifest> ApplyGalleryOverlayAsync(AppManifest manifest, List<string> errors, CancellationToken cancellationToken)
+    {
+        if (manifest.GalleryId == null || _catalogService == null || _overlayService == null)
+        {
+            return manifest;
+        }
+
+        try
+        {
+            var galleryEntry = await _catalogService.GetAppAsync(manifest.GalleryId, cancellationToken).ConfigureAwait(false);
+            if (galleryEntry == null)
+            {
+                errors.Add($"[{manifest.ModuleName}] Gallery app '{manifest.GalleryId}' not found.");
+                return manifest;
+            }
+
+            return _overlayService.Merge(manifest, galleryEntry);
+        }
+        catch (Exception ex)
+        {
+            errors.Add($"[{manifest.ModuleName}] Failed to load gallery app '{manifest.GalleryId}': {ex.Message}");
+            return manifest;
+        }
     }
 }

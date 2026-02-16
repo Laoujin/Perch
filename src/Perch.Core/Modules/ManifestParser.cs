@@ -31,50 +31,67 @@ public sealed class ManifestParser
             return ManifestParseResult.Failure($"Invalid YAML: {ex.Message}");
         }
 
-        bool hasLinks = model?.Links != null && model.Links.Count > 0;
-        bool hasRegistry = model?.Registry != null && model.Registry.Count > 0;
-        bool hasGlobalPackages = model?.GlobalPackages?.Packages != null && model.GlobalPackages.Packages.Count > 0;
-        bool hasVscodeExtensions = model?.VscodeExtensions != null && model.VscodeExtensions.Count > 0;
-        bool hasPsModules = model?.PsModules != null && model.PsModules.Count > 0;
-        if (!hasLinks && !hasRegistry && !hasGlobalPackages && !hasVscodeExtensions && !hasPsModules)
+        if (!HasActionableContent(model))
         {
             return ManifestParseResult.Failure("Manifest must contain at least one actionable section.");
         }
 
-        var links = new List<LinkEntry>();
-        for (int i = 0; i < (model!.Links?.Count ?? 0); i++)
+        string? linksError = ParseLinks(model!.Links, out var links);
+        if (linksError != null)
         {
-            var link = model.Links![i];
+            return ManifestParseResult.Failure(linksError);
+        }
+
+        string displayName = string.IsNullOrWhiteSpace(model.DisplayName) ? moduleName : model.DisplayName;
+        string? galleryId = string.IsNullOrWhiteSpace(model.Gallery) ? null : model.Gallery;
+        var manifest = new AppManifest(
+            moduleName, displayName, model.Enabled,
+            ParsePlatforms(model.Platforms), links,
+            ParseHooks(model.Hooks), ParseCleanFilter(model.CleanFilter),
+            ParseRegistry(model.Registry), ParseGlobalPackages(model.GlobalPackages),
+            ParseStringList(model.VscodeExtensions), ParseStringList(model.PsModules), galleryId);
+        return ManifestParseResult.Success(manifest);
+    }
+
+    private static bool HasActionableContent(ManifestYamlModel? model) =>
+        (model?.Links != null && model.Links.Count > 0) ||
+        (model?.Registry != null && model.Registry.Count > 0) ||
+        (model?.GlobalPackages?.Packages != null && model.GlobalPackages.Packages.Count > 0) ||
+        (model?.VscodeExtensions != null && model.VscodeExtensions.Count > 0) ||
+        (model?.PsModules != null && model.PsModules.Count > 0) ||
+        !string.IsNullOrWhiteSpace(model?.Gallery);
+
+    private static string? ParseLinks(List<LinkYamlModel>? linkModels, out ImmutableArray<LinkEntry> links)
+    {
+        var result = new List<LinkEntry>();
+        for (int i = 0; i < (linkModels?.Count ?? 0); i++)
+        {
+            var link = linkModels![i];
             if (string.IsNullOrWhiteSpace(link.Source))
             {
-                return ManifestParseResult.Failure($"Link [{i}] is missing 'source'.");
+                links = ImmutableArray<LinkEntry>.Empty;
+                return $"Link [{i}] is missing 'source'.";
             }
 
             if (link.Target == null)
             {
-                return ManifestParseResult.Failure($"Link [{i}] is missing 'target'.");
+                links = ImmutableArray<LinkEntry>.Empty;
+                return $"Link [{i}] is missing 'target'.";
             }
 
             var linkType = ParseLinkType(link.LinkType);
             var entry = ParseTarget(link.Source, link.Target, linkType, link.Template);
             if (entry == null)
             {
-                return ManifestParseResult.Failure($"Link [{i}] has an invalid 'target'.");
+                links = ImmutableArray<LinkEntry>.Empty;
+                return $"Link [{i}] has an invalid 'target'.";
             }
 
-            links.Add(entry);
+            result.Add(entry);
         }
 
-        string displayName = string.IsNullOrWhiteSpace(model.DisplayName) ? moduleName : model.DisplayName;
-        var platforms = ParsePlatforms(model.Platforms);
-        var hooks = ParseHooks(model.Hooks);
-        var cleanFilter = ParseCleanFilter(model.CleanFilter);
-        var registry = ParseRegistry(model.Registry);
-        var globalPackages = ParseGlobalPackages(model.GlobalPackages);
-        var vscodeExtensions = ParseStringList(model.VscodeExtensions);
-        var psModules = ParseStringList(model.PsModules);
-        var manifest = new AppManifest(moduleName, displayName, model.Enabled, platforms, links.ToImmutableArray(), hooks, cleanFilter, registry, globalPackages, vscodeExtensions, psModules);
-        return ManifestParseResult.Success(manifest);
+        links = result.ToImmutableArray();
+        return null;
     }
 
     private static ImmutableArray<Platform> ParsePlatforms(List<string>? values)

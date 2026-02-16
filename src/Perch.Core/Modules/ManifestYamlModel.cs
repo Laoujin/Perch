@@ -4,6 +4,7 @@ internal sealed class ManifestYamlModel
 {
     public bool Enabled { get; set; } = true;
     public string? DisplayName { get; set; }
+    public string? Gallery { get; set; }
     public List<string>? Platforms { get; set; }
     public List<LinkYamlModel>? Links { get; set; }
     public HooksYamlModel? Hooks { get; set; }

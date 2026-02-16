@@ -76,6 +76,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICatalogCache>(_ => new FileCatalogCache(
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "perch", "cache", "catalog")));
         services.AddSingleton<ICatalogService, CatalogService>();
+        services.AddSingleton<IGalleryOverlayService, GalleryOverlayService>();
         services.AddSingleton<IDotfileScanner, DotfileScanner>();
         services.AddSingleton<IFontScanner, FontScanner>();
         services.AddSingleton<IVsCodeService, VsCodeService>();

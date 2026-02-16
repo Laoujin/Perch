@@ -726,4 +726,48 @@ public sealed class ManifestParserTests
             Assert.That(result.Manifest!.Links[1].IsTemplate, Is.False);
         });
     }
+
+    [Test]
+    public void Parse_GalleryField_ReturnsGalleryId()
+    {
+        string yaml = """
+            gallery: vscode
+            links:
+              - source: settings.json
+                target: "%APPDATA%\\Code\\User\\settings.json"
+            """;
+
+        var result = _parser.Parse(yaml, "vscode");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Manifest!.GalleryId, Is.EqualTo("vscode"));
+    }
+
+    [Test]
+    public void Parse_GalleryOnlyManifest_IsValid()
+    {
+        string yaml = """
+            gallery: vscode
+            """;
+
+        var result = _parser.Parse(yaml, "vscode");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Manifest!.GalleryId, Is.EqualTo("vscode"));
+        Assert.That(result.Manifest.Links, Is.Empty);
+    }
+
+    [Test]
+    public void Parse_NoGalleryField_GalleryIdIsNull()
+    {
+        string yaml = """
+            links:
+              - source: settings.json
+                target: "%APPDATA%\\Code\\User\\settings.json"
+            """;
+
+        var result = _parser.Parse(yaml, "vscode");
+
+        Assert.That(result.Manifest!.GalleryId, Is.Null);
+    }
 }
