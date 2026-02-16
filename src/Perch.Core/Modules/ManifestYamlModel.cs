@@ -38,6 +38,7 @@ internal sealed class LinkYamlModel
     public string? Source { get; set; }
     public object? Target { get; set; }
     public string? LinkType { get; set; }
+    public bool Template { get; set; }
 }
 
 internal sealed class RegistryYamlModel

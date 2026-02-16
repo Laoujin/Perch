@@ -55,7 +55,7 @@ public sealed class ManifestParser
             }
 
             var linkType = ParseLinkType(link.LinkType);
-            var entry = ParseTarget(link.Source, link.Target, linkType);
+            var entry = ParseTarget(link.Source, link.Target, linkType, link.Template);
             if (entry == null)
             {
                 return ManifestParseResult.Failure($"Link [{i}] has an invalid 'target'.");
@@ -95,11 +95,11 @@ public sealed class ManifestParser
         return platforms.ToImmutableArray();
     }
 
-    private static LinkEntry? ParseTarget(string source, object target, LinkType linkType)
+    private static LinkEntry? ParseTarget(string source, object target, LinkType linkType, bool isTemplate)
     {
         if (target is string s)
         {
-            return string.IsNullOrWhiteSpace(s) ? null : new LinkEntry(source, s, linkType);
+            return string.IsNullOrWhiteSpace(s) ? null : new LinkEntry(source, s, null, linkType, isTemplate);
         }
 
         if (target is Dictionary<object, object> dict)
@@ -115,7 +115,7 @@ public sealed class ManifestParser
             }
 
             return platformTargets.Count > 0
-                ? new LinkEntry(source, null, platformTargets.ToImmutableDictionary(), linkType)
+                ? new LinkEntry(source, null, platformTargets.ToImmutableDictionary(), linkType, isTemplate)
                 : null;
         }
 
