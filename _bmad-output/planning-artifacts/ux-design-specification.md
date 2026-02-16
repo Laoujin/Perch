@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [1, 2, 3, 4]
+stepsCompleted: [1, 2, 3, 4, 5, 6]
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/prd-validation-report.md'
@@ -141,3 +141,118 @@ Both experiences share the same card-based view components and the same Perch.Co
 3. **Errors are guidance, not dead ends.** Every error state tells users what happened, why, and what to do next.
 4. **Visual quality is the trust signal.** In a space of terminal tools, the polish of the UI is itself a feature — it communicates "this was built with care."
 5. **Never make users feel dumb.** Technical concepts (symlinks, dotfiles, registry) are presented through familiar metaphors (cards, toggles, status indicators) — not jargon.
+
+## UX Pattern Analysis & Inspiration
+
+### Inspiring Products Analysis
+
+**ASUS Armoury Crate 6 (Primary Inspiration)**
+The central visual and interaction reference for Perch Desktop. Key UX elements:
+- **Sidebar navigation** with icon + label, section-based (Devices, Playground, Assistant). Clean hierarchy — one click to any section.
+- **Dashboard with metrics front and center.** Performance stats (GPU, CPU, fans, memory) visible immediately without navigation. Maps directly to Perch's drift summary on the home screen.
+- **Modular architecture.** Users install only the modules they need (Playground for RGB, Assistant for performance). Parallels Perch's profile-driven content filtering.
+- **Dark theme, premium aesthetic.** ROG's gaming visual identity — polished, not utilitarian. The bar Perch should aim for in a developer/power-user context.
+- **Reduced cognitive load.** Version 6 explicitly removed visual clutter from v5. "Cleaner, more modern look" with "far less visually busy" presentation. Settings consolidated under logical sections instead of scattered across dashboard.
+- **Device-centric navigation.** Click a device image to see its settings. Maps to Perch's card-click-to-detail pattern — click an app card, see its config and actions.
+
+**VS Code Extensions Panel (Card Grid Pattern)**
+The reference for Perch's app browsing experience:
+- Card grid layout with icon, name, brief description, and action button per card
+- Tabs: Installed / Recommended / Search results
+- Search bar with instant filtering
+- Category sidebar for browsing
+- Maps to: Perch's "Your apps" / "Suggested" / "Other apps" three-tier layout
+
+**GitHub Desktop (Status-Focused Dashboard)**
+The reference for Perch's drift concept:
+- Home screen answers "what changed?" at a glance
+- File-level diff indicators (added, modified, deleted) map to Perch's card status ribbons (linked, drifted, missing, broken)
+- Minimal chrome — the status IS the interface
+- One-click actions from the status view (commit, push) map to Perch's one-click fix/link actions
+
+### Transferable UX Patterns
+
+**Navigation:**
+- Armoury Crate's sidebar → Perch sidebar (Home, Dotfiles, Apps, System Tweaks, Settings)
+- Armoury Crate's device-click-to-detail → Perch card-click-to-detail
+
+**Information Hierarchy:**
+- Armoury Crate's "metrics front and center" → Perch drift summary as hero section on dashboard
+- VS Code's Installed/Recommended/Search tabs → Perch's three-tier card layout (Your apps → Suggested → Other)
+
+**Visual Design:**
+- Armoury Crate's dark premium aesthetic → Perch dark theme with Fluent Design + Midjourney artwork
+- VS Code's clean card grid → Perch app/dotfile cards with real icons and status ribbons
+
+**Interaction:**
+- GitHub Desktop's one-click actions from status → Perch one-click fix/link from drift cards
+- Armoury Crate's modular install → Perch profile-driven view filtering
+
+### Anti-Patterns to Avoid
+
+- **The old Avalonia prototype:** 10-step wizard with bare checkboxes, no visual hierarchy, no component library, technical language. The explicit anti-reference.
+- **Ninite's wall of checkboxes:** Functional but zero visual appeal. No cards, no images, no status indicators. Efficient but forgettable.
+- **Settings panels disguised as dashboards:** If the home screen is just a list of toggles, it's a settings panel. The dashboard must communicate state, not offer configuration.
+- **Information overload on first load:** Armoury Crate v5 was criticized for being visually busy. V6 fixed this by consolidating. Perch must launch clean — drift summary and attention items only, not every module.
+- **Technical jargon in non-developer contexts:** The Apps view and System Tweaks should be free of symlink/junction/path terminology. Dotfiles views can be more technical when the user selected a Developer profile — that audience expects and prefers it. Where possible, even system configuration should use plain language ("Dark mode", "Context menu entries") rather than implementation details ("Registry key HKCU\...").
+
+### Design Inspiration Strategy
+
+**Adopt directly:**
+- Sidebar navigation pattern (Armoury Crate)
+- Dark theme with premium visual polish (Armoury Crate)
+- Card grid with search for browsing content (VS Code)
+- Status-focused home screen (GitHub Desktop)
+
+**Adapt for Perch:**
+- Armoury Crate's device images → Perch's Midjourney profile cards and real app icons
+- VS Code's Installed/Recommended tabs → Perch's "Your apps" / "Suggested for you" / "Other apps" sections with detection-first ordering
+- GitHub Desktop's file-level diffs → Perch's module-level drift cards with color-coded status ribbons
+
+**Avoid:**
+- Armoury Crate v5's visual clutter — keep the dashboard focused on drift, not configuration
+- Ninite's checkbox grid — cards with images and status, never bare checkboxes
+- Technical jargon in non-developer contexts — Apps and System Tweaks use plain language; Dotfiles views for Developer profiles can be technical
+
+## Design System Foundation
+
+### Design System Choice
+
+**Primary:** WPF UI (lepoco/wpfui) — Fluent Design System for WPF
+**Secondary:** HandyControl StepBar — wizard step indicator component
+**MVVM:** CommunityToolkit.Mvvm — carried over from the Avalonia prototype
+
+This is a **themeable established system** approach: WPF UI provides the Fluent 2 / Windows 11 design language as a foundation, with HandyControl filling specific component gaps. Custom styling on top for Perch's brand identity (logo, Midjourney artwork, color accents).
+
+### Rationale for Selection
+
+- **WPF UI** provides the Armoury Crate-like sidebar NavigationView, CardControl, CardAction, InfoBar, and Badge — the exact controls needed for dashboard and card-based views. Windows 11 Fluent aesthetic matches the premium, dark-theme visual goal. ~7k GitHub stars, MIT licensed, actively maintained through 2026.
+- **HandyControl** adds the `StepBar` component for wizard step indicators — the one critical control WPF UI lacks. Also provides `SearchBar`, `Shield` (badges), and `CoverView` as backup options. ~6k GitHub stars, MIT licensed.
+- **CommunityToolkit.Mvvm** is already proven in the codebase from the Avalonia prototype. `[ObservableProperty]`, `[RelayCommand]`, and `ObservableObject` carry over directly to WPF with zero changes.
+
+### Implementation Approach
+
+**Shell (WPF UI):**
+- `NavigationView` for sidebar (Home, Dotfiles, Apps, System Tweaks, Settings)
+- `CardControl` / `CardAction` for app cards, dotfile cards, profile cards
+- Dark Fluent theme as the base aesthetic
+- `InfoBar` for status messages and notifications
+- `Badge` for drift status indicators on cards
+
+**Wizard (HandyControl):**
+- `StepBar` for step indicator (Profile → Dotfiles → Apps → System Tweaks → Deploy)
+- Hosted in a dedicated wizard window/view, separate from the sidebar-based dashboard shell
+
+**MVVM (CommunityToolkit.Mvvm):**
+- `ObservableObject` base for all ViewModels
+- `[ObservableProperty]` for bindable properties
+- `[RelayCommand]` for command bindings
+- ViewLocator pattern for ViewModel → View resolution (same approach as Avalonia prototype)
+
+### Customization Strategy
+
+- **Color palette:** Dark base from WPF UI Fluent theme. Custom accent color for Perch brand identity (to be defined — likely a nature-inspired tone to match the bird/perch concept).
+- **Card backgrounds:** Profile cards use Midjourney hero images via `ImageBrush` with semi-transparent overlay for text readability. App cards use real app icons on a subtle gradient or solid background.
+- **Typography:** Inter or Segoe UI Variable (Windows 11 system font) — clean, modern, readable at small sizes for card descriptions.
+- **Status colors:** Green (linked/OK), Yellow (exists but not linked / needs attention), Red (broken/error), Blue (not installed / informational). Consistent across all views.
+- **Logo:** Bird silhouette concept (perching bird on a branch or wire). Dark-theme-friendly, works at sidebar icon size (~24px) through splash screen size. Midjourney for concepts, vectorized for final asset.
