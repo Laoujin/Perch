@@ -588,4 +588,57 @@ public sealed class ManifestParserTests
         Assert.That(result.IsSuccess, Is.True);
         Assert.That(result.Manifest!.PsModules, Is.Empty);
     }
+
+    [Test]
+    public void Parse_LinkWithTemplateTrue_SetsIsTemplate()
+    {
+        string yaml = """
+            links:
+              - source: .gitconfig.template
+                target: "%USERPROFILE%\\.gitconfig"
+                template: true
+            """;
+
+        var result = _parser.Parse(yaml, "git");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Manifest!.Links[0].IsTemplate, Is.True);
+    }
+
+    [Test]
+    public void Parse_LinkWithoutTemplate_DefaultsToFalse()
+    {
+        string yaml = """
+            links:
+              - source: settings.json
+                target: "%APPDATA%\\Code\\User\\settings.json"
+            """;
+
+        var result = _parser.Parse(yaml, "vscode");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Manifest!.Links[0].IsTemplate, Is.False);
+    }
+
+    [Test]
+    public void Parse_MixedTemplateAndNonTemplateLinks_ParsesBothCorrectly()
+    {
+        string yaml = """
+            links:
+              - source: .gitconfig.template
+                target: "%USERPROFILE%\\.gitconfig"
+                template: true
+              - source: .gitignore_global
+                target: "%USERPROFILE%\\.gitignore_global"
+            """;
+
+        var result = _parser.Parse(yaml, "git");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Manifest!.Links[0].IsTemplate, Is.True);
+            Assert.That(result.Manifest!.Links[1].IsTemplate, Is.False);
+        });
+    }
 }
