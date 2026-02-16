@@ -63,6 +63,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IStatusService, StatusService>();
         services.AddSingleton<ISettingsProvider, YamlSettingsProvider>();
         services.AddSingleton<PackageManifestParser>();
+        services.AddSingleton<InstallManifestParser>();
+        services.AddSingleton<IInstallResolver, InstallResolver>();
         services.AddSingleton<IProcessRunner, DefaultProcessRunner>();
         services.AddSingleton<ITemplateProcessor, TemplateProcessor>();
         services.AddSingleton<IReferenceResolver, OnePasswordResolver>();
