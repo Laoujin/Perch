@@ -1,5 +1,5 @@
 ---
-stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+stepsCompleted: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
 inputDocuments:
   - '_bmad-output/planning-artifacts/prd.md'
   - '_bmad-output/planning-artifacts/prd-validation-report.md'
@@ -613,3 +613,119 @@ flowchart TD
 3. **Batch operations:** Users can toggle multiple cards before deploying once. No per-card deploy friction.
 4. **Remember choices:** Profile selection and density toggle preferences persist across sessions. Returning users skip straight to dashboard.
 5. **Exit at any point:** Wizard supports closing mid-flow — already-deployed items remain linked. No "must complete all steps" lock-in.
+
+## Component Strategy
+
+### Design System Components
+
+**From WPF UI (primary library):**
+
+| Component | Usage in Perch |
+|---|---|
+| `NavigationView` | Dashboard sidebar (Home, Dotfiles, Apps, System Tweaks, Settings). `LeftFluent` mode with icon + label. Footer item for Settings. |
+| `Card` | Base container for app/dotfile/tweak cards. Header + content + footer areas. |
+| `CardExpander` | Expanded card detail view — click a card to reveal config paths, actions, options. |
+| `InfoBar` | Deploy success/failure notifications, inline status messages. Severity levels map to our status colors. |
+| `Snackbar` | Transient feedback — "Symlink created", "Config backed up". Auto-dismiss after 3s. |
+| `ProgressRing` | Per-card deploy progress (determinate). System scan loading indicator (indeterminate). |
+| `Button` | Deploy CTA (Primary appearance), card actions (Secondary), destructive actions (Danger). |
+| `ToggleSwitch` | Card on/off toggles for wizard selection. System tweak toggles. |
+| `AutoSuggestBox` | Search bar in NavigationView and card gallery views. |
+| `SymbolIcon` | Sidebar icons (Home24, Code24, Apps24, Settings24), action icons. |
+| `BreadcrumbBar` | Navigation header showing current location in dashboard. |
+
+**From HandyControl (secondary library):**
+
+| Component | Usage in Perch |
+|---|---|
+| `StepBar` | Wizard step indicator. Horizontal, top-docked. Bindable `StepIndex` with Prev/Next commands. Supports custom `ItemTemplate` for step labels. |
+| `SearchBar` | Alternative to WPF UI AutoSuggestBox if richer search UX needed (clear button, command binding, placeholder text). |
+
+**From WPF / .NET (built-in):**
+
+| Component | Usage in Perch |
+|---|---|
+| `Image` / `BitmapImage` | App icons on cards, Midjourney hero images on profile cards, Perch logo in sidebar. |
+| `UniformGrid` / `WrapPanel` | Card grid layout — responsive columns with minimum card width. |
+| `ScrollViewer` | Content area scrolling (card grids, three-tier layout). |
+| `DataTemplate` | Card templates for different card types (app card, dotfile card, profile card, tweak card). |
+
+### Custom Components
+
+**1. StatusRibbon**
+
+**Purpose:** Visual status indicator strip on cards — communicates config health at a glance.
+**Content:** Status text ("Linked", "Not linked", "Broken", "Not installed") + colored background.
+**States:** OK (green), Warning (amber), Error (red), Info (blue), Selected (accent green).
+**Implementation:** Custom `UserControl` — a slim horizontal strip at the top or side of a card with status text and background color bound to a `ResultLevel` enum. Uses our status color tokens.
+**Accessibility:** Status communicated via text, not color alone.
+
+**2. ProfileCard**
+
+**Purpose:** Multi-select profile selection card for wizard step 1.
+**Content:** Midjourney hero image background, profile name overlay, brief tagline, selection indicator.
+**States:** Default (dim overlay), Hover (lighter overlay), Selected (accent border + checkmark badge), Disabled (grayed).
+**Implementation:** Custom `UserControl` wrapping WPF UI `Card` with `ImageBrush` background, semi-transparent gradient overlay for text readability, and a selection checkmark using `SymbolIcon`.
+**Variants:** Fixed size (~200x280px portrait orientation) for the wizard grid.
+
+**3. AppCard**
+
+**Purpose:** The primary interaction unit — represents a detected/gallery app or dotfile module.
+**Content:** App icon (24-32px), name, one-line description, `StatusRibbon`, toggle/action area.
+**States:** Default, Hover (elevated shadow), Selected (accent border), Expanded (shows `CardExpander` detail), Disabled (not installed, grayed).
+**Actions:** Toggle manage on/off, expand for detail, context menu (link/unlink/fix/ignore).
+**Implementation:** Custom `UserControl` composing WPF UI `Card` + `CardExpander` + `ToggleSwitch`. Uses `DataTemplate` for binding to an `AppCardViewModel`.
+**Variants:** Grid mode (square-ish, icon-prominent) and List mode (horizontal row, compact).
+
+**4. DriftHeroBanner**
+
+**Purpose:** Dashboard home hero section — aggregate drift summary at a glance.
+**Content:** Status counts (X linked, Y attention, Z broken), visual health bar or ring, brief message ("Everything looks good" / "3 items need attention").
+**States:** Healthy (all green, calm), Attention (yellow accent, action prompt), Critical (red accent, urgent).
+**Implementation:** Custom `UserControl` with a large card spanning full content width. Status counts as styled `TextBlock` elements. Optional `ProgressRing` showing percentage healthy.
+**Accessibility:** All counts are text-based, status message is screen-reader friendly.
+
+**5. DeployBar**
+
+**Purpose:** Contextual floating action bar that appears when items are selected for deploy.
+**Content:** Selected item count ("5 items selected"), Deploy button, Cancel/Clear selection.
+**States:** Hidden (no selection), Visible (items selected), Deploying (progress), Complete (success message, auto-dismiss).
+**Implementation:** Custom `UserControl` positioned at the bottom of the content area. Slide-up animation on appear. Uses WPF UI `Button` (Primary) for deploy CTA.
+
+**6. TierSectionHeader**
+
+**Purpose:** Section divider for the three-tier card layout (Your Apps / Suggested for You / Other Apps).
+**Content:** Section title, item count badge, optional collapse toggle.
+**States:** Expanded (default), Collapsed (cards hidden, header only).
+**Implementation:** Simple `UserControl` — styled `TextBlock` + count badge + chevron toggle. Minimal custom code.
+
+### Component Implementation Strategy
+
+**Build on library primitives:** Every custom component composes WPF UI controls (`Card`, `Button`, `SymbolIcon`, `ToggleSwitch`) rather than building from scratch. This ensures visual consistency with the Fluent theme without fighting the library.
+
+**ViewModel-first:** Each custom component has a corresponding ViewModel (`ProfileCardViewModel`, `AppCardViewModel`, `DriftSummaryViewModel`). The component is a `UserControl` with `DataTemplate` binding — no code-behind logic beyond dependency properties.
+
+**Shared tokens:** All custom components reference the same color/spacing tokens defined in `App.xaml` resource dictionaries. StatusRibbon colors, card padding, border radius — all from central resources.
+
+**Density-aware:** `AppCard` supports both grid and list variants via a `DataTemplateSelector` that switches based on a `ViewDensity` enum (Grid/List). Same ViewModel, different visual template.
+
+### Implementation Roadmap
+
+**Phase 1 — Wizard MVP:**
+- `ProfileCard` — needed for wizard step 1 (profile selection), including Midjourney hero image backgrounds
+- `AppCard` (grid variant) — needed for wizard steps 2-4 (dotfiles, apps, tweaks)
+- `StatusRibbon` — embedded in AppCard
+- `TierSectionHeader` — sections within card views
+- `DeployBar` — wizard deploy action
+- HandyControl `StepBar` integration — wizard step indicator
+
+**Phase 2 — Dashboard:**
+- `DriftHeroBanner` — dashboard home view
+- `AppCard` (list variant) — compact density mode
+- WPF UI `NavigationView` shell — sidebar navigation
+- `InfoBar` / `Snackbar` integration — deploy feedback
+
+**Phase 3 — Polish:**
+- Card hover animations and transitions
+- `CardExpander` detail panels for advanced card actions
+- `SearchBar` integration with gallery filtering
