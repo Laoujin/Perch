@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Perch.Core\Perch.Core.csproj" />
+    <ProjectReference Include="..\..\src\Perch.Cli\Perch.Cli.csproj" />
   </ItemGroup>
 
 </Project>

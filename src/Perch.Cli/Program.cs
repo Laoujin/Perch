@@ -40,7 +40,7 @@ app.Configure(config =>
             .WithDescription("Restore files from a pre-deploy snapshot");
     });
     config.AddCommand<CompletionCommand>("completion")
-        .WithDescription("Output shell tab-completion script");
+        .WithDescription("Generate shell completion script");
 });
 
 return app.Run(args);
