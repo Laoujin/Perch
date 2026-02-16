@@ -9,6 +9,7 @@ using Wpf.Ui.DependencyInjection;
 
 using Perch.Core;
 using Perch.Core.Config;
+using Perch.Desktop.Services;
 using Perch.Desktop.ViewModels;
 using Perch.Desktop.ViewModels.Wizard;
 using Perch.Desktop.Views;
@@ -29,6 +30,7 @@ public partial class App : Application
             services.AddSingleton<IContentDialogService, ContentDialogService>();
 
             services.AddPerchCore();
+            services.AddSingleton<IGalleryDetectionService, GalleryDetectionService>();
 
             services.AddSingleton<INavigationWindow, MainWindow>();
             services.AddSingleton<MainWindowViewModel>();

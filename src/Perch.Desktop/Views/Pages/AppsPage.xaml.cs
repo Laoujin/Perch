@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Controls;
 
 using Perch.Desktop.ViewModels;
@@ -19,5 +20,15 @@ public partial class AppsPage : Page
     {
         if (ViewModel.RefreshCommand.CanExecute(null))
             ViewModel.RefreshCommand.Execute(null);
+    }
+
+    private void OnDeployRequested(object sender, RoutedEventArgs e)
+    {
+        // Deploy from dashboard context — handled by parent
+    }
+
+    private void OnClearRequested(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ClearSelection();
     }
 }

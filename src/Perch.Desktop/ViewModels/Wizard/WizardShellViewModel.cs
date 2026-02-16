@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -5,8 +6,9 @@ using CommunityToolkit.Mvvm.Input;
 
 using Perch.Core.Config;
 using Perch.Core.Deploy;
-using Perch.Core.Modules;
-using Perch.Core.Packages;
+
+using Perch.Desktop.Models;
+using Perch.Desktop.Services;
 
 namespace Perch.Desktop.ViewModels.Wizard;
 
@@ -14,8 +16,7 @@ public sealed partial class WizardShellViewModel : ViewModelBase
 {
     private readonly IDeployService _deployService;
     private readonly ISettingsProvider _settingsProvider;
-    private readonly IModuleDiscoveryService _discoveryService;
-    private readonly IAppScanService _appScanService;
+    private readonly IGalleryDetectionService _detectionService;
 
     [ObservableProperty]
     private int _currentStepIndex;
@@ -39,47 +40,116 @@ public sealed partial class WizardShellViewModel : ViewModelBase
     private int _errorCount;
 
     [ObservableProperty]
-    private bool _isLoadingModules;
+    private bool _isLoadingDetection;
+
+    [ObservableProperty]
+    private string _configRepoPath = string.Empty;
+
+    private readonly HashSet<UserProfile> _selectedProfiles = [];
 
     public ObservableCollection<string> StepNames { get; } = [];
 
-    public ProfileSelectionViewModel ProfileSelection { get; }
+    // Profile selection state
+    [ObservableProperty]
+    private bool _isDeveloper = true;
 
-    public ObservableCollection<WizardModuleViewModel> DotfileModules { get; } = [];
-    public ObservableCollection<WizardAppViewModel> Apps { get; } = [];
-    public ObservableCollection<WizardTweakModuleViewModel> TweakModules { get; } = [];
+    [ObservableProperty]
+    private bool _isPowerUser;
+
+    [ObservableProperty]
+    private bool _isGamer;
+
+    [ObservableProperty]
+    private bool _isCasual;
+
+    // Detected items from gallery
+    public ObservableCollection<DotfileCardModel> Dotfiles { get; } = [];
+    public ObservableCollection<AppCardModel> YourApps { get; } = [];
+    public ObservableCollection<AppCardModel> SuggestedApps { get; } = [];
+    public ObservableCollection<AppCardModel> OtherApps { get; } = [];
+    public ObservableCollection<TweakCardModel> Tweaks { get; } = [];
     public ObservableCollection<DeployResultItemViewModel> DeployResults { get; } = [];
+
+    [ObservableProperty]
+    private int _selectedAppCount;
+
+    [ObservableProperty]
+    private int _selectedDotfileCount;
+
+    [ObservableProperty]
+    private int _selectedTweakCount;
+
+    public int TotalSelectedCount => SelectedAppCount + SelectedDotfileCount + SelectedTweakCount;
+
+    public bool ShowDotfilesStep => IsDeveloper || IsPowerUser;
 
     public WizardShellViewModel(
         IDeployService deployService,
         ISettingsProvider settingsProvider,
-        IModuleDiscoveryService discoveryService,
-        IAppScanService appScanService)
+        IGalleryDetectionService detectionService)
     {
         _deployService = deployService;
         _settingsProvider = settingsProvider;
-        _discoveryService = discoveryService;
-        _appScanService = appScanService;
+        _detectionService = detectionService;
 
-        ProfileSelection = new ProfileSelectionViewModel();
-
-        StepNames.Add("Welcome");
-        StepNames.Add("Dotfiles");
-        StepNames.Add("Apps");
-        StepNames.Add("System Tweaks");
-        StepNames.Add("Review");
-        StepNames.Add("Deploy");
+        _ = LoadConfigRepoPathAsync();
+        RebuildSteps();
     }
 
     public bool CanGoBack => CurrentStepIndex > 0 && !IsDeploying && !IsComplete;
-    public bool CanGoNext => CurrentStepIndex < StepNames.Count - 1 && !IsDeploying && !IsComplete;
-    public bool ShowDeploy => CurrentStepIndex == StepNames.Count - 1 && !IsDeploying && !IsComplete;
+    public bool CanGoNext => CurrentStepIndex < StepNames.Count - 2 && !IsDeploying && !IsComplete;
+    public bool ShowDeploy => CurrentStepIndex == StepNames.Count - 2 && !IsDeploying && !IsComplete;
 
     partial void OnCurrentStepIndexChanged(int value)
     {
         OnPropertyChanged(nameof(CanGoBack));
         OnPropertyChanged(nameof(CanGoNext));
         OnPropertyChanged(nameof(ShowDeploy));
+    }
+
+    partial void OnIsDeveloperChanged(bool value) => RebuildSteps();
+    partial void OnIsPowerUserChanged(bool value) => RebuildSteps();
+    partial void OnIsGamerChanged(bool value) => RebuildSteps();
+    partial void OnIsCasualChanged(bool value) => RebuildSteps();
+
+    private void RebuildSteps()
+    {
+        _selectedProfiles.Clear();
+        if (IsDeveloper) _selectedProfiles.Add(UserProfile.Developer);
+        if (IsPowerUser) _selectedProfiles.Add(UserProfile.PowerUser);
+        if (IsGamer) _selectedProfiles.Add(UserProfile.Gamer);
+        if (IsCasual) _selectedProfiles.Add(UserProfile.Casual);
+
+        StepNames.Clear();
+        StepNames.Add("Profile");
+        if (ShowDotfilesStep) StepNames.Add("Dotfiles");
+        StepNames.Add("Apps");
+        StepNames.Add("System Tweaks");
+        StepNames.Add("Review");
+        StepNames.Add("Deploy");
+
+        OnPropertyChanged(nameof(ShowDotfilesStep));
+        OnPropertyChanged(nameof(CanGoBack));
+        OnPropertyChanged(nameof(CanGoNext));
+        OnPropertyChanged(nameof(ShowDeploy));
+    }
+
+    private async Task LoadConfigRepoPathAsync()
+    {
+        var settings = await _settingsProvider.LoadAsync();
+        ConfigRepoPath = settings.ConfigRepoPath ?? string.Empty;
+    }
+
+    [RelayCommand]
+    private void BrowseConfigRepo()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Select your perch-config repository",
+        };
+
+        if (dialog.ShowDialog() == true)
+            ConfigRepoPath = dialog.FolderName;
     }
 
     [RelayCommand]
@@ -95,67 +165,60 @@ public sealed partial class WizardShellViewModel : ViewModelBase
         if (!CanGoNext)
             return;
 
-        // Load data when leaving Welcome step
-        if (CurrentStepIndex == 0 && DotfileModules.Count == 0)
-            await LoadModulesAndAppsAsync(cancellationToken);
+        // Save config and run detection when leaving Profile step
+        if (CurrentStepIndex == 0)
+        {
+            if (string.IsNullOrWhiteSpace(ConfigRepoPath))
+                return;
+
+            var settings = await _settingsProvider.LoadAsync(cancellationToken);
+            if (!string.Equals(settings.ConfigRepoPath, ConfigRepoPath, StringComparison.Ordinal))
+                await _settingsProvider.SaveAsync(settings with { ConfigRepoPath = ConfigRepoPath }, cancellationToken);
+
+            await RunDetectionAsync(cancellationToken);
+        }
 
         CurrentStepIndex++;
     }
 
-    private async Task LoadModulesAndAppsAsync(CancellationToken cancellationToken)
+    private async Task RunDetectionAsync(CancellationToken cancellationToken)
     {
-        var settings = await _settingsProvider.LoadAsync(cancellationToken);
-        if (string.IsNullOrWhiteSpace(settings.ConfigRepoPath))
-            return;
-
-        IsLoadingModules = true;
+        IsLoadingDetection = true;
 
         try
         {
-            var discoveryTask = _discoveryService.DiscoverAsync(settings.ConfigRepoPath, cancellationToken);
-            var appScanTask = _appScanService.ScanAsync(settings.ConfigRepoPath, cancellationToken);
+            var appsTask = _detectionService.DetectAppsAsync(_selectedProfiles, cancellationToken);
+            var tweaksTask = _detectionService.DetectTweaksAsync(_selectedProfiles, cancellationToken);
+            var dotfilesTask = _detectionService.DetectDotfilesAsync(cancellationToken);
 
-            await Task.WhenAll(discoveryTask, appScanTask);
+            await Task.WhenAll(appsTask, tweaksTask, dotfilesTask);
 
-            var discovery = discoveryTask.Result;
-            var appScan = appScanTask.Result;
+            var appResult = appsTask.Result;
+            var tweakResult = tweaksTask.Result;
+            var dotfileResult = dotfilesTask.Result;
 
-            DotfileModules.Clear();
-            TweakModules.Clear();
-            Apps.Clear();
+            YourApps.Clear();
+            SuggestedApps.Clear();
+            OtherApps.Clear();
+            Tweaks.Clear();
+            Dotfiles.Clear();
 
-            foreach (var module in discovery.Modules.OrderBy(m => m.DisplayName))
-            {
-                if (module.Links.Length > 0)
-                {
-                    DotfileModules.Add(new WizardModuleViewModel(module.Name, module.DisplayName, module.Enabled)
-                    {
-                        LinkCount = module.Links.Length,
-                    });
-                }
-
-                if (module.Registry.Length > 0)
-                {
-                    TweakModules.Add(new WizardTweakModuleViewModel(module.Name, module.DisplayName, module.Enabled)
-                    {
-                        EntryCount = module.Registry.Length,
-                    });
-                }
-            }
-
-            foreach (var entry in appScan.Entries.OrderBy(e => e.Name))
-            {
-                Apps.Add(new WizardAppViewModel(entry.Name, entry.Category, entry.Source?.ToString()));
-            }
+            foreach (var app in appResult.YourApps) { app.IsSelected = true; YourApps.Add(app); }
+            foreach (var app in appResult.Suggested) SuggestedApps.Add(app);
+            foreach (var app in appResult.OtherApps) OtherApps.Add(app);
+            foreach (var tweak in tweakResult) Tweaks.Add(tweak);
+            foreach (var df in dotfileResult) { df.IsSelected = df.IsSymlink; Dotfiles.Add(df); }
         }
         catch (OperationCanceledException)
         {
-            // User cancelled
+            // cancelled
         }
         finally
         {
-            IsLoadingModules = false;
+            IsLoadingDetection = false;
         }
+
+        NotifySelectionCounts();
     }
 
     [RelayCommand]
@@ -176,10 +239,10 @@ public sealed partial class WizardShellViewModel : ViewModelBase
         ErrorCount = 0;
         DeployStatusMessage = "Deploying...";
 
-        var selectedModules = DotfileModules
-            .Where(m => m.IsSelected)
-            .Select(m => m.Name)
-            .Concat(TweakModules.Where(m => m.IsSelected).Select(m => m.Name))
+        // Collect selected module names from detected apps that have config
+        var selectedModules = YourApps.Concat(SuggestedApps).Concat(OtherApps)
+            .Where(a => a.IsSelected && a.Config is not null)
+            .Select(a => a.Id)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         var progress = new Progress<DeployResult>(result =>
@@ -198,7 +261,7 @@ public sealed partial class WizardShellViewModel : ViewModelBase
 
         try
         {
-            var exitCode = await _deployService.DeployAsync(
+            await _deployService.DeployAsync(
                 settings.ConfigRepoPath,
                 new DeployOptions
                 {
@@ -213,7 +276,7 @@ public sealed partial class WizardShellViewModel : ViewModelBase
                 },
                 cancellationToken);
 
-            HasErrors = exitCode != 0 || ErrorCount > 0;
+            HasErrors = ErrorCount > 0;
         }
         catch (OperationCanceledException)
         {
@@ -233,104 +296,27 @@ public sealed partial class WizardShellViewModel : ViewModelBase
             ? $"Completed with {ErrorCount} error{(ErrorCount == 1 ? "" : "s")}. {DeployedCount} items deployed."
             : $"All done! {DeployedCount} configs linked successfully.";
 
+        // Move to deploy results step
+        CurrentStepIndex = StepNames.Count - 1;
+
         OnPropertyChanged(nameof(CanGoBack));
         OnPropertyChanged(nameof(CanGoNext));
         OnPropertyChanged(nameof(ShowDeploy));
     }
 
-    public int SelectedDotfileCount => DotfileModules.Count(m => m.IsSelected);
-    public int SelectedTweakCount => TweakModules.Count(m => m.IsSelected);
-    public int TotalSelectedCount => SelectedDotfileCount + SelectedTweakCount;
-
     public void NotifySelectionCounts()
     {
-        OnPropertyChanged(nameof(SelectedDotfileCount));
-        OnPropertyChanged(nameof(SelectedTweakCount));
+        SelectedAppCount = YourApps.Concat(SuggestedApps).Concat(OtherApps).Count(a => a.IsSelected);
+        SelectedDotfileCount = Dotfiles.Count(d => d.IsSelected);
+        SelectedTweakCount = Tweaks.Count(t => t.IsSelected);
         OnPropertyChanged(nameof(TotalSelectedCount));
     }
-}
 
-public sealed partial class ProfileSelectionViewModel : ObservableObject
-{
-    [ObservableProperty]
-    private bool _isDeveloper = true;
-
-    [ObservableProperty]
-    private bool _isPowerUser;
-
-    [ObservableProperty]
-    private bool _isGamer;
-
-    [ObservableProperty]
-    private bool _isCasual;
-
-    [ObservableProperty]
-    private bool _isCreative;
-}
-
-public sealed partial class WizardModuleViewModel : ObservableObject
-{
-    public string Name { get; }
-    public string DisplayName { get; }
-
-    [ObservableProperty]
-    private bool _isSelected;
-
-    public int LinkCount { get; init; }
-
-    public string Description => $"{LinkCount} config file{(LinkCount == 1 ? "" : "s")}";
-
-    public WizardModuleViewModel(string name, string displayName, bool defaultEnabled)
+    public string GetCurrentStepName()
     {
-        Name = name;
-        DisplayName = displayName;
-        IsSelected = defaultEnabled;
-    }
-}
-
-public sealed partial class WizardAppViewModel : ObservableObject
-{
-    public string Name { get; }
-    public AppCategory Category { get; }
-    public string? Source { get; }
-
-    [ObservableProperty]
-    private bool _isSelected;
-
-    public string CategoryDisplay => Category switch
-    {
-        AppCategory.Managed => "Managed",
-        AppCategory.InstalledNoModule => "Installed",
-        AppCategory.DefinedNotInstalled => "Not installed",
-        _ => "",
-    };
-
-    public WizardAppViewModel(string name, AppCategory category, string? source)
-    {
-        Name = name;
-        Category = category;
-        Source = source;
-        IsSelected = category == AppCategory.Managed;
-    }
-}
-
-public sealed partial class WizardTweakModuleViewModel : ObservableObject
-{
-    public string Name { get; }
-    public string DisplayName { get; }
-
-    [ObservableProperty]
-    private bool _isSelected;
-
-    public int EntryCount { get; init; }
-
-    public string Description => $"{EntryCount} registry entr{(EntryCount == 1 ? "y" : "ies")}";
-
-    public WizardTweakModuleViewModel(string name, string displayName, bool defaultEnabled)
-    {
-        Name = name;
-        DisplayName = displayName;
-        IsSelected = defaultEnabled;
+        if (CurrentStepIndex >= 0 && CurrentStepIndex < StepNames.Count)
+            return StepNames[CurrentStepIndex];
+        return string.Empty;
     }
 }
 
@@ -341,14 +327,6 @@ public sealed class DeployResultItemViewModel
     public ResultLevel Level { get; }
     public string SourcePath { get; }
     public string TargetPath { get; }
-
-    public string LevelDisplay => Level switch
-    {
-        ResultLevel.Ok => "OK",
-        ResultLevel.Warning => "Warning",
-        ResultLevel.Error => "Error",
-        _ => "",
-    };
 
     public DeployResultItemViewModel(DeployResult result)
     {

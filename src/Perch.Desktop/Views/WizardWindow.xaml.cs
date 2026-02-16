@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 
@@ -17,31 +19,29 @@ public partial class WizardWindow : FluentWindow
         DataContext = viewModel;
         InitializeComponent();
         SystemThemeWatcher.Watch(this);
+
+        viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        UpdateStepVisibility();
     }
 
-    private void OnProfileCardClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (sender is FrameworkElement element && element.Tag is string profile)
+        if (e.PropertyName == nameof(WizardShellViewModel.CurrentStepIndex))
         {
-            switch (profile)
-            {
-                case "Developer":
-                    ViewModel.ProfileSelection.IsDeveloper = !ViewModel.ProfileSelection.IsDeveloper;
-                    break;
-                case "PowerUser":
-                    ViewModel.ProfileSelection.IsPowerUser = !ViewModel.ProfileSelection.IsPowerUser;
-                    break;
-                case "Gamer":
-                    ViewModel.ProfileSelection.IsGamer = !ViewModel.ProfileSelection.IsGamer;
-                    break;
-                case "Casual":
-                    ViewModel.ProfileSelection.IsCasual = !ViewModel.ProfileSelection.IsCasual;
-                    break;
-                case "Creative":
-                    ViewModel.ProfileSelection.IsCreative = !ViewModel.ProfileSelection.IsCreative;
-                    break;
-            }
+            UpdateStepVisibility();
+            ViewModel.NotifySelectionCounts();
         }
+    }
+
+    private void UpdateStepVisibility()
+    {
+        var stepName = ViewModel.GetCurrentStepName();
+
+        DotfilesStep.Visibility = stepName == "Dotfiles" ? Visibility.Visible : Visibility.Collapsed;
+        AppsStep.Visibility = stepName == "Apps" ? Visibility.Visible : Visibility.Collapsed;
+        TweaksStep.Visibility = stepName == "System Tweaks" ? Visibility.Visible : Visibility.Collapsed;
+        ReviewStep.Visibility = stepName == "Review" ? Visibility.Visible : Visibility.Collapsed;
+        DeployStep.Visibility = stepName == "Deploy" ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnOpenDashboard(object sender, RoutedEventArgs e)
@@ -49,7 +49,4 @@ public partial class WizardWindow : FluentWindow
         WizardCompleted?.Invoke();
         Close();
     }
-
-    private void OnModuleChecked(object sender, RoutedEventArgs e) => ViewModel.NotifySelectionCounts();
-    private void OnModuleUnchecked(object sender, RoutedEventArgs e) => ViewModel.NotifySelectionCounts();
 }

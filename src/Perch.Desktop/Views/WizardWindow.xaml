@@ -4,6 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:vm="clr-namespace:Perch.Desktop.ViewModels.Wizard"
+    xmlns:models="clr-namespace:Perch.Desktop.Models"
+    xmlns:controls="clr-namespace:Perch.Desktop.Views.Controls"
     xmlns:deploy="clr-namespace:Perch.Core.Deploy;assembly=Perch.Core"
     d:DataContext="{d:DesignInstance vm:WizardShellViewModel}"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -21,6 +23,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -28,317 +31,354 @@
         <!-- Title Bar -->
         <ui:TitleBar Grid.Row="0" Title="Perch Setup" />
 
-        <!-- Step Content -->
-        <Grid Grid.Row="1">
+        <!-- Step indicator (name-based, since step count varies) -->
+        <Border Grid.Row="1" Background="#16162A" Padding="24,8">
+            <ItemsControl ItemsSource="{Binding StepNames}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="12,6" Margin="0,0,4,0" CornerRadius="4">
+                            <TextBlock Text="{Binding}" FontSize="11" Foreground="#888888" />
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
 
-            <!-- Step 0: Welcome / Profile Selection -->
+        <!-- Step Content -->
+        <Grid Grid.Row="2">
+
+            <!-- Step: Profile Selection (always index 0) -->
             <Grid Visibility="{Binding CurrentStepIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=0}">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <!-- Startpage hero -->
-                <Border Grid.Row="0" Height="180" ClipToBounds="True" Margin="24,8,24,0" CornerRadius="8">
+                <!-- Welcome hero -->
+                <Border Grid.Row="0" Height="160" ClipToBounds="True" Margin="24,8,24,0" CornerRadius="8">
                     <Border.Background>
                         <ImageBrush ImageSource="/Assets/startpage.png" Stretch="UniformToFill" AlignmentY="Center" />
                     </Border.Background>
                     <Border Background="#88000000" Padding="24,0">
                         <StackPanel VerticalAlignment="Center">
-                            <ui:TextBlock FontTypography="TitleLarge" Foreground="White" Text="Welcome to Perch" />
-                            <ui:TextBlock FontTypography="Body" Foreground="#CCFFFFFF" Margin="0,4,0,0"
-                                Text="Select your profile to get started. This determines which configs and tweaks are suggested for you." />
+                            <TextBlock FontSize="24" FontWeight="SemiBold" Foreground="White" Text="Welcome to Perch" />
+                            <TextBlock FontSize="13" Foreground="#CCFFFFFF" Margin="0,4,0,0"
+                                Text="Select your profile(s), then Perch will scan your system and show what it found." />
                         </StackPanel>
                     </Border>
                 </Border>
 
-                <ui:TextBlock Grid.Row="1" FontTypography="Subtitle" Margin="24,16,24,8" Text="Choose your profile" />
+                <!-- Config repo path -->
+                <StackPanel Grid.Row="1" Margin="24,16,24,0">
+                    <TextBlock FontSize="16" FontWeight="SemiBold" Foreground="White" Text="Config Repository" Margin="0,0,0,4" />
+                    <TextBlock FontSize="11" Foreground="#888888" Margin="0,0,0,8"
+                        Text="Path to your perch-config repository containing module manifests." />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ui:TextBox Grid.Column="0"
+                            PlaceholderText="e.g. C:\Users\you\perch-config"
+                            Text="{Binding ConfigRepoPath, UpdateSourceTrigger=PropertyChanged}" />
+                        <ui:Button Grid.Column="1" Content="Browse" Margin="8,0,0,0"
+                            Command="{Binding BrowseConfigRepoCommand}" />
+                    </Grid>
+                </StackPanel>
 
-                <!-- Profile cards - responsive grid -->
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="24,0">
-                    <UniformGrid Rows="1" Margin="0,0,0,12">
-                        <!-- Developer -->
-                        <Border Margin="0,0,8,0" MinHeight="200" CornerRadius="8" ClipToBounds="True"
-                                MouseLeftButtonUp="OnProfileCardClick" Tag="Developer" Cursor="Hand"
-                                BorderThickness="3"
-                                BorderBrush="{Binding ProfileSelection.IsDeveloper, Converter={StaticResource BooleanToBorderBrushConverter}}">
-                            <Border.Background>
-                                <ImageBrush ImageSource="/Assets/profile-developer.png" Stretch="UniformToFill" />
-                            </Border.Background>
-                            <Border Padding="16" VerticalAlignment="Bottom">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                        <GradientStop Color="#00000000" Offset="0" />
-                                        <GradientStop Color="#DD000000" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                                <StackPanel>
-                                    <Grid>
-                                        <ui:TextBlock FontTypography="BodyStrong" Foreground="White" Text="Developer" />
-                                        <CheckBox HorizontalAlignment="Right" IsChecked="{Binding ProfileSelection.IsDeveloper}" IsHitTestVisible="False" />
-                                    </Grid>
-                                    <ui:TextBlock FontTypography="Caption" Foreground="#AAFFFFFF" TextWrapping="Wrap"
-                                        Text="Full dotfiles, dev tools, shell configs" />
-                                </StackPanel>
-                            </Border>
-                        </Border>
+                <TextBlock Grid.Row="2" FontSize="16" FontWeight="SemiBold" Foreground="White" Margin="24,16,24,8"
+                    Text="Choose your profile(s)" />
 
-                        <!-- Power User -->
-                        <Border Margin="4,0" MinHeight="200" CornerRadius="8" ClipToBounds="True"
-                                MouseLeftButtonUp="OnProfileCardClick" Tag="PowerUser" Cursor="Hand"
-                                BorderThickness="3"
-                                BorderBrush="{Binding ProfileSelection.IsPowerUser, Converter={StaticResource BooleanToBorderBrushConverter}}">
-                            <Border.Background>
-                                <ImageBrush ImageSource="/Assets/profile-power-user.png" Stretch="UniformToFill" />
-                            </Border.Background>
-                            <Border Padding="16" VerticalAlignment="Bottom">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                        <GradientStop Color="#00000000" Offset="0" />
-                                        <GradientStop Color="#DD000000" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                                <StackPanel>
-                                    <Grid>
-                                        <ui:TextBlock FontTypography="BodyStrong" Foreground="White" Text="Power User" />
-                                        <CheckBox HorizontalAlignment="Right" IsChecked="{Binding ProfileSelection.IsPowerUser}" IsHitTestVisible="False" />
-                                    </Grid>
-                                    <ui:TextBlock FontTypography="Caption" Foreground="#AAFFFFFF" TextWrapping="Wrap"
-                                        Text="System tweaks, app settings" />
-                                </StackPanel>
-                            </Border>
-                        </Border>
+                <!-- Profile cards using ProfileCard control -->
+                <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" Margin="24,0">
+                    <WrapPanel>
+                        <controls:ProfileCard
+                            ProfileName="Developer"
+                            Tagline="Full dotfiles, dev tools, shell configs"
+                            HeroImageSource="/Assets/profile-developer.png"
+                            IsSelected="{Binding IsDeveloper, Mode=TwoWay}"
+                            Margin="0,0,12,12" />
 
-                        <!-- Gamer -->
-                        <Border Margin="4,0" MinHeight="200" CornerRadius="8" ClipToBounds="True"
-                                MouseLeftButtonUp="OnProfileCardClick" Tag="Gamer" Cursor="Hand"
-                                BorderThickness="3"
-                                BorderBrush="{Binding ProfileSelection.IsGamer, Converter={StaticResource BooleanToBorderBrushConverter}}">
-                            <Border.Background>
-                                <ImageBrush ImageSource="/Assets/profile-gamer.png" Stretch="UniformToFill" />
-                            </Border.Background>
-                            <Border Padding="16" VerticalAlignment="Bottom">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                        <GradientStop Color="#00000000" Offset="0" />
-                                        <GradientStop Color="#DD000000" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                                <StackPanel>
-                                    <Grid>
-                                        <ui:TextBlock FontTypography="BodyStrong" Foreground="White" Text="Gamer" />
-                                        <CheckBox HorizontalAlignment="Right" IsChecked="{Binding ProfileSelection.IsGamer}" IsHitTestVisible="False" />
-                                    </Grid>
-                                    <ui:TextBlock FontTypography="Caption" Foreground="#AAFFFFFF" TextWrapping="Wrap"
-                                        Text="Gaming apps, performance tweaks" />
-                                </StackPanel>
-                            </Border>
-                        </Border>
+                        <controls:ProfileCard
+                            ProfileName="Power User"
+                            Tagline="System tweaks, app settings, productivity"
+                            HeroImageSource="/Assets/profile-power-user.png"
+                            IsSelected="{Binding IsPowerUser, Mode=TwoWay}"
+                            Margin="0,0,12,12" />
 
-                        <!-- Creative -->
-                        <Border Margin="4,0" MinHeight="200" CornerRadius="8" ClipToBounds="True"
-                                MouseLeftButtonUp="OnProfileCardClick" Tag="Creative" Cursor="Hand"
-                                BorderThickness="3"
-                                BorderBrush="{Binding ProfileSelection.IsCreative, Converter={StaticResource BooleanToBorderBrushConverter}}">
-                            <Border.Background>
-                                <ImageBrush ImageSource="/Assets/profile-creative.png" Stretch="UniformToFill" />
-                            </Border.Background>
-                            <Border Padding="16" VerticalAlignment="Bottom">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                        <GradientStop Color="#00000000" Offset="0" />
-                                        <GradientStop Color="#DD000000" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                                <StackPanel>
-                                    <Grid>
-                                        <ui:TextBlock FontTypography="BodyStrong" Foreground="White" Text="Creative" />
-                                        <CheckBox HorizontalAlignment="Right" IsChecked="{Binding ProfileSelection.IsCreative}" IsHitTestVisible="False" />
-                                    </Grid>
-                                    <ui:TextBlock FontTypography="Caption" Foreground="#AAFFFFFF" TextWrapping="Wrap"
-                                        Text="Design tools, media apps, fonts" />
-                                </StackPanel>
-                            </Border>
-                        </Border>
+                        <controls:ProfileCard
+                            ProfileName="Gamer"
+                            Tagline="Gaming apps, performance tweaks"
+                            HeroImageSource="/Assets/profile-gamer.png"
+                            IsSelected="{Binding IsGamer, Mode=TwoWay}"
+                            Margin="0,0,12,12" />
 
-                        <!-- Casual -->
-                        <Border Margin="8,0,0,0" MinHeight="200" CornerRadius="8" ClipToBounds="True"
-                                MouseLeftButtonUp="OnProfileCardClick" Tag="Casual" Cursor="Hand"
-                                BorderThickness="3"
-                                BorderBrush="{Binding ProfileSelection.IsCasual, Converter={StaticResource BooleanToBorderBrushConverter}}">
-                            <Border.Background>
-                                <ImageBrush ImageSource="/Assets/profile-casual2.png" Stretch="UniformToFill" />
-                            </Border.Background>
-                            <Border Padding="16" VerticalAlignment="Bottom">
-                                <Border.Background>
-                                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                        <GradientStop Color="#00000000" Offset="0" />
-                                        <GradientStop Color="#DD000000" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Border.Background>
-                                <StackPanel>
-                                    <Grid>
-                                        <ui:TextBlock FontTypography="BodyStrong" Foreground="White" Text="Casual" />
-                                        <CheckBox HorizontalAlignment="Right" IsChecked="{Binding ProfileSelection.IsCasual}" IsHitTestVisible="False" />
-                                    </Grid>
-                                    <ui:TextBlock FontTypography="Caption" Foreground="#AAFFFFFF" TextWrapping="Wrap"
-                                        Text="Simplified experience, apps only" />
-                                </StackPanel>
-                            </Border>
-                        </Border>
-                    </UniformGrid>
+                        <controls:ProfileCard
+                            ProfileName="Casual"
+                            Tagline="Simplified experience, apps only"
+                            HeroImageSource="/Assets/profile-casual2.png"
+                            IsSelected="{Binding IsCasual, Mode=TwoWay}"
+                            Margin="0,0,12,12" />
+                    </WrapPanel>
                 </ScrollViewer>
             </Grid>
 
-            <!-- Step 1: Dotfiles Selection -->
-            <Grid Visibility="{Binding CurrentStepIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=1}"
-                  Margin="24,16">
+            <!-- Dynamic steps: content switches based on GetCurrentStepName() -->
+            <!-- We use a simple approach: show content based on step name match -->
+
+            <!-- Dotfiles Step (visible when step name is "Dotfiles") -->
+            <Grid x:Name="DotfilesStep" Margin="24,16">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <ui:TextBlock Grid.Row="0" FontTypography="Title" Text="Dotfiles &amp; Config" />
-                <ui:TextBlock Grid.Row="1" FontTypography="Body" Opacity="0.6" Margin="0,4,0,16"
-                    Text="Select which config modules to deploy. Each module symlinks its config files so changes are instantly tracked in git." />
+                <TextBlock Grid.Row="0" FontSize="20" FontWeight="SemiBold" Foreground="White" Text="Dotfiles &amp; Config" />
+                <TextBlock Grid.Row="1" FontSize="13" Foreground="#888888" Margin="0,4,0,16"
+                    Text="Detected dotfiles on your system. Toggle which ones Perch should manage via symlinks." />
 
                 <!-- Loading -->
                 <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center"
-                            Visibility="{Binding IsLoadingModules, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            Visibility="{Binding IsLoadingDetection, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <ui:ProgressRing IsIndeterminate="True" Width="32" Height="32" Margin="0,0,0,8" />
-                    <ui:TextBlock FontTypography="Caption" Opacity="0.6" Text="Scanning modules..." HorizontalAlignment="Center" />
+                    <TextBlock FontSize="11" Foreground="#888888" Text="Scanning your system..." HorizontalAlignment="Center" />
                 </StackPanel>
 
-                <!-- Module list -->
-                <ListView Grid.Row="2" ItemsSource="{Binding DotfileModules}"
-                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                          Visibility="{Binding IsLoadingModules, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                    <ListView.ItemTemplate>
-                        <DataTemplate DataType="{x:Type vm:WizardModuleViewModel}">
-                            <Border Padding="12,8" Margin="0,0,0,2" CornerRadius="4"
-                                    Background="{DynamicResource ControlFillColorDefaultBrush}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" Margin="0,0,12,0"
-                                              Checked="OnModuleChecked" Unchecked="OnModuleUnchecked" />
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <ui:TextBlock FontTypography="BodyStrong" Text="{Binding DisplayName}" />
-                                        <ui:TextBlock FontTypography="Caption" Opacity="0.6" Text="{Binding Description}" />
-                                    </StackPanel>
-                                    <ui:TextBlock Grid.Column="2" FontTypography="Caption" Opacity="0.4"
-                                                  VerticalAlignment="Center" Text="{Binding Name}" />
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
+                <!-- Dotfile cards -->
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding IsLoadingDetection, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                    <ItemsControl ItemsSource="{Binding Dotfiles}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type models:DotfileCardModel}">
+                                <Border
+                                    Background="#1A1A2E"
+                                    BorderBrush="{Binding IsSelected, Converter={StaticResource BooleanToBorderBrushConverter}}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="12"
+                                    Margin="0,0,0,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <ui:SymbolIcon Grid.Column="0" Symbol="Document24" FontSize="20" Foreground="#888888"
+                                                       VerticalAlignment="Center" Margin="0,0,12,0" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+                                            <TextBlock Text="{Binding FullPath}" FontSize="10" Foreground="#666666" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+
+                                        <controls:StatusRibbon Grid.Column="2" Status="{Binding Status}"
+                                                               VerticalAlignment="Center" Margin="8,0" />
+
+                                        <ui:ToggleSwitch Grid.Column="3" IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                         VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </Grid>
 
-            <!-- Step 2: Apps Selection -->
-            <Grid Visibility="{Binding CurrentStepIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=2}"
-                  Margin="24,16">
+            <!-- Apps Step -->
+            <Grid x:Name="AppsStep" Margin="24,16">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <ui:TextBlock Grid.Row="0" FontTypography="Title" Text="Applications" />
-                <ui:TextBlock Grid.Row="1" FontTypography="Body" Opacity="0.6" Margin="0,4,0,16"
-                    Text="Review the applications detected from your config repository." />
+                <TextBlock Grid.Row="0" FontSize="20" FontWeight="SemiBold" Foreground="White" Text="Applications" />
+                <TextBlock Grid.Row="1" FontSize="13" Foreground="#888888" Margin="0,4,0,16"
+                    Text="Apps detected on your system, plus suggestions based on your profile. Toggle to manage their settings." />
 
-                <ListView Grid.Row="2" ItemsSource="{Binding Apps}"
-                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    <ListView.ItemTemplate>
-                        <DataTemplate DataType="{x:Type vm:WizardAppViewModel}">
-                            <Border Padding="12,8" Margin="0,0,0,2" CornerRadius="4"
-                                    Background="{DynamicResource ControlFillColorDefaultBrush}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" Margin="0,0,12,0" />
-                                    <ui:TextBlock Grid.Column="1" FontTypography="BodyStrong" VerticalAlignment="Center" Text="{Binding Name}" />
-                                    <Border Grid.Column="2" CornerRadius="4" Padding="8,2" VerticalAlignment="Center">
-                                        <ui:TextBlock FontTypography="Caption" Opacity="0.5" Text="{Binding CategoryDisplay}" />
-                                    </Border>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Your Apps tier -->
+                        <StackPanel Visibility="{Binding YourApps.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}">
+                            <controls:TierSectionHeader Title="Your Apps" ItemCount="{Binding YourApps.Count}" />
+                            <ItemsControl ItemsSource="{Binding YourApps}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type models:AppCardModel}">
+                                        <controls:AppCard
+                                            DisplayLabel="{Binding DisplayLabel}"
+                                            Description="{Binding Description}"
+                                            Category="{Binding Category}"
+                                            Status="{Binding Status}"
+                                            IsSelected="{Binding IsSelected, Mode=TwoWay}"
+                                            Margin="0,0,12,12" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- Suggested tier -->
+                        <StackPanel Visibility="{Binding SuggestedApps.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}">
+                            <controls:TierSectionHeader Title="Suggested for You" ItemCount="{Binding SuggestedApps.Count}" />
+                            <ItemsControl ItemsSource="{Binding SuggestedApps}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type models:AppCardModel}">
+                                        <controls:AppCard
+                                            DisplayLabel="{Binding DisplayLabel}"
+                                            Description="{Binding Description}"
+                                            Category="{Binding Category}"
+                                            Status="{Binding Status}"
+                                            IsSelected="{Binding IsSelected, Mode=TwoWay}"
+                                            Margin="0,0,12,12" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- Other Apps tier -->
+                        <StackPanel Visibility="{Binding OtherApps.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}">
+                            <controls:TierSectionHeader Title="Other Apps" ItemCount="{Binding OtherApps.Count}" />
+                            <ItemsControl ItemsSource="{Binding OtherApps}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type models:AppCardModel}">
+                                        <controls:AppCard
+                                            DisplayLabel="{Binding DisplayLabel}"
+                                            Description="{Binding Description}"
+                                            Category="{Binding Category}"
+                                            Status="{Binding Status}"
+                                            IsSelected="{Binding IsSelected, Mode=TwoWay}"
+                                            Margin="0,0,12,12" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
             </Grid>
 
-            <!-- Step 3: System Tweaks Selection -->
-            <Grid Visibility="{Binding CurrentStepIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=3}"
-                  Margin="24,16">
+            <!-- System Tweaks Step -->
+            <Grid x:Name="TweaksStep" Margin="24,16">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <ui:TextBlock Grid.Row="0" FontTypography="Title" Text="System Tweaks" />
-                <ui:TextBlock Grid.Row="1" FontTypography="Body" Opacity="0.6" Margin="0,4,0,16"
-                    Text="Select registry tweaks to apply. These modify Windows system settings to match your preferred configuration." />
+                <TextBlock Grid.Row="0" FontSize="20" FontWeight="SemiBold" Foreground="White" Text="System Tweaks" />
+                <TextBlock Grid.Row="1" FontSize="13" Foreground="#888888" Margin="0,4,0,16"
+                    Text="Windows registry tweaks matched to your profile. Toggle to apply during deploy." />
 
-                <ListView Grid.Row="2" ItemsSource="{Binding TweakModules}"
-                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    <ListView.ItemTemplate>
-                        <DataTemplate DataType="{x:Type vm:WizardTweakModuleViewModel}">
-                            <Border Padding="12,8" Margin="0,0,0,2" CornerRadius="4"
-                                    Background="{DynamicResource ControlFillColorDefaultBrush}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}" Margin="0,0,12,0"
-                                              Checked="OnModuleChecked" Unchecked="OnModuleUnchecked" />
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <ui:TextBlock FontTypography="BodyStrong" Text="{Binding DisplayName}" />
-                                        <ui:TextBlock FontTypography="Caption" Opacity="0.6" Text="{Binding Description}" />
-                                    </StackPanel>
-                                    <ui:TextBlock Grid.Column="2" FontTypography="Caption" Opacity="0.4"
-                                                  VerticalAlignment="Center" Text="{Binding Name}" />
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Tweaks}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type models:TweakCardModel}">
+                                <Border
+                                    Background="#1A1A2E"
+                                    BorderBrush="{Binding IsSelected, Converter={StaticResource BooleanToBorderBrushConverter}}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="12"
+                                    MinWidth="220"
+                                    Margin="0,0,12,12">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+
+                                        <Grid Grid.Row="0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="13" FontWeight="SemiBold"
+                                                       Foreground="White" TextTrimming="CharacterEllipsis" />
+                                            <ui:ToggleSwitch Grid.Column="1" IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                        </Grid>
+
+                                        <TextBlock Grid.Row="1" Text="{Binding Description}" FontSize="11" Foreground="#888888"
+                                                   TextWrapping="Wrap" MaxHeight="32" Margin="0,4,0,0" />
+
+                                        <TextBlock Grid.Row="2" FontSize="10" Foreground="#666666" Margin="0,4,0,0">
+                                            <Run Text="{Binding TotalCount, Mode=OneWay}" />
+                                            <Run Text=" registry entries" />
+                                        </TextBlock>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </Grid>
 
-            <!-- Step 4: Review -->
-            <Grid Visibility="{Binding CurrentStepIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=4}"
-                  Margin="24,16">
+            <!-- Review Step -->
+            <Grid x:Name="ReviewStep" Margin="24,16">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="500">
-                    <Grid Height="260" Margin="0,0,0,0">
+                    <Grid Height="240">
                         <Image Source="/Assets/wizard-empty.png" Stretch="Uniform" />
                         <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,24">
-                            <ui:TextBlock FontTypography="Title" HorizontalAlignment="Center" Foreground="White" Text="Ready to deploy" />
-                            <ui:TextBlock FontTypography="Body" Opacity="0.7" HorizontalAlignment="Center" Margin="0,4,0,0"
-                                Foreground="White" TextWrapping="Wrap" TextAlignment="Center"
-                                Text="{Binding TotalSelectedCount, StringFormat='{}{0} modules selected'}" />
+                            <TextBlock FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="White"
+                                       Text="Ready to deploy" />
+                            <TextBlock FontSize="13" Foreground="#AAFFFFFF" HorizontalAlignment="Center" Margin="0,4,0,0"
+                                       Text="{Binding TotalSelectedCount, StringFormat='{}{0} items selected'}" />
                         </StackPanel>
                     </Grid>
-                    <ui:TextBlock FontTypography="Body" Opacity="0.6" HorizontalAlignment="Center" Margin="0,16,0,0"
-                        TextWrapping="Wrap" TextAlignment="Center"
-                        Text="Perch will scan your config repository and create symlinks for all selected modules. Existing files will be backed up." />
+
+                    <!-- Summary counts -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0">
+                        <Border Background="#2634D399" CornerRadius="6" Padding="12,6" Margin="0,0,8,0"
+                                Visibility="{Binding SelectedDotfileCount, Converter={StaticResource CountToVisibilityConverter}}">
+                            <TextBlock FontSize="11" Foreground="#34D399">
+                                <Run Text="{Binding SelectedDotfileCount, Mode=OneWay}" FontWeight="SemiBold" />
+                                <Run Text=" dotfiles" />
+                            </TextBlock>
+                        </Border>
+                        <Border Background="#2610B981" CornerRadius="6" Padding="12,6" Margin="0,0,8,0"
+                                Visibility="{Binding SelectedAppCount, Converter={StaticResource CountToVisibilityConverter}}">
+                            <TextBlock FontSize="11" Foreground="#10B981">
+                                <Run Text="{Binding SelectedAppCount, Mode=OneWay}" FontWeight="SemiBold" />
+                                <Run Text=" apps" />
+                            </TextBlock>
+                        </Border>
+                        <Border Background="#26F59E0B" CornerRadius="6" Padding="12,6"
+                                Visibility="{Binding SelectedTweakCount, Converter={StaticResource CountToVisibilityConverter}}">
+                            <TextBlock FontSize="11" Foreground="#F59E0B">
+                                <Run Text="{Binding SelectedTweakCount, Mode=OneWay}" FontWeight="SemiBold" />
+                                <Run Text=" tweaks" />
+                            </TextBlock>
+                        </Border>
+                    </StackPanel>
+
+                    <TextBlock FontSize="13" Foreground="#888888" HorizontalAlignment="Center" Margin="0,16,0,0"
+                               TextWrapping="Wrap" TextAlignment="Center"
+                               Text="Perch will create symlinks for config files and apply registry tweaks. Existing files will be backed up." />
                 </StackPanel>
             </Grid>
 
-            <!-- Step 5: Deploy / Results -->
-            <Grid Visibility="{Binding CurrentStepIndex, Converter={StaticResource IndexToVisibilityConverter}, ConverterParameter=5}"
-                  Margin="24,16">
+            <!-- Deploy Results Step -->
+            <Grid x:Name="DeployStep" Margin="24,16">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -348,9 +388,9 @@
                 <!-- Completion images -->
                 <Grid Grid.Row="0" HorizontalAlignment="Center" Margin="0,0,0,16"
                       Visibility="{Binding IsComplete, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <Image Source="/Assets/wizard-success.png" Width="180" Height="180"
+                    <Image Source="/Assets/wizard-success.png" Width="160" Height="160"
                            Visibility="{Binding HasErrors, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
-                    <Image Source="/Assets/wizard-error.png" Width="180" Height="180"
+                    <Image Source="/Assets/wizard-error.png" Width="160" Height="160"
                            Visibility="{Binding HasErrors, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 </Grid>
 
@@ -358,63 +398,72 @@
                 <StackPanel Grid.Row="1" HorizontalAlignment="Center">
                     <ui:ProgressRing IsIndeterminate="True" Width="32" Height="32" Margin="0,0,0,8"
                         Visibility="{Binding IsDeploying, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                    <ui:TextBlock FontTypography="Subtitle" HorizontalAlignment="Center" Text="{Binding DeployStatusMessage}" />
-                    <ui:TextBlock FontTypography="Caption" Opacity="0.6" HorizontalAlignment="Center" Margin="0,4,0,0">
-                        <ui:TextBlock.Text>
-                            <MultiBinding StringFormat="{}{0} deployed, {1} errors">
-                                <Binding Path="DeployedCount" />
-                                <Binding Path="ErrorCount" />
-                            </MultiBinding>
-                        </ui:TextBlock.Text>
-                    </ui:TextBlock>
+                    <TextBlock FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"
+                               Foreground="White" Text="{Binding DeployStatusMessage}" />
+                    <TextBlock FontSize="11" Foreground="#888888" HorizontalAlignment="Center" Margin="0,4,0,0">
+                        <Run Text="{Binding DeployedCount, Mode=OneWay}" />
+                        <Run Text=" deployed, " />
+                        <Run Text="{Binding ErrorCount, Mode=OneWay}" />
+                        <Run Text=" errors" />
+                    </TextBlock>
                 </StackPanel>
 
                 <!-- Deploy results list -->
-                <ListView Grid.Row="2" Margin="0,16,0,0" ItemsSource="{Binding DeployResults}"
-                    ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                    <ListView.ItemTemplate>
-                        <DataTemplate DataType="{x:Type vm:DeployResultItemViewModel}">
-                            <Grid Margin="0,2">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                </Grid.ColumnDefinitions>
-                                <ui:SymbolIcon Grid.Column="0" Margin="0,0,8,0">
-                                    <ui:SymbolIcon.Style>
-                                        <Style TargetType="ui:SymbolIcon">
-                                            <Setter Property="Symbol" Value="CheckmarkCircle24" />
-                                            <Setter Property="Foreground" Value="#34D399" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Level}" Value="{x:Static deploy:ResultLevel.Error}">
-                                                    <Setter Property="Symbol" Value="ErrorCircle24" />
-                                                    <Setter Property="Foreground" Value="#EF4444" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding Level}" Value="{x:Static deploy:ResultLevel.Warning}">
-                                                    <Setter Property="Symbol" Value="Warning24" />
-                                                    <Setter Property="Foreground" Value="#F59E0B" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </ui:SymbolIcon.Style>
-                                </ui:SymbolIcon>
-                                <ui:TextBlock Grid.Column="1" FontTypography="Caption" Text="{Binding ModuleName}" Margin="0,0,8,0" />
-                                <ui:TextBlock Grid.Column="2" FontTypography="Caption" Opacity="0.6" Text="{Binding Message}" TextTrimming="CharacterEllipsis" />
-                            </Grid>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
+                <ScrollViewer Grid.Row="2" Margin="0,16,0,0" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding DeployResults}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:DeployResultItemViewModel}">
+                                <Grid Margin="0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <ui:SymbolIcon Grid.Column="0" Margin="0,0,8,0">
+                                        <ui:SymbolIcon.Style>
+                                            <Style TargetType="ui:SymbolIcon">
+                                                <Setter Property="Symbol" Value="CheckmarkCircle24" />
+                                                <Setter Property="Foreground" Value="#34D399" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Level}" Value="{x:Static deploy:ResultLevel.Error}">
+                                                        <Setter Property="Symbol" Value="ErrorCircle24" />
+                                                        <Setter Property="Foreground" Value="#EF4444" />
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Level}" Value="{x:Static deploy:ResultLevel.Warning}">
+                                                        <Setter Property="Symbol" Value="Warning24" />
+                                                        <Setter Property="Foreground" Value="#F59E0B" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ui:SymbolIcon.Style>
+                                    </ui:SymbolIcon>
+                                    <TextBlock Grid.Column="1" FontSize="11" Text="{Binding ModuleName}" Margin="0,0,8,0" Foreground="White" />
+                                    <TextBlock Grid.Column="2" FontSize="11" Foreground="#888888" Text="{Binding Message}" TextTrimming="CharacterEllipsis" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </Grid>
         </Grid>
 
         <!-- Footer navigation -->
-        <Border Grid.Row="2" Padding="24,12" Background="{DynamicResource ControlFillColorDefaultBrush}">
+        <Border Grid.Row="3" Padding="24,12" Background="#16162A">
             <Grid>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <ui:Button Content="Back" Command="{Binding GoBackCommand}"
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Selected count -->
+                <TextBlock Grid.Column="0" VerticalAlignment="Center" FontSize="11" Foreground="#888888"
+                           Text="{Binding TotalSelectedCount, StringFormat='{}{0} items selected'}" />
+
+                <!-- Nav buttons -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <ui:Button Content="Back" Command="{Binding GoBackCommand}" Margin="0,0,8,0"
                         Visibility="{Binding CanGoBack, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <ui:Button Content="Next" Appearance="Primary" Command="{Binding GoNextCommand}"
                         Visibility="{Binding CanGoNext, Converter={StaticResource BooleanToVisibilityConverter}}" />
                     <ui:Button Content="Deploy" Appearance="Primary" Command="{Binding DeployCommand}"

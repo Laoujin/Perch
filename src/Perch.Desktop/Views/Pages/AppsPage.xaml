@@ -4,84 +4,19 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:vm="clr-namespace:Perch.Desktop.ViewModels"
-    xmlns:packages="clr-namespace:Perch.Core.Packages;assembly=Perch.Core"
+    xmlns:models="clr-namespace:Perch.Desktop.Models"
+    xmlns:controls="clr-namespace:Perch.Desktop.Views.Controls"
     d:DataContext="{d:DesignInstance vm:AppsViewModel}"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     Loaded="OnLoaded">
 
-    <Page.Resources>
-        <DataTemplate x:Key="AppCardTemplate" DataType="{x:Type vm:AppEntryViewModel}">
-            <Border
-                Padding="16,12"
-                Margin="0,0,0,4"
-                CornerRadius="6"
-                Background="{DynamicResource ControlFillColorDefaultBrush}">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <ui:TextBlock
-                        Grid.Column="0"
-                        FontTypography="BodyStrong"
-                        VerticalAlignment="Center"
-                        Text="{Binding Name}" />
-
-                    <Border
-                        Grid.Column="1"
-                        CornerRadius="4"
-                        Padding="8,4"
-                        Margin="8,0"
-                        VerticalAlignment="Center">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Background" Value="#2234D399" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Category}" Value="{x:Static packages:AppCategory.InstalledNoModule}">
-                                        <Setter Property="Background" Value="#22F59E0B" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding Category}" Value="{x:Static packages:AppCategory.DefinedNotInstalled}">
-                                        <Setter Property="Background" Value="#223B82F6" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <ui:TextBlock FontTypography="Caption" Text="{Binding StatusRibbon}">
-                            <ui:TextBlock.Style>
-                                <Style TargetType="ui:TextBlock">
-                                    <Setter Property="Foreground" Value="#34D399" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Category}" Value="{x:Static packages:AppCategory.InstalledNoModule}">
-                                            <Setter Property="Foreground" Value="#F59E0B" />
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding Category}" Value="{x:Static packages:AppCategory.DefinedNotInstalled}">
-                                            <Setter Property="Foreground" Value="#3B82F6" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </ui:TextBlock.Style>
-                        </ui:TextBlock>
-                    </Border>
-
-                    <ui:TextBlock
-                        Grid.Column="2"
-                        FontTypography="Caption"
-                        Opacity="0.4"
-                        VerticalAlignment="Center"
-                        Text="{Binding Source}" />
-                </Grid>
-            </Border>
-        </DataTemplate>
-    </Page.Resources>
-
     <Grid Margin="24,16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Header -->
@@ -91,7 +26,7 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <ui:TextBlock Grid.Column="0" FontTypography="Title" Text="Apps" />
+            <ui:TextBlock Grid.Column="0" FontTypography="Title" Text="Applications" />
 
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <ui:TextBox
@@ -109,73 +44,96 @@
         <ui:ProgressRing
             Grid.Row="1"
             IsIndeterminate="True"
-            Width="24"
-            Height="24"
-            Margin="0,12,0,0"
+            Width="32"
+            Height="32"
             HorizontalAlignment="Center"
-            VerticalAlignment="Top"
+            VerticalAlignment="Center"
             Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- No config -->
-        <ui:TextBlock
-            Grid.Row="1"
-            FontTypography="Body"
-            Text="No config repository configured. Go to Settings to set one up."
-            Opacity="0.6"
-            VerticalAlignment="Center"
-            HorizontalAlignment="Center"
-            Visibility="{Binding HasConfigRepo, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
-
-        <!-- Three-tier layout -->
+        <!-- Three-tier card grid -->
         <ScrollViewer
             Grid.Row="1"
             Margin="0,16,0,0"
             VerticalScrollBarVisibility="Auto"
-            Visibility="{Binding HasConfigRepo, Converter={StaticResource BooleanToVisibilityConverter}}">
+            Visibility="{Binding IsLoading, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
             <StackPanel>
-                <!-- Managed Apps -->
-                <StackPanel Visibility="{Binding ManagedApps.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}">
-                    <Grid Margin="0,0,0,8">
-                        <ui:TextBlock FontTypography="Subtitle" Text="Managed Apps" />
-                        <ui:TextBlock
-                            FontTypography="Caption"
-                            Opacity="0.5"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Text="{Binding ManagedApps.Count, StringFormat='{}{0} apps'}" />
-                    </Grid>
-                    <ItemsControl ItemsSource="{Binding ManagedApps}" ItemTemplate="{StaticResource AppCardTemplate}" />
+                <!-- Your Apps tier -->
+                <StackPanel Visibility="{Binding YourApps.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}">
+                    <controls:TierSectionHeader Title="Your Apps" ItemCount="{Binding YourApps.Count}" />
+                    <ItemsControl ItemsSource="{Binding YourApps}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type models:AppCardModel}">
+                                <controls:AppCard
+                                    DisplayLabel="{Binding DisplayLabel}"
+                                    Description="{Binding Description}"
+                                    Category="{Binding Category}"
+                                    Status="{Binding Status}"
+                                    IsSelected="{Binding IsSelected, Mode=TwoWay}"
+                                    Margin="0,0,12,12" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
 
-                <!-- Installed (No Module) -->
-                <StackPanel Margin="0,16,0,0" Visibility="{Binding InstalledApps.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}">
-                    <Grid Margin="0,0,0,8">
-                        <ui:TextBlock FontTypography="Subtitle" Text="Installed (No Module)" />
-                        <ui:TextBlock
-                            FontTypography="Caption"
-                            Opacity="0.5"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Text="{Binding InstalledApps.Count, StringFormat='{}{0} apps'}" />
-                    </Grid>
-                    <ItemsControl ItemsSource="{Binding InstalledApps}" ItemTemplate="{StaticResource AppCardTemplate}" />
+                <!-- Suggested tier -->
+                <StackPanel Visibility="{Binding SuggestedApps.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}">
+                    <controls:TierSectionHeader Title="Suggested for You" ItemCount="{Binding SuggestedApps.Count}" />
+                    <ItemsControl ItemsSource="{Binding SuggestedApps}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type models:AppCardModel}">
+                                <controls:AppCard
+                                    DisplayLabel="{Binding DisplayLabel}"
+                                    Description="{Binding Description}"
+                                    Category="{Binding Category}"
+                                    Status="{Binding Status}"
+                                    IsSelected="{Binding IsSelected, Mode=TwoWay}"
+                                    Margin="0,0,12,12" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
 
-                <!-- Defined (Not Installed) -->
-                <StackPanel Margin="0,16,0,0" Visibility="{Binding DefinedApps.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}">
-                    <Grid Margin="0,0,0,8">
-                        <ui:TextBlock FontTypography="Subtitle" Text="Defined (Not Installed)" />
-                        <ui:TextBlock
-                            FontTypography="Caption"
-                            Opacity="0.5"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center"
-                            Text="{Binding DefinedApps.Count, StringFormat='{}{0} apps'}" />
-                    </Grid>
-                    <ItemsControl ItemsSource="{Binding DefinedApps}" ItemTemplate="{StaticResource AppCardTemplate}" />
+                <!-- Other Apps tier -->
+                <StackPanel Visibility="{Binding OtherApps.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}">
+                    <controls:TierSectionHeader Title="Other Apps" ItemCount="{Binding OtherApps.Count}" />
+                    <ItemsControl ItemsSource="{Binding OtherApps}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type models:AppCardModel}">
+                                <controls:AppCard
+                                    DisplayLabel="{Binding DisplayLabel}"
+                                    Description="{Binding Description}"
+                                    Category="{Binding Category}"
+                                    Status="{Binding Status}"
+                                    IsSelected="{Binding IsSelected, Mode=TwoWay}"
+                                    Margin="0,0,12,12" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>
+
+        <!-- Deploy bar -->
+        <controls:DeployBar
+            Grid.Row="2"
+            SelectedCount="{Binding SelectedCount}"
+            DeployRequested="OnDeployRequested"
+            ClearRequested="OnClearRequested" />
     </Grid>
 
 </Page>

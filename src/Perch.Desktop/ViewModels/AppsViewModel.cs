@@ -3,34 +3,33 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
-using Perch.Core.Config;
-using Perch.Core.Packages;
+using Perch.Desktop.Models;
+using Perch.Desktop.Services;
 
 namespace Perch.Desktop.ViewModels;
 
 public sealed partial class AppsViewModel : ViewModelBase
 {
-    private readonly IAppScanService _appScanService;
-    private readonly ISettingsProvider _settingsProvider;
+    private readonly IGalleryDetectionService _detectionService;
 
     [ObservableProperty]
     private bool _isLoading;
 
     [ObservableProperty]
-    private bool _hasConfigRepo = true;
-
-    [ObservableProperty]
     private string _searchText = string.Empty;
 
-    public ObservableCollection<AppEntryViewModel> AllApps { get; } = [];
-    public ObservableCollection<AppEntryViewModel> ManagedApps { get; } = [];
-    public ObservableCollection<AppEntryViewModel> InstalledApps { get; } = [];
-    public ObservableCollection<AppEntryViewModel> DefinedApps { get; } = [];
+    [ObservableProperty]
+    private int _selectedCount;
 
-    public AppsViewModel(IAppScanService appScanService, ISettingsProvider settingsProvider)
+    public ObservableCollection<AppCardModel> YourApps { get; } = [];
+    public ObservableCollection<AppCardModel> SuggestedApps { get; } = [];
+    public ObservableCollection<AppCardModel> OtherApps { get; } = [];
+
+    private GalleryDetectionResult? _lastResult;
+
+    public AppsViewModel(IGalleryDetectionService detectionService)
     {
-        _appScanService = appScanService;
-        _settingsProvider = settingsProvider;
+        _detectionService = detectionService;
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -38,89 +37,71 @@ public sealed partial class AppsViewModel : ViewModelBase
     [RelayCommand]
     private async Task RefreshAsync(CancellationToken cancellationToken)
     {
-        var settings = await _settingsProvider.LoadAsync(cancellationToken);
-        if (string.IsNullOrWhiteSpace(settings.ConfigRepoPath))
-        {
-            HasConfigRepo = false;
-            return;
-        }
-
-        HasConfigRepo = true;
         IsLoading = true;
-        AllApps.Clear();
 
         try
         {
-            var result = await _appScanService.ScanAsync(settings.ConfigRepoPath, cancellationToken);
-
-            foreach (var entry in result.Entries.OrderBy(e => e.Name))
-            {
-                AllApps.Add(new AppEntryViewModel(entry));
-            }
+            var profiles = new HashSet<UserProfile> { UserProfile.Developer, UserProfile.PowerUser };
+            _lastResult = await _detectionService.DetectAppsAsync(profiles, cancellationToken);
+            ApplyFilter();
         }
         catch (OperationCanceledException)
         {
             return;
         }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
 
+    public async Task LoadFromDetectionResultAsync(GalleryDetectionResult result)
+    {
+        _lastResult = result;
         ApplyFilter();
-        IsLoading = false;
+        await Task.CompletedTask;
     }
 
     private void ApplyFilter()
     {
-        ManagedApps.Clear();
-        InstalledApps.Clear();
-        DefinedApps.Clear();
+        if (_lastResult is null) return;
 
-        foreach (var app in AllApps)
+        YourApps.Clear();
+        SuggestedApps.Clear();
+        OtherApps.Clear();
+
+        foreach (var app in _lastResult.YourApps)
         {
-            if (!string.IsNullOrWhiteSpace(SearchText) &&
-                !app.Name.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            switch (app.Category)
-            {
-                case AppCategory.Managed:
-                    ManagedApps.Add(app);
-                    break;
-                case AppCategory.InstalledNoModule:
-                    InstalledApps.Add(app);
-                    break;
-                case AppCategory.DefinedNotInstalled:
-                    DefinedApps.Add(app);
-                    break;
-            }
+            if (app.MatchesSearch(SearchText))
+                YourApps.Add(app);
         }
+
+        foreach (var app in _lastResult.Suggested)
+        {
+            if (app.MatchesSearch(SearchText))
+                SuggestedApps.Add(app);
+        }
+
+        foreach (var app in _lastResult.OtherApps)
+        {
+            if (app.MatchesSearch(SearchText))
+                OtherApps.Add(app);
+        }
+
+        UpdateSelectedCount();
     }
-}
 
-public sealed class AppEntryViewModel
-{
-    public string Name { get; }
-    public AppCategory Category { get; }
-    public string? Source { get; }
-
-    public string CategoryDisplay => Category switch
+    public void UpdateSelectedCount()
     {
-        AppCategory.Managed => "Managed",
-        AppCategory.InstalledNoModule => "No Module",
-        AppCategory.DefinedNotInstalled => "Not Installed",
-        _ => "Unknown",
-    };
+        SelectedCount = YourApps.Count(a => a.IsSelected)
+            + SuggestedApps.Count(a => a.IsSelected)
+            + OtherApps.Count(a => a.IsSelected);
+    }
 
-    public string StatusRibbon => Category switch
+    public void ClearSelection()
     {
-        AppCategory.Managed => "Linked",
-        AppCategory.InstalledNoModule => "Not linked",
-        AppCategory.DefinedNotInstalled => "Not installed",
-        _ => "",
-    };
-
-    public AppEntryViewModel(AppEntry entry)
-    {
-        Name = entry.Name;
-        Category = entry.Category;
-        Source = entry.Source?.ToString();
+        foreach (var app in YourApps.Concat(SuggestedApps).Concat(OtherApps))
+            app.IsSelected = false;
+        SelectedCount = 0;
     }
 }

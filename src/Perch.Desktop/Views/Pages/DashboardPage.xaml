@@ -4,6 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:vm="clr-namespace:Perch.Desktop.ViewModels"
+    xmlns:controls="clr-namespace:Perch.Desktop.Views.Controls"
+    xmlns:status="clr-namespace:Perch.Core.Status;assembly=Perch.Core"
     d:DataContext="{d:DesignInstance vm:DashboardViewModel}"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -17,74 +19,20 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!-- Hero Banner with hero.png background -->
-        <Border
+        <!-- Drift Hero Banner -->
+        <controls:DriftHeroBanner
             Grid.Row="0"
-            CornerRadius="8"
-            ClipToBounds="True"
-            MinHeight="180"
-            MaxHeight="240">
-            <Border.Background>
-                <ImageBrush
-                    ImageSource="/Assets/hero.png"
-                    Stretch="UniformToFill"
-                    AlignmentX="Center"
-                    AlignmentY="Center" />
-            </Border.Background>
+            LinkedCount="{Binding LinkedCount}"
+            AttentionCount="{Binding AttentionCount}"
+            BrokenCount="{Binding BrokenCount}"
+            HealthPercent="{Binding HealthPercent}"
+            StatusMessage="{Binding StatusMessage}" />
 
-            <!-- Dark overlay for text readability -->
-            <Border Background="#99000000" Padding="24,20">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
-                    <ui:TextBlock
-                        Grid.Row="0"
-                        FontTypography="Subtitle"
-                        Foreground="White"
-                        Text="{Binding HealthMessage}" />
-
-                    <StackPanel
-                        Grid.Row="1"
-                        Orientation="Horizontal"
-                        Margin="0,12,0,0"
-                        Visibility="{Binding HasConfigRepo, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Border CornerRadius="4" Padding="12,6" Background="#4434D399" Margin="0,0,8,0">
-                            <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="CheckmarkCircle24" Foreground="#34D399" Margin="0,0,6,0" />
-                                <ui:TextBlock Text="{Binding OkCount, StringFormat='{}{0} OK'}" Foreground="#34D399" />
-                            </StackPanel>
-                        </Border>
-                        <Border CornerRadius="4" Padding="12,6" Background="#44F59E0B" Margin="0,0,8,0">
-                            <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="Warning24" Foreground="#F59E0B" Margin="0,0,6,0" />
-                                <ui:TextBlock Text="{Binding MissingCount, StringFormat='{}{0} Missing'}" Foreground="#F59E0B" />
-                            </StackPanel>
-                        </Border>
-                        <Border CornerRadius="4" Padding="12,6" Background="#44F59E0B" Margin="0,0,8,0">
-                            <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="ArrowSync24" Foreground="#F59E0B" Margin="0,0,6,0" />
-                                <ui:TextBlock Text="{Binding DriftCount, StringFormat='{}{0} Drift'}" Foreground="#F59E0B" />
-                            </StackPanel>
-                        </Border>
-                        <Border CornerRadius="4" Padding="12,6" Background="#44EF4444">
-                            <StackPanel Orientation="Horizontal">
-                                <ui:SymbolIcon Symbol="ErrorCircle24" Foreground="#EF4444" Margin="0,0,6,0" />
-                                <ui:TextBlock Text="{Binding ErrorCount, StringFormat='{}{0} Errors'}" Foreground="#EF4444" />
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </Grid>
-            </Border>
-        </Border>
-
-        <!-- Refresh Button + Loading -->
+        <!-- Refresh + Loading -->
         <StackPanel
             Grid.Row="1"
             Orientation="Horizontal"
-            Margin="0,16,0,0">
+            Margin="0,0,0,12">
             <ui:Button
                 Content="Refresh"
                 Icon="{ui:SymbolIcon ArrowClockwise24}"
@@ -98,92 +46,106 @@
                 Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
         </StackPanel>
 
-        <!-- Attention Items -->
-        <Grid Grid.Row="2" Margin="0,16,0,0">
-            <!-- No config message -->
-            <ui:TextBlock
-                FontTypography="Body"
-                Text="No config repository configured. Go to Settings to set one up."
-                Opacity="0.6"
-                Visibility="{Binding HasConfigRepo, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
-                VerticalAlignment="Center"
-                HorizontalAlignment="Center" />
+        <!-- No config message -->
+        <ui:TextBlock
+            Grid.Row="2"
+            FontTypography="Body"
+            Text="No config repository configured. Go to Settings to set one up."
+            Opacity="0.6"
+            Visibility="{Binding HasConfigRepo, Converter={StaticResource InverseBooleanToVisibilityConverter}}"
+            VerticalAlignment="Center"
+            HorizontalAlignment="Center" />
 
-            <!-- Items list -->
-            <ListView
-                ItemsSource="{Binding AttentionItems}"
-                Visibility="{Binding HasConfigRepo, Converter={StaticResource BooleanToVisibilityConverter}}"
-                ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                <ListView.ItemTemplate>
+        <!-- Attention items -->
+        <ScrollViewer
+            Grid.Row="2"
+            VerticalScrollBarVisibility="Auto"
+            Visibility="{Binding HasConfigRepo, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ItemsControl ItemsSource="{Binding AttentionItems}">
+                <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:StatusItemViewModel}">
                         <Border
+                            Background="#1A1A2E"
+                            BorderBrush="#2A2A3E"
+                            BorderThickness="1"
+                            CornerRadius="8"
                             Padding="16,12"
-                            Margin="0,0,0,4"
-                            CornerRadius="4"
-                            Background="{DynamicResource ControlFillColorDefaultBrush}">
+                            Margin="0,0,0,8">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
+
+                                <ui:SymbolIcon
+                                    Grid.Column="0"
+                                    Margin="0,0,12,0"
+                                    VerticalAlignment="Center">
+                                    <ui:SymbolIcon.Style>
+                                        <Style TargetType="ui:SymbolIcon">
+                                            <Setter Property="Symbol" Value="Warning24" />
+                                            <Setter Property="Foreground" Value="#F59E0B" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Level}" Value="{x:Static status:DriftLevel.Error}">
+                                                    <Setter Property="Symbol" Value="DismissCircle24" />
+                                                    <Setter Property="Foreground" Value="#EF4444" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ui:SymbolIcon.Style>
+                                </ui:SymbolIcon>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock
+                                        Text="{Binding ModuleName}"
+                                        FontSize="13"
+                                        FontWeight="SemiBold"
+                                        Foreground="White" />
+                                    <TextBlock
+                                        Text="{Binding Message}"
+                                        FontSize="11"
+                                        Foreground="#888888"
+                                        TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
 
                                 <Border
-                                    Grid.Column="0"
-                                    Grid.RowSpan="2"
+                                    Grid.Column="2"
                                     CornerRadius="4"
                                     Padding="8,4"
-                                    Margin="0,0,12,0"
-                                    VerticalAlignment="Center"
-                                    Background="{DynamicResource SystemFillColorCriticalBackgroundBrush}">
-                                    <ui:TextBlock
-                                        FontTypography="Caption"
-                                        Text="{Binding LevelDisplay}" />
+                                    VerticalAlignment="Center">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#26F59E0B" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Level}" Value="{x:Static status:DriftLevel.Error}">
+                                                    <Setter Property="Background" Value="#26EF4444" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock
+                                        Text="{Binding LevelDisplay}"
+                                        FontSize="10"
+                                        FontWeight="SemiBold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="#F59E0B" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Level}" Value="{x:Static status:DriftLevel.Error}">
+                                                        <Setter Property="Foreground" Value="#EF4444" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
                                 </Border>
-
-                                <ui:TextBlock
-                                    Grid.Column="1"
-                                    Grid.Row="0"
-                                    FontTypography="BodyStrong"
-                                    Text="{Binding ModuleName}" />
-
-                                <ui:TextBlock
-                                    Grid.Column="1"
-                                    Grid.Row="1"
-                                    FontTypography="Caption"
-                                    Opacity="0.6"
-                                    Text="{Binding Message}"
-                                    TextTrimming="CharacterEllipsis" />
-
-                                <ui:TextBlock
-                                    Grid.Column="2"
-                                    Grid.RowSpan="2"
-                                    FontTypography="Caption"
-                                    Opacity="0.4"
-                                    VerticalAlignment="Center"
-                                    Text="{Binding Category}" />
                             </Grid>
                         </Border>
                     </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
-        </Grid>
-
-        <!-- Logo watermark bottom-right -->
-        <Image
-            Grid.Row="2"
-            Source="/Assets/logo.png"
-            Width="48"
-            Height="48"
-            Opacity="0.15"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Bottom"
-            Margin="0,0,8,8"
-            IsHitTestVisible="False" />
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
     </Grid>
 
 </Page>

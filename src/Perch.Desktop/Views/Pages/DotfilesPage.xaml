@@ -4,6 +4,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:vm="clr-namespace:Perch.Desktop.ViewModels"
+    xmlns:models="clr-namespace:Perch.Desktop.Models"
+    xmlns:controls="clr-namespace:Perch.Desktop.Views.Controls"
     d:DataContext="{d:DesignInstance vm:DotfilesViewModel}"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -13,8 +15,8 @@
     <Grid Margin="24,16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Header -->
@@ -31,7 +33,7 @@
                     Opacity="0.6"
                     Margin="0,4,0,0">
                     <ui:TextBlock.Text>
-                        <MultiBinding StringFormat="{}{0} of {1} links active">
+                        <MultiBinding StringFormat="{}{0} of {1} linked">
                             <Binding Path="LinkedCount" />
                             <Binding Path="TotalCount" />
                         </MultiBinding>
@@ -41,7 +43,7 @@
 
             <StackPanel Grid.Column="1" Orientation="Horizontal">
                 <ui:TextBox
-                    PlaceholderText="Search modules..."
+                    PlaceholderText="Search dotfiles..."
                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                     Width="200"
                     Margin="0,0,8,0" />
@@ -55,153 +57,79 @@
         <ui:ProgressRing
             Grid.Row="1"
             IsIndeterminate="True"
-            Width="24"
-            Height="24"
-            Margin="0,12,0,0"
-            HorizontalAlignment="Left"
+            Width="32"
+            Height="32"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
             Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- No config -->
-        <ui:TextBlock
-            Grid.Row="2"
-            FontTypography="Body"
-            Text="No config repository configured. Go to Settings to set one up."
-            Opacity="0.6"
-            VerticalAlignment="Center"
-            HorizontalAlignment="Center"
-            Visibility="{Binding HasConfigRepo, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
-
-        <!-- Module list -->
-        <ListView
-            Grid.Row="2"
-            Margin="0,12,0,0"
-            ItemsSource="{Binding FilteredModules}"
-            Visibility="{Binding HasConfigRepo, Converter={StaticResource BooleanToVisibilityConverter}}"
-            ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-            <ListView.ItemTemplate>
-                <DataTemplate DataType="{x:Type vm:ModuleItemViewModel}">
-                    <ui:CardExpander Margin="0,0,0,4">
-                        <ui:CardExpander.Header>
+        <!-- Dotfile card list -->
+        <ScrollViewer
+            Grid.Row="1"
+            Margin="0,16,0,0"
+            VerticalScrollBarVisibility="Auto"
+            Visibility="{Binding IsLoading, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+            <ItemsControl ItemsSource="{Binding Dotfiles}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type models:DotfileCardModel}">
+                        <Border
+                            Background="#1A1A2E"
+                            BorderBrush="{Binding IsSelected, Converter={StaticResource BooleanToBorderBrushConverter}}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12"
+                            Margin="0,0,0,8">
                             <Grid>
                                 <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                    <ui:TextBlock FontTypography="BodyStrong" Text="{Binding DisplayName}" />
-                                    <ui:TextBlock FontTypography="Caption" Opacity="0.5" Text="{Binding Name}" />
+                                <ui:SymbolIcon
+                                    Grid.Column="0"
+                                    Symbol="Document24"
+                                    FontSize="20"
+                                    Foreground="#888888"
+                                    VerticalAlignment="Center"
+                                    Margin="0,0,12,0" />
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock
+                                        Text="{Binding Name}"
+                                        FontSize="13"
+                                        FontWeight="SemiBold"
+                                        Foreground="White" />
+                                    <TextBlock
+                                        Text="{Binding FullPath}"
+                                        FontSize="10"
+                                        Foreground="#666666"
+                                        TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
 
-                                <Border
-                                    Grid.Column="1"
-                                    CornerRadius="4"
-                                    Padding="8,4"
-                                    Margin="8,0"
-                                    VerticalAlignment="Center">
-                                    <Border.Style>
-                                        <Style TargetType="Border">
-                                            <Setter Property="Background" Value="#22F59E0B" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsFullyLinked}" Value="True">
-                                                    <Setter Property="Background" Value="#2234D399" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Border.Style>
-                                    <ui:TextBlock FontTypography="Caption" Text="{Binding StatusSummary}">
-                                        <ui:TextBlock.Style>
-                                            <Style TargetType="ui:TextBlock">
-                                                <Setter Property="Foreground" Value="#F59E0B" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsFullyLinked}" Value="True">
-                                                        <Setter Property="Foreground" Value="#34D399" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </ui:TextBlock.Style>
-                                    </ui:TextBlock>
-                                </Border>
-
-                                <ui:TextBlock
+                                <controls:StatusRibbon
                                     Grid.Column="2"
-                                    FontTypography="Caption"
-                                    Opacity="0.4"
-                                    VerticalAlignment="Center">
-                                    <ui:TextBlock.Style>
-                                        <Style TargetType="ui:TextBlock">
-                                            <Setter Property="Text" Value="Enabled" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Enabled}" Value="False">
-                                                    <Setter Property="Text" Value="Disabled" />
-                                                    <Setter Property="Foreground" Value="#EF4444" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </ui:TextBlock.Style>
-                                </ui:TextBlock>
+                                    Status="{Binding Status}"
+                                    VerticalAlignment="Center"
+                                    Margin="8,0" />
+
+                                <ui:ToggleSwitch
+                                    Grid.Column="3"
+                                    IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                    VerticalAlignment="Center" />
                             </Grid>
-                        </ui:CardExpander.Header>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
 
-                        <ui:CardExpander.Content>
-                            <StackPanel Margin="0,4">
-                                <ItemsControl ItemsSource="{Binding Links}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type vm:LinkItemViewModel}">
-                                            <Grid Margin="0,4">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                </Grid.ColumnDefinitions>
-
-                                                <ui:SymbolIcon
-                                                    Grid.Column="0"
-                                                    Margin="0,0,8,0"
-                                                    VerticalAlignment="Center">
-                                                    <ui:SymbolIcon.Style>
-                                                        <Style TargetType="ui:SymbolIcon">
-                                                            <Setter Property="Symbol" Value="Link24" />
-                                                            <Setter Property="Foreground" Value="#34D399" />
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding Status}" Value="{x:Static vm:LinkStatus.NotLinked}">
-                                                                    <Setter Property="Symbol" Value="LinkDismiss24" />
-                                                                    <Setter Property="Foreground" Value="#F59E0B" />
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Status}" Value="{x:Static vm:LinkStatus.Drift}">
-                                                                    <Setter Property="Symbol" Value="Warning24" />
-                                                                    <Setter Property="Foreground" Value="#F59E0B" />
-                                                                </DataTrigger>
-                                                                <DataTrigger Binding="{Binding Status}" Value="{x:Static vm:LinkStatus.Conflict}">
-                                                                    <Setter Property="Symbol" Value="ErrorCircle24" />
-                                                                    <Setter Property="Foreground" Value="#EF4444" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </ui:SymbolIcon.Style>
-                                                </ui:SymbolIcon>
-
-                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                    <ui:TextBlock FontTypography="Caption" Text="{Binding Source}" />
-                                                    <ui:TextBlock FontTypography="Caption" Opacity="0.5" Text="{Binding Target}" TextTrimming="CharacterEllipsis" />
-                                                </StackPanel>
-
-                                                <ui:TextBlock
-                                                    Grid.Column="2"
-                                                    FontTypography="Caption"
-                                                    VerticalAlignment="Center"
-                                                    Text="{Binding StatusDisplay}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </ui:CardExpander.Content>
-                    </ui:CardExpander>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+        <!-- Deploy bar -->
+        <controls:DeployBar
+            Grid.Row="2"
+            SelectedCount="{Binding SelectedCount}"
+            ClearRequested="OnClearRequested" />
     </Grid>
 
 </Page>

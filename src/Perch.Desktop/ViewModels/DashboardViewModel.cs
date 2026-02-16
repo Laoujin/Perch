@@ -14,19 +14,19 @@ public sealed partial class DashboardViewModel : ViewModelBase
     private readonly ISettingsProvider _settingsProvider;
 
     [ObservableProperty]
-    private int _okCount;
+    private int _linkedCount;
 
     [ObservableProperty]
-    private int _missingCount;
+    private int _attentionCount;
 
     [ObservableProperty]
-    private int _driftCount;
+    private int _brokenCount;
 
     [ObservableProperty]
-    private int _errorCount;
+    private int _healthPercent = 100;
 
     [ObservableProperty]
-    private string _healthMessage = "Checking status...";
+    private string _statusMessage = "Checking status...";
 
     [ObservableProperty]
     private bool _isLoading;
@@ -49,37 +49,31 @@ public sealed partial class DashboardViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(settings.ConfigRepoPath))
         {
             HasConfigRepo = false;
-            HealthMessage = "No config repository configured. Go to Settings to set one up.";
+            StatusMessage = "No config repository configured";
             return;
         }
 
         HasConfigRepo = true;
         IsLoading = true;
         AttentionItems.Clear();
-        OkCount = 0;
-        MissingCount = 0;
-        DriftCount = 0;
-        ErrorCount = 0;
+        LinkedCount = 0;
+        AttentionCount = 0;
+        BrokenCount = 0;
 
-        var results = new List<StatusResult>();
         var progress = new Progress<StatusResult>(result =>
         {
-            results.Add(result);
             switch (result.Level)
             {
                 case DriftLevel.Ok:
-                    OkCount++;
+                    LinkedCount++;
                     break;
                 case DriftLevel.Missing:
-                    MissingCount++;
-                    AttentionItems.Add(new StatusItemViewModel(result));
-                    break;
                 case DriftLevel.Drift:
-                    DriftCount++;
+                    AttentionCount++;
                     AttentionItems.Add(new StatusItemViewModel(result));
                     break;
                 case DriftLevel.Error:
-                    ErrorCount++;
+                    BrokenCount++;
                     AttentionItems.Add(new StatusItemViewModel(result));
                     break;
             }
@@ -94,16 +88,19 @@ public sealed partial class DashboardViewModel : ViewModelBase
             return;
         }
 
-        var issues = MissingCount + DriftCount + ErrorCount;
-        HealthMessage = issues == 0
-            ? $"Everything looks good. {OkCount} configs linked."
-            : $"{issues} item{(issues == 1 ? "" : "s")} need attention.";
+        var total = LinkedCount + AttentionCount + BrokenCount;
+        HealthPercent = total > 0 ? (int)(LinkedCount * 100.0 / total) : 100;
+
+        var issues = AttentionCount + BrokenCount;
+        StatusMessage = issues == 0
+            ? $"Everything looks good"
+            : $"{issues} item{(issues == 1 ? "" : "s")} need attention";
 
         IsLoading = false;
     }
 }
 
-public sealed partial class StatusItemViewModel : ObservableObject
+public sealed class StatusItemViewModel
 {
     public string ModuleName { get; }
     public string SourcePath { get; }

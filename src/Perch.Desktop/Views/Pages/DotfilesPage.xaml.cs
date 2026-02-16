@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Controls;
 
 using Perch.Desktop.ViewModels;
@@ -19,5 +20,10 @@ public partial class DotfilesPage : Page
     {
         if (ViewModel.RefreshCommand.CanExecute(null))
             ViewModel.RefreshCommand.Execute(null);
+    }
+
+    private void OnClearRequested(object sender, RoutedEventArgs e)
+    {
+        ViewModel.ClearSelection();
     }
 }
