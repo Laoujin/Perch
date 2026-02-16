@@ -32,7 +32,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
     private bool _canGoBack;
 
     [ObservableProperty]
-    private string _stepLabel = "Step 1 of 10";
+    private string _stepLabel = string.Empty;
 
     [ObservableProperty]
     private string _currentStepTitle = "Welcome";
@@ -62,6 +62,7 @@ public sealed partial class MainWindowViewModel : ViewModelBase
 
         TotalSteps = _steps.Count;
         _currentPage = _steps[0];
+        _stepLabel = $"Step 1 of {TotalSteps}";
 
         for (int i = 0; i < _steps.Count; i++)
         {

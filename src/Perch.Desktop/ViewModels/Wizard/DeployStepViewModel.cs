@@ -41,8 +41,7 @@ public sealed partial class DeployStepViewModel : WizardStepViewModel
     {
         Phases.Clear();
         Phases.Add(new DeployPhaseViewModel("Repository Setup"));
-        Phases.Add(new DeployPhaseViewModel("Installing Applications"));
-        Phases.Add(new DeployPhaseViewModel("Installing Fonts"));
+        Phases.Add(new DeployPhaseViewModel("Installing Applications & Fonts"));
         Phases.Add(new DeployPhaseViewModel("Adopting Config Files"));
         Phases.Add(new DeployPhaseViewModel("Creating Symlinks"));
         Phases.Add(new DeployPhaseViewModel("Syncing VS Code Extensions"));
