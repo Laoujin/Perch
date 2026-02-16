@@ -6,6 +6,7 @@ using Perch.Core.Machines;
 using Perch.Core.Modules;
 using Perch.Core.Packages;
 using Perch.Core.Registry;
+using Perch.Core.Git;
 using Perch.Core.Symlinks;
 using Perch.Core.Templates;
 using NSubstitute.ReceivedExtensions;
@@ -35,6 +36,7 @@ public sealed class DeployServiceTests
     private ISystemPackageInstaller _systemPackageInstaller = null!;
     private IReferenceResolver _referenceResolver = null!;
     private IVariableResolver _variableResolver = null!;
+    private ICleanFilterService _cleanFilterService = null!;
     private SymlinkOrchestrator _orchestrator = null!;
     private DeployService _deployService = null!;
     private List<DeployResult> _reported = null!;
@@ -66,7 +68,10 @@ public sealed class DeployServiceTests
             .Returns(x => new DeployResult("system-packages", "", x.ArgAt<string>(0), ResultLevel.Ok, $"Installed {x.ArgAt<string>(0)}"));
         _referenceResolver = Substitute.For<IReferenceResolver>();
         _variableResolver = Substitute.For<IVariableResolver>();
-        _deployService = new DeployService(_discoveryService, _orchestrator, _platformDetector, _globResolver, _snapshotProvider, _hookRunner, _machineProfileService, _registryProvider, _globalPackageInstaller, _vscodeExtensionInstaller, _psModuleInstaller, new PackageManifestParser(), _systemPackageInstaller, new TemplateProcessor(), _referenceResolver, _variableResolver);
+        _cleanFilterService = Substitute.For<ICleanFilterService>();
+        _cleanFilterService.SetupAsync(Arg.Any<string>(), Arg.Any<ImmutableArray<AppModule>>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray<CleanFilterResult>.Empty);
+        _deployService = new DeployService(_discoveryService, _orchestrator, _platformDetector, _globResolver, _snapshotProvider, _hookRunner, _machineProfileService, _registryProvider, _globalPackageInstaller, _vscodeExtensionInstaller, _psModuleInstaller, new PackageManifestParser(), _systemPackageInstaller, new TemplateProcessor(), _referenceResolver, _variableResolver, _cleanFilterService);
         _reported = new List<DeployResult>();
         _progress = new SynchronousProgress<DeployResult>(r => _reported.Add(r));
     }
@@ -1827,6 +1832,62 @@ public sealed class DeployServiceTests
 
             string expectedTarget = Path.Combine(targetDir, "output.txt");
             _symlinkProvider.Received(1).CreateSymlink(expectedTarget, Arg.Any<string>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_ModulesWithCleanFilter_CallsSetup()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        try
+        {
+            var filter = new CleanFilterDefinition("mod-clean", null, ImmutableArray.Create("config.xml"),
+                ImmutableArray.Create(new FilterRule("strip-xml-elements", ImmutableArray.Create("FindHistory"))));
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty,
+                    ImmutableArray<LinkEntry>.Empty, CleanFilter: filter));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            await _cleanFilterService.Received(1).SetupAsync(tempDir, modules, Arg.Any<CancellationToken>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_DryRun_SkipsCleanFilterSetup()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        try
+        {
+            var filter = new CleanFilterDefinition("mod-clean", null, ImmutableArray.Create("config.xml"),
+                ImmutableArray.Create(new FilterRule("strip-xml-elements", ImmutableArray.Create("FindHistory"))));
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty,
+                    ImmutableArray<LinkEntry>.Empty, CleanFilter: filter));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            await _deployService.DeployAsync(tempDir, new DeployOptions { DryRun = true, Progress = _progress });
+
+            await _cleanFilterService.DidNotReceive().SetupAsync(Arg.Any<string>(), Arg.Any<ImmutableArray<AppModule>>(), Arg.Any<CancellationToken>());
         }
         finally
         {

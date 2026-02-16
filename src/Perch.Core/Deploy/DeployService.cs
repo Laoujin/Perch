@@ -1,4 +1,5 @@
 using Perch.Core.Backup;
+using Perch.Core.Git;
 using Perch.Core.Machines;
 using Perch.Core.Modules;
 using Perch.Core.Packages;
@@ -26,8 +27,9 @@ public sealed class DeployService : IDeployService
     private readonly ITemplateProcessor _templateProcessor;
     private readonly IReferenceResolver _referenceResolver;
     private readonly IVariableResolver _variableResolver;
+    private readonly ICleanFilterService _cleanFilterService;
 
-    public DeployService(IModuleDiscoveryService discoveryService, SymlinkOrchestrator orchestrator, IPlatformDetector platformDetector, IGlobResolver globResolver, ISnapshotProvider snapshotProvider, IHookRunner hookRunner, IMachineProfileService machineProfileService, IRegistryProvider registryProvider, IGlobalPackageInstaller globalPackageInstaller, IVscodeExtensionInstaller vscodeExtensionInstaller, IPsModuleInstaller psModuleInstaller, PackageManifestParser packageManifestParser, ISystemPackageInstaller systemPackageInstaller, ITemplateProcessor templateProcessor, IReferenceResolver referenceResolver, IVariableResolver variableResolver)
+    public DeployService(IModuleDiscoveryService discoveryService, SymlinkOrchestrator orchestrator, IPlatformDetector platformDetector, IGlobResolver globResolver, ISnapshotProvider snapshotProvider, IHookRunner hookRunner, IMachineProfileService machineProfileService, IRegistryProvider registryProvider, IGlobalPackageInstaller globalPackageInstaller, IVscodeExtensionInstaller vscodeExtensionInstaller, IPsModuleInstaller psModuleInstaller, PackageManifestParser packageManifestParser, ISystemPackageInstaller systemPackageInstaller, ITemplateProcessor templateProcessor, IReferenceResolver referenceResolver, IVariableResolver variableResolver, ICleanFilterService cleanFilterService)
     {
         _discoveryService = discoveryService;
         _orchestrator = orchestrator;
@@ -45,6 +47,7 @@ public sealed class DeployService : IDeployService
         _templateProcessor = templateProcessor;
         _referenceResolver = referenceResolver;
         _variableResolver = variableResolver;
+        _cleanFilterService = cleanFilterService;
     }
 
     public async Task<int> DeployAsync(string configRepoPath, DeployOptions? options = null, CancellationToken cancellationToken = default)
@@ -55,29 +58,11 @@ public sealed class DeployService : IDeployService
 
         DiscoveryResult discovery = await _discoveryService.DiscoverAsync(configRepoPath, cancellationToken).ConfigureAwait(false);
 
-        foreach (string error in discovery.Errors)
-        {
-            progress?.Report(new DeployResult("discovery", "", "", ResultLevel.Error, error));
-        }
-
-        bool hasErrors = discovery.Errors.Length > 0;
+        bool hasErrors = ReportDiscoveryErrors(discovery, progress);
         Platform currentPlatform = _platformDetector.CurrentPlatform;
         MachineProfile? machineProfile = await _machineProfileService.LoadAsync(configRepoPath, cancellationToken).ConfigureAwait(false);
 
-        var eligibleModules = new List<AppModule>();
-        foreach (AppModule module in discovery.Modules)
-        {
-            string? skipReason = GetSkipReason(module, currentPlatform, machineProfile);
-            if (skipReason != null)
-            {
-                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, skipReason, DeployEventType.ModuleSkipped));
-            }
-            else
-            {
-                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, "", DeployEventType.ModuleDiscovered));
-                eligibleModules.Add(module);
-            }
-        }
+        var eligibleModules = FilterEligibleModules(discovery.Modules, currentPlatform, machineProfile, progress);
 
         IReadOnlyDictionary<string, string>? variables = machineProfile?.Variables;
 
@@ -126,6 +111,11 @@ public sealed class DeployService : IDeployService
             hasErrors = true;
         }
 
+        if (!dryRun && await SetupCleanFiltersAsync(configRepoPath, discovery.Modules, progress, cancellationToken).ConfigureAwait(false))
+        {
+            hasErrors = true;
+        }
+
         return hasErrors ? 1 : 0;
     }
 
@@ -152,6 +142,36 @@ public sealed class DeployService : IDeployService
         }
 
         return null;
+    }
+
+    private static bool ReportDiscoveryErrors(DiscoveryResult discovery, IProgress<DeployResult>? progress)
+    {
+        foreach (string error in discovery.Errors)
+        {
+            progress?.Report(new DeployResult("discovery", "", "", ResultLevel.Error, error));
+        }
+
+        return discovery.Errors.Length > 0;
+    }
+
+    private static List<AppModule> FilterEligibleModules(System.Collections.Immutable.ImmutableArray<AppModule> modules, Platform currentPlatform, MachineProfile? machineProfile, IProgress<DeployResult>? progress)
+    {
+        var eligibleModules = new List<AppModule>();
+        foreach (AppModule module in modules)
+        {
+            string? skipReason = GetSkipReason(module, currentPlatform, machineProfile);
+            if (skipReason != null)
+            {
+                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, skipReason, DeployEventType.ModuleSkipped));
+            }
+            else
+            {
+                progress?.Report(new DeployResult(module.DisplayName, "", "", ResultLevel.Ok, "", DeployEventType.ModuleDiscovered));
+                eligibleModules.Add(module);
+            }
+        }
+
+        return eligibleModules;
     }
 
     private async Task<IReadOnlyList<DeployResult>> CollectModulePreviewAsync(AppModule module, Platform currentPlatform, IReadOnlyDictionary<string, string>? variables, string configRepoPath, bool includePackages, CancellationToken cancellationToken)
@@ -253,6 +273,22 @@ public sealed class DeployService : IDeployService
         return hasErrors;
     }
 
+    private async Task<bool> SetupCleanFiltersAsync(string configRepoPath, System.Collections.Immutable.ImmutableArray<AppModule> modules, IProgress<DeployResult>? progress, CancellationToken cancellationToken)
+    {
+        var results = await _cleanFilterService.SetupAsync(configRepoPath, modules, cancellationToken).ConfigureAwait(false);
+
+        bool hasErrors = false;
+        foreach (CleanFilterResult result in results)
+        {
+            progress?.Report(new DeployResult(result.ModuleName, "", "", result.Level, result.Message));
+            if (result.Level == ResultLevel.Error)
+            {
+                hasErrors = true;
+            }
+        }
+
+        return hasErrors;
+    }
 
     private async Task<bool> ProcessModuleLinksAsync(AppModule module, Platform currentPlatform, IReadOnlyDictionary<string, string>? variables, string configRepoPath, bool dryRun, IProgress<DeployResult>? progress, CancellationToken cancellationToken)
     {
