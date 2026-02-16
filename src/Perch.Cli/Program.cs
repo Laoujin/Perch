@@ -32,6 +32,8 @@ app.Configure(config =>
         diff.AddCommand<DiffStopCommand>("stop")
             .WithDescription("Compare current state against the captured snapshot");
     });
+    config.AddCommand<CompletionCommand>("completion")
+        .WithDescription("Generate shell completion script");
 });
 
 return app.Run(args);
