@@ -71,6 +71,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAppScanService, AppScanService>();
 
         services.AddSingleton<CatalogParser>();
+        services.AddSingleton(new System.Net.Http.HttpClient());
+        services.AddSingleton<ICatalogFetcher, SettingsAwareCatalogFetcher>();
+        services.AddSingleton<ICatalogCache>(_ => new FileCatalogCache(
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "perch", "cache", "catalog")));
+        services.AddSingleton<ICatalogService, CatalogService>();
         services.AddSingleton<IDotfileScanner, DotfileScanner>();
         services.AddSingleton<IFontScanner, FontScanner>();
         services.AddSingleton<IVsCodeService, VsCodeService>();
