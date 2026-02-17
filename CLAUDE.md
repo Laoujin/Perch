@@ -18,6 +18,12 @@ dotnet run --project src/Perch.Cli        # Run the CLI
 dotnet run --project src/Perch.Cli -- deploy   # Run with arguments
 ```
 
+After making changes to Perch.Desktop, launch the app to verify:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File launch-dev.ps1
+```
+
 ## Coding Conventions
 
 See global `~/.claude/AGENTS-DOTNET-STYLE.md` and `~/.claude/AGENTS-DOTNET-TESTING.md`.
