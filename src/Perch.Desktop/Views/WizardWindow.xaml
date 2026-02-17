@@ -619,10 +619,12 @@
                                                         <TextBlock
                                                             Grid.Column="0"
                                                             Text="{Binding Name}"
+                                                            FontFamily="{Binding Name}"
                                                             FontSize="13"
                                                             FontWeight="SemiBold"
                                                             Foreground="White"
                                                             TextTrimming="CharacterEllipsis"
+                                                            ToolTip="{Binding Name}"
                                                             VerticalAlignment="Center" />
 
                                                         <ui:ToggleSwitch
@@ -642,7 +644,7 @@
 
                                                     <ui:Button
                                                         Grid.Row="2"
-                                                        Content="Show Font"
+                                                        Content="View Font"
                                                         Icon="{ui:SymbolIcon Eye24}"
                                                         Command="{Binding PreviewCommand}"
                                                         Padding="6,2"
@@ -691,10 +693,12 @@
                                                         <TextBlock
                                                             Grid.Column="0"
                                                             Text="{Binding Name}"
+                                                            FontFamily="{Binding Name}"
                                                             FontSize="13"
                                                             FontWeight="SemiBold"
                                                             Foreground="White"
                                                             TextTrimming="CharacterEllipsis"
+                                                            ToolTip="{Binding Name}"
                                                             VerticalAlignment="Center" />
 
                                                         <ui:ToggleSwitch
