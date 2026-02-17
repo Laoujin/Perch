@@ -316,7 +316,10 @@ public sealed class CatalogParser
 
             var kind = ParseRegistryValueType(entry.Type);
             object value = CoerceRegistryValue(entry.Value, kind);
-            result.Add(new RegistryEntryDefinition(entry.Key!, entry.Name!, value, kind));
+            object? defaultValue = entry.HasDefaultValue && entry.DefaultValue != null
+                ? CoerceRegistryValue(entry.DefaultValue, kind)
+                : null;
+            result.Add(new RegistryEntryDefinition(entry.Key!, entry.Name!, value, kind, defaultValue));
         }
 
         return result.ToImmutableArray();

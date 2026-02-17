@@ -456,4 +456,94 @@ public sealed class CatalogParserTests
             Assert.That(entry.Extensions.Recommended, Has.Length.EqualTo(2));
         });
     }
+
+    [Test]
+    public void ParseTweak_WithDefaultValue_ParsesDefaultValue()
+    {
+        string yaml = """
+            name: Show File Extensions
+            category: Explorer/Files
+            tags: [explorer, files]
+            description: Always show file name extensions in Explorer
+            reversible: true
+            profiles: [developer]
+            registry:
+              - key: HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced
+                name: HideFileExt
+                value: 0
+                type: dword
+                default-value: 1
+            """;
+
+        var result = _parser.ParseTweak(yaml, "show-file-extensions");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.Registry[0].DefaultValue, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void ParseTweak_WithNullDefaultValue_ParsesAsNull()
+    {
+        string yaml = """
+            name: Classic Context Menu
+            category: Explorer/Context Menu
+            tags: [explorer]
+            description: Restore classic context menu
+            reversible: true
+            registry:
+              - key: HKCU\Software\Classes\CLSID\{86ca1aa0}\InprocServer32
+                name: ""
+                value: ""
+                type: string
+                default-value: null
+            """;
+
+        var result = _parser.ParseTweak(yaml, "classic-context-menu");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.Registry[0].DefaultValue, Is.Null);
+    }
+
+    [Test]
+    public void ParseTweak_WithoutDefaultValue_DefaultValueIsNull()
+    {
+        string yaml = """
+            name: Test Tweak
+            category: Test
+            tags: [test]
+            reversible: true
+            registry:
+              - key: HKCU\Software\Test
+                name: TestValue
+                value: 1
+                type: dword
+            """;
+
+        var result = _parser.ParseTweak(yaml, "test-tweak");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.Registry[0].DefaultValue, Is.Null);
+    }
+
+    [Test]
+    public void ParseTweak_WithStringDefaultValue_CoercesCorrectly()
+    {
+        string yaml = """
+            name: Disable Sticky Keys
+            category: Accessibility/Keyboard
+            tags: [accessibility]
+            reversible: true
+            registry:
+              - key: HKCU\Control Panel\Accessibility\StickyKeys
+                name: Flags
+                value: "506"
+                type: string
+                default-value: "510"
+            """;
+
+        var result = _parser.ParseTweak(yaml, "disable-sticky-keys");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.Registry[0].DefaultValue, Is.EqualTo("510"));
+    }
 }

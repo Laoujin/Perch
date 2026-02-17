@@ -104,6 +104,13 @@ internal sealed class TweakRegistryYamlModel
     public string? Name { get; set; }
     public object? Value { get; set; }
     public string? Type { get; set; }
+
+    [YamlMember(Alias = "default-value")]
+    public object? DefaultValue { get => _defaultValue; set { _defaultValue = value; HasDefaultValue = true; } }
+    private object? _defaultValue;
+
+    [YamlIgnore]
+    public bool HasDefaultValue { get; private set; }
 }
 
 internal sealed class CatalogIndexYamlModel
