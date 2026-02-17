@@ -4,6 +4,7 @@ using Perch.Core.Catalog;
 using Perch.Core.Config;
 using Perch.Core.Deploy;
 using Perch.Core.Diff;
+using Perch.Core.Fonts;
 using Perch.Core.Git;
 using Perch.Core.Machines;
 using Perch.Core.Modules;
@@ -83,6 +84,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IGalleryOverlayService, GalleryOverlayService>();
         services.AddSingleton<IDotfileScanner, DotfileScanner>();
         services.AddSingleton<IFontScanner, FontScanner>();
+        services.AddSingleton<IFontOnboardingService, FontOnboardingService>();
         services.AddSingleton<IVsCodeService, VsCodeService>();
         services.AddSingleton<ISystemScanner, SystemScanner>();
         return services;

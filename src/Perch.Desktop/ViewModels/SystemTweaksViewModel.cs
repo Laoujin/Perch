@@ -21,7 +21,17 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     [ObservableProperty]
     private int _selectedCount;
 
+    [ObservableProperty]
+    private string? _selectedCategory;
+
     public ObservableCollection<TweakCardModel> Tweaks { get; } = [];
+    public ObservableCollection<TweakCardModel> FilteredTweaks { get; } = [];
+    public ObservableCollection<FontCardModel> DetectedFonts { get; } = [];
+    public ObservableCollection<FontCardModel> GalleryFonts { get; } = [];
+    public ObservableCollection<TweakCategoryCardModel> Categories { get; } = [];
+
+    public bool ShowCategories => SelectedCategory is null;
+    public bool ShowDetail => SelectedCategory is not null;
 
     public SystemTweaksViewModel(IGalleryDetectionService detectionService)
     {
@@ -29,6 +39,12 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
+
+    partial void OnSelectedCategoryChanged(string? value)
+    {
+        OnPropertyChanged(nameof(ShowCategories));
+        OnPropertyChanged(nameof(ShowDetail));
+    }
 
     [RelayCommand]
     private async Task RefreshAsync(CancellationToken cancellationToken)
@@ -38,11 +54,22 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
         try
         {
             var profiles = new HashSet<UserProfile> { UserProfile.Developer, UserProfile.PowerUser };
-            var all = await _detectionService.DetectTweaksAsync(profiles, cancellationToken);
+            var tweaksTask = _detectionService.DetectTweaksAsync(profiles, cancellationToken);
+            var fontsTask = _detectionService.DetectFontsAsync(cancellationToken);
+
+            await Task.WhenAll(tweaksTask, fontsTask);
+
             Tweaks.Clear();
-            foreach (var tweak in all)
+            foreach (var tweak in tweaksTask.Result)
                 Tweaks.Add(tweak);
 
+            var fontResult = fontsTask.Result;
+            DetectedFonts.Clear();
+            GalleryFonts.Clear();
+            foreach (var f in fontResult.DetectedFonts) DetectedFonts.Add(f);
+            foreach (var f in fontResult.GalleryFonts) GalleryFonts.Add(f);
+
+            RebuildCategories();
             ApplyFilter();
         }
         catch (OperationCanceledException)
@@ -55,6 +82,54 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
         }
     }
 
+    private void RebuildCategories()
+    {
+        Categories.Clear();
+
+        var groups = Tweaks.GroupBy(t => t.Category, StringComparer.OrdinalIgnoreCase);
+        foreach (var group in groups.OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            var items = group.ToList();
+            Categories.Add(new TweakCategoryCardModel(
+                group.Key,
+                group.Key,
+                description: null,
+                items.Count,
+                items.Count(t => t.IsSelected)));
+        }
+
+        var fontCount = DetectedFonts.Count + GalleryFonts.Count;
+        if (fontCount > 0)
+        {
+            Categories.Add(new TweakCategoryCardModel(
+                "Fonts",
+                "Fonts",
+                "Detected & gallery nerd fonts",
+                fontCount,
+                DetectedFonts.Count(f => f.IsSelected) + GalleryFonts.Count(f => f.IsSelected)));
+        }
+    }
+
+    [RelayCommand]
+    private void SelectCategory(string category)
+    {
+        FilteredTweaks.Clear();
+        if (!string.Equals(category, "Fonts", StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var tweak in Tweaks.Where(t => string.Equals(t.Category, category, StringComparison.OrdinalIgnoreCase)))
+                FilteredTweaks.Add(tweak);
+        }
+
+        SelectedCategory = category;
+    }
+
+    [RelayCommand]
+    private void BackToCategories()
+    {
+        SelectedCategory = null;
+        RebuildCategories();
+    }
+
     private void ApplyFilter()
     {
         UpdateSelectedCount();
@@ -62,13 +137,20 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
 
     public void UpdateSelectedCount()
     {
-        SelectedCount = Tweaks.Count(t => t.IsSelected);
+        SelectedCount = Tweaks.Count(t => t.IsSelected)
+            + DetectedFonts.Count(f => f.IsSelected)
+            + GalleryFonts.Count(f => f.IsSelected);
     }
 
     public void ClearSelection()
     {
         foreach (var tweak in Tweaks)
             tweak.IsSelected = false;
+        foreach (var font in DetectedFonts)
+            font.IsSelected = false;
+        foreach (var font in GalleryFonts)
+            font.IsSelected = false;
         SelectedCount = 0;
+        RebuildCategories();
     }
 }

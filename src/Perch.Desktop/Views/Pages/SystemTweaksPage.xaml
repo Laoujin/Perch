@@ -50,76 +50,59 @@
             VerticalAlignment="Center"
             Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}" />
 
-        <!-- Tweak cards -->
+        <!-- Category grid (visible when no category selected) -->
         <ScrollViewer
             Grid.Row="1"
             Margin="0,16,0,0"
             VerticalScrollBarVisibility="Auto"
-            Visibility="{Binding IsLoading, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-            <ItemsControl ItemsSource="{Binding Tweaks}">
+            Visibility="{Binding ShowCategories, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <ItemsControl ItemsSource="{Binding Categories}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type models:TweakCardModel}">
+                    <DataTemplate DataType="{x:Type models:TweakCategoryCardModel}">
                         <Border
-                            Background="#1A1A2E"
-                            BorderBrush="{Binding IsSelected, Converter={StaticResource BooleanToBorderBrushConverter}}"
+                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="#333350"
                             BorderThickness="1"
                             CornerRadius="8"
-                            Padding="12"
-                            Width="240"
-                            Margin="0,0,12,12">
+                            Padding="16"
+                            Width="200"
+                            Margin="0,0,12,12"
+                            Cursor="Hand"
+                            MouseLeftButtonUp="OnCategoryCardClick">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
-                                <controls:StatusRibbon
+                                <ui:SymbolIcon
                                     Grid.Row="0"
-                                    Status="{Binding Status}"
+                                    Symbol="{Binding IconSymbol}"
+                                    FontSize="28"
+                                    Foreground="#10B981"
+                                    HorizontalAlignment="Left"
                                     Margin="0,0,0,8" />
 
-                                <Grid Grid.Row="1">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <TextBlock
-                                        Grid.Column="0"
-                                        Text="{Binding Name}"
-                                        FontSize="13"
-                                        FontWeight="SemiBold"
-                                        Foreground="White"
-                                        TextTrimming="CharacterEllipsis" />
-
-                                    <ui:ToggleSwitch
-                                        Grid.Column="1"
-                                        IsChecked="{Binding IsSelected, Mode=TwoWay}" />
-                                </Grid>
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Text="{Binding DisplayName}"
+                                    FontSize="14"
+                                    FontWeight="SemiBold"
+                                    Foreground="White" />
 
                                 <TextBlock
                                     Grid.Row="2"
-                                    Text="{Binding Description}"
                                     FontSize="11"
                                     Foreground="#888888"
-                                    TextWrapping="Wrap"
-                                    MaxHeight="32"
-                                    Margin="0,4,0,0" />
-
-                                <TextBlock
-                                    Grid.Row="3"
-                                    FontSize="10"
-                                    Foreground="#666666"
                                     Margin="0,4,0,0">
-                                    <Run Text="{Binding TotalCount, Mode=OneWay}" />
-                                    <Run Text=" registry entries" />
+                                    <Run Text="{Binding ItemCount, Mode=OneWay}" />
+                                    <Run Text=" items" />
                                 </TextBlock>
                             </Grid>
                         </Border>
@@ -127,6 +110,253 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+
+        <!-- Detail view (visible when a category is selected) -->
+        <Grid
+            Grid.Row="1"
+            Margin="0,16,0,0"
+            Visibility="{Binding ShowDetail, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Back button + category header -->
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                <ui:Button
+                    Icon="{ui:SymbolIcon ArrowLeft24}"
+                    Command="{Binding BackToCategoriesCommand}"
+                    Margin="0,0,12,0" />
+                <TextBlock
+                    Text="{Binding SelectedCategory}"
+                    FontSize="18"
+                    FontWeight="SemiBold"
+                    Foreground="White"
+                    VerticalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Tweak cards for selected category (non-Fonts) -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                          x:Name="TweakDetailPanel">
+                <ItemsControl ItemsSource="{Binding FilteredTweaks}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type models:TweakCardModel}">
+                            <Border
+                                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                BorderBrush="{Binding IsSelected, Converter={StaticResource BooleanToBorderBrushConverter}}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="12"
+                                Width="240"
+                                Margin="0,0,12,12">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <controls:StatusRibbon
+                                        Grid.Row="0"
+                                        Status="{Binding Status}"
+                                        Margin="0,0,0,8" />
+
+                                    <Grid Grid.Row="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <TextBlock
+                                            Grid.Column="0"
+                                            Text="{Binding Name}"
+                                            FontSize="13"
+                                            FontWeight="SemiBold"
+                                            Foreground="White"
+                                            TextTrimming="CharacterEllipsis" />
+
+                                        <ui:ToggleSwitch
+                                            Grid.Column="1"
+                                            IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                    </Grid>
+
+                                    <TextBlock
+                                        Grid.Row="2"
+                                        Text="{Binding Description}"
+                                        FontSize="11"
+                                        Foreground="#888888"
+                                        TextWrapping="Wrap"
+                                        MaxHeight="32"
+                                        Margin="0,4,0,0" />
+
+                                    <TextBlock
+                                        Grid.Row="3"
+                                        FontSize="10"
+                                        Foreground="#666666"
+                                        Margin="0,4,0,0">
+                                        <Run Text="{Binding TotalCount, Mode=OneWay}" />
+                                        <Run Text=" registry entries" />
+                                    </TextBlock>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Font cards for Fonts category -->
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                          x:Name="FontDetailPanel">
+                <StackPanel>
+                    <!-- Detected Fonts -->
+                    <StackPanel Visibility="{Binding DetectedFonts.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}">
+                        <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="#888888" Margin="0,0,0,8"
+                                   Text="Detected on your system" />
+                        <ItemsControl ItemsSource="{Binding DetectedFonts}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type models:FontCardModel}">
+                                    <Border
+                                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                        BorderBrush="{Binding IsSelected, Converter={StaticResource BooleanToBorderBrushConverter}}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12"
+                                        Width="240"
+                                        Margin="0,0,12,12">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+
+                                            <Grid Grid.Row="0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock
+                                                    Grid.Column="0"
+                                                    Text="{Binding Name}"
+                                                    FontSize="13"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="White"
+                                                    TextTrimming="CharacterEllipsis"
+                                                    VerticalAlignment="Center" />
+
+                                                <ui:Button
+                                                    Grid.Column="1"
+                                                    Icon="{ui:SymbolIcon Eye24}"
+                                                    Command="{Binding PreviewCommand}"
+                                                    ToolTip="Preview font"
+                                                    Padding="4"
+                                                    Margin="4,0"
+                                                    VerticalAlignment="Center"
+                                                    Visibility="{Binding FullPath, Converter={StaticResource CountToVisibilityConverter}}" />
+
+                                                <ui:ToggleSwitch
+                                                    Grid.Column="2"
+                                                    IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                    VerticalAlignment="Center" />
+                                            </Grid>
+
+                                            <TextBlock
+                                                Grid.Row="1"
+                                                Text="{Binding Description}"
+                                                FontSize="11"
+                                                Foreground="#888888"
+                                                TextTrimming="CharacterEllipsis"
+                                                Margin="0,4,0,0" />
+
+                                            <controls:StatusRibbon
+                                                Grid.Row="2"
+                                                Status="{Binding Status}"
+                                                Margin="0,4,0,0" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                    <!-- Gallery Fonts -->
+                    <StackPanel Visibility="{Binding GalleryFonts.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}"
+                                Margin="0,16,0,0">
+                        <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="#888888" Margin="0,0,0,8"
+                                   Text="Available from gallery" />
+                        <ItemsControl ItemsSource="{Binding GalleryFonts}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type models:FontCardModel}">
+                                    <Border
+                                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                        BorderBrush="{Binding IsSelected, Converter={StaticResource BooleanToBorderBrushConverter}}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12"
+                                        Width="240"
+                                        Margin="0,0,12,12">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+
+                                            <Grid Grid.Row="0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock
+                                                    Grid.Column="0"
+                                                    Text="{Binding Name}"
+                                                    FontSize="13"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="White"
+                                                    TextTrimming="CharacterEllipsis"
+                                                    VerticalAlignment="Center" />
+
+                                                <ui:ToggleSwitch
+                                                    Grid.Column="1"
+                                                    IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                    VerticalAlignment="Center" />
+                                            </Grid>
+
+                                            <TextBlock
+                                                Grid.Row="1"
+                                                Text="{Binding Description}"
+                                                FontSize="11"
+                                                Foreground="#888888"
+                                                TextWrapping="Wrap"
+                                                MaxHeight="32"
+                                                Margin="0,4,0,0" />
+
+                                            <controls:StatusRibbon
+                                                Grid.Row="2"
+                                                Status="{Binding Status}"
+                                                Margin="0,4,0,0" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
 
         <!-- Deploy bar -->
         <controls:DeployBar

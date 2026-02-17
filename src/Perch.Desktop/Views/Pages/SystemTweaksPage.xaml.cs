@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
+using Perch.Desktop.Models;
 using Perch.Desktop.ViewModels;
 
 namespace Perch.Desktop.Views.Pages;
@@ -14,6 +16,12 @@ public partial class SystemTweaksPage : Page
         ViewModel = viewModel;
         DataContext = viewModel;
         InitializeComponent();
+
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SystemTweaksViewModel.SelectedCategory))
+                UpdateDetailPanelVisibility();
+        };
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -25,5 +33,22 @@ public partial class SystemTweaksPage : Page
     private void OnClearRequested(object sender, RoutedEventArgs e)
     {
         ViewModel.ClearSelection();
+    }
+
+    private void OnCategoryCardClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: TweakCategoryCardModel card })
+        {
+            ViewModel.SelectCategoryCommand.Execute(card.Category);
+        }
+    }
+
+    private void UpdateDetailPanelVisibility()
+    {
+        var isFonts = string.Equals(ViewModel.SelectedCategory, "Fonts", StringComparison.OrdinalIgnoreCase);
+        TweakDetailPanel.Visibility = ViewModel.SelectedCategory is not null && !isFonts
+            ? Visibility.Visible : Visibility.Collapsed;
+        FontDetailPanel.Visibility = isFonts
+            ? Visibility.Visible : Visibility.Collapsed;
     }
 }

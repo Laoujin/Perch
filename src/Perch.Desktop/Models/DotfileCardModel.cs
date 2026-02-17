@@ -11,6 +11,7 @@ public partial class DotfileCardModel : ObservableObject
     public string Group { get; }
     public long SizeBytes { get; }
     public bool IsSymlink { get; }
+    public bool Exists { get; }
 
     [ObservableProperty]
     private CardStatus _status;
@@ -25,7 +26,10 @@ public partial class DotfileCardModel : ObservableObject
         Group = dotfile.Group;
         SizeBytes = dotfile.SizeBytes;
         IsSymlink = dotfile.IsSymlink;
-        Status = dotfile.IsSymlink ? CardStatus.Linked : CardStatus.Detected;
+        Exists = dotfile.Exists;
+        Status = !dotfile.Exists ? CardStatus.NotInstalled
+               : dotfile.IsSymlink ? CardStatus.Linked
+               : CardStatus.Detected;
     }
 
     public bool MatchesSearch(string query)

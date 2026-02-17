@@ -38,6 +38,10 @@ public sealed class DotfileScanner : IDotfileScanner
                 bool isSymlink = info.LinkTarget != null;
                 results.Add(new DetectedDotfile(name, fullPath, group, info.Length, info.LastWriteTimeUtc, isSymlink));
             }
+            else
+            {
+                results.Add(new DetectedDotfile(name, fullPath, group, 0, default, false, Exists: false));
+            }
         }
 
         foreach (var (name, expandedPath, group) in KnownConfigFiles)
@@ -49,6 +53,10 @@ public sealed class DotfileScanner : IDotfileScanner
                 var info = new FileInfo(fullPath);
                 bool isSymlink = info.LinkTarget != null;
                 results.Add(new DetectedDotfile(name, fullPath, group, info.Length, info.LastWriteTimeUtc, isSymlink));
+            }
+            else
+            {
+                results.Add(new DetectedDotfile(name, fullPath, group, 0, default, false, Exists: false));
             }
         }
 

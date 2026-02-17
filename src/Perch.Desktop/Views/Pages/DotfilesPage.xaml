@@ -77,7 +77,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:DotfileCardModel}">
                         <Border
-                            Background="#1A1A2E"
+                            Background="{DynamicResource ControlFillColorDefaultBrush}"
                             BorderBrush="{Binding IsSelected, Converter={StaticResource BooleanToBorderBrushConverter}}"
                             BorderThickness="1"
                             CornerRadius="8"

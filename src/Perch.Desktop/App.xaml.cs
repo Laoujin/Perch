@@ -1,3 +1,5 @@
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -55,6 +57,10 @@ public partial class App : Application
 
     protected override async void OnStartup(StartupEventArgs e)
     {
+        EventManager.RegisterClassHandler(typeof(ScrollViewer),
+            UIElement.PreviewMouseWheelEvent,
+            new MouseWheelEventHandler(OnScrollViewerPreviewMouseWheel));
+
         ApplicationThemeManager.Apply(ApplicationTheme.Dark);
         ApplicationAccentColorManager.Apply(
             System.Windows.Media.Color.FromRgb(0x10, 0xB9, 0x81),
@@ -96,6 +102,15 @@ public partial class App : Application
         await _host.StopAsync();
         _host.Dispose();
         base.OnExit(e);
+    }
+
+    private static void OnScrollViewerPreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (sender is ScrollViewer sv && !e.Handled)
+        {
+            sv.ScrollToVerticalOffset(sv.VerticalOffset - e.Delta);
+            e.Handled = true;
+        }
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

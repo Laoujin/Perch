@@ -13,6 +13,7 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
 {
     private readonly ICatalogService _catalog;
     private readonly IDotfileScanner _dotfileScanner;
+    private readonly IFontScanner _fontScanner;
     private readonly IPlatformDetector _platformDetector;
     private readonly ISymlinkProvider _symlinkProvider;
     private readonly ISettingsProvider _settingsProvider;
@@ -35,12 +36,14 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
     public GalleryDetectionService(
         ICatalogService catalog,
         IDotfileScanner dotfileScanner,
+        IFontScanner fontScanner,
         IPlatformDetector platformDetector,
         ISymlinkProvider symlinkProvider,
         ISettingsProvider settingsProvider)
     {
         _catalog = catalog;
         _dotfileScanner = dotfileScanner;
+        _fontScanner = fontScanner;
         _platformDetector = platformDetector;
         _symlinkProvider = symlinkProvider;
         _settingsProvider = settingsProvider;
@@ -111,30 +114,93 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         CancellationToken cancellationToken = default)
     {
         var dotfiles = await _dotfileScanner.ScanAsync(cancellationToken);
-        var allApps = await _catalog.GetAllAppsAsync(cancellationToken);
-        var platform = _platformDetector.CurrentPlatform;
-
-        var galleryPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var app in allApps)
-        {
-            if (app.Config is null || app.Config.Links.IsDefaultOrEmpty)
-                continue;
-
-            foreach (var link in app.Config.Links)
-            {
-                if (link.Targets.TryGetValue(platform, out var targetPath))
-                {
-                    var resolved = Environment.ExpandEnvironmentVariables(targetPath.Replace('/', '\\'));
-                    galleryPaths.Add(Path.GetFullPath(resolved));
-                }
-            }
-        }
+        var settings = await _settingsProvider.LoadAsync(cancellationToken);
+        var configRepoPath = settings.ConfigRepoPath;
 
         return dotfiles
-            .Where(d => !galleryPaths.Contains(Path.GetFullPath(d.FullPath)))
-            .Select(d => new DotfileCardModel(d))
+            .Select(d =>
+            {
+                var model = new DotfileCardModel(d);
+                if (d.IsSymlink && !string.IsNullOrEmpty(configRepoPath))
+                {
+                    try
+                    {
+                        var target = new FileInfo(d.FullPath).LinkTarget;
+                        if (target != null)
+                        {
+                            var resolvedTarget = Path.GetFullPath(target, Path.GetDirectoryName(d.FullPath)!);
+                            var resolvedConfig = Path.GetFullPath(configRepoPath);
+                            if (!resolvedTarget.StartsWith(resolvedConfig, StringComparison.OrdinalIgnoreCase))
+                                model.Status = CardStatus.Drift;
+                        }
+                    }
+                    catch { }
+                }
+                return model;
+            })
             .ToImmutableArray();
     }
+
+    public async Task<FontDetectionResult> DetectFontsAsync(CancellationToken cancellationToken = default)
+    {
+        var systemFonts = await _fontScanner.ScanAsync(cancellationToken);
+        var galleryFonts = await _catalog.GetAllFontsAsync(cancellationToken);
+
+        var galleryByNormalized = new Dictionary<string, FontCatalogEntry>(StringComparer.OrdinalIgnoreCase);
+        foreach (var gf in galleryFonts)
+            galleryByNormalized[NormalizeFontName(gf.Name)] = gf;
+
+        var matchedGalleryIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var detected = ImmutableArray.CreateBuilder<FontCardModel>();
+
+        foreach (var font in systemFonts)
+        {
+            if (DefaultFontFamilies.IsDefault(font.Name))
+                continue;
+
+            var normalizedName = NormalizeFontName(font.Name);
+            FontCatalogEntry? matchedGallery = null;
+            if (galleryByNormalized.TryGetValue(normalizedName, out var entry))
+            {
+                matchedGallery = entry;
+                matchedGalleryIds.Add(entry.Id);
+            }
+
+            detected.Add(new FontCardModel(
+                matchedGallery?.Id ?? font.Name,
+                matchedGallery?.Name ?? font.Name,
+                matchedGallery?.Description ?? font.FullPath,
+                matchedGallery?.PreviewText,
+                font.FullPath,
+                FontCardSource.Detected,
+                matchedGallery?.Tags ?? [],
+                CardStatus.Detected));
+        }
+
+        var gallery = ImmutableArray.CreateBuilder<FontCardModel>();
+        foreach (var gf in galleryFonts)
+        {
+            if (matchedGalleryIds.Contains(gf.Id))
+                continue;
+
+            gallery.Add(new FontCardModel(
+                gf.Id,
+                gf.Name,
+                gf.Description,
+                gf.PreviewText,
+                fullPath: null,
+                FontCardSource.Gallery,
+                gf.Tags,
+                CardStatus.NotInstalled));
+        }
+
+        return new FontDetectionResult(detected.ToImmutable(), gallery.ToImmutable());
+    }
+
+    private static string NormalizeFontName(string name)
+        => name.Replace(" ", "", StringComparison.Ordinal)
+               .Replace("-", "", StringComparison.Ordinal)
+               .Replace("_", "", StringComparison.Ordinal);
 
     private bool IsAppDetectedOnFilesystem(CatalogEntry app, Platform platform)
     {

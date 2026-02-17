@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.Input;
 
 using Perch.Core.Config;
 using Perch.Core.Deploy;
+using Perch.Core.Fonts;
 
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
@@ -18,6 +19,7 @@ public sealed partial class WizardShellViewModel : ViewModelBase
     private readonly IDeployService _deployService;
     private readonly ISettingsProvider _settingsProvider;
     private readonly IGalleryDetectionService _detectionService;
+    private readonly IFontOnboardingService _fontOnboardingService;
 
     [ObservableProperty]
     private int _currentStepIndex;
@@ -71,6 +73,8 @@ public sealed partial class WizardShellViewModel : ViewModelBase
     private bool _hasCrashed;
 
     private readonly HashSet<UserProfile> _selectedProfiles = [];
+    private readonly List<string> _stepKeys = [];
+    private bool _detectionRun;
 
     public ObservableCollection<string> StepNames { get; } = [];
 
@@ -91,6 +95,10 @@ public sealed partial class WizardShellViewModel : ViewModelBase
     public ObservableCollection<AppCardModel> SuggestedApps { get; } = [];
     public ObservableCollection<AppCardModel> OtherApps { get; } = [];
     public ObservableCollection<TweakCardModel> Tweaks { get; } = [];
+    public ObservableCollection<TweakCardModel> FilteredTweaks { get; } = [];
+    public ObservableCollection<FontCardModel> DetectedFonts { get; } = [];
+    public ObservableCollection<FontCardModel> GalleryFonts { get; } = [];
+    public ObservableCollection<TweakCategoryCardModel> TweakCategories { get; } = [];
     public ObservableCollection<DeployResultItemViewModel> DeployResults { get; } = [];
 
     [ObservableProperty]
@@ -102,18 +110,29 @@ public sealed partial class WizardShellViewModel : ViewModelBase
     [ObservableProperty]
     private int _selectedTweakCount;
 
-    public int TotalSelectedCount => SelectedAppCount + SelectedDotfileCount + SelectedTweakCount;
+    [ObservableProperty]
+    private int _selectedFontCount;
+
+    [ObservableProperty]
+    private string? _selectedTweakCategory;
+
+    public bool ShowTweakCategories => SelectedTweakCategory is null;
+    public bool ShowTweakDetail => SelectedTweakCategory is not null;
+
+    public int TotalSelectedCount => SelectedAppCount + SelectedDotfileCount + SelectedTweakCount + SelectedFontCount;
 
     public bool ShowDotfilesStep => IsDeveloper || IsPowerUser;
 
     public WizardShellViewModel(
         IDeployService deployService,
         ISettingsProvider settingsProvider,
-        IGalleryDetectionService detectionService)
+        IGalleryDetectionService detectionService,
+        IFontOnboardingService fontOnboardingService)
     {
         _deployService = deployService;
         _settingsProvider = settingsProvider;
         _detectionService = detectionService;
+        _fontOnboardingService = fontOnboardingService;
 
         RebuildSteps();
         _ = InitializeAsync();
@@ -130,6 +149,12 @@ public sealed partial class WizardShellViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowDeploy));
     }
 
+    partial void OnSelectedTweakCategoryChanged(string? value)
+    {
+        OnPropertyChanged(nameof(ShowTweakCategories));
+        OnPropertyChanged(nameof(ShowTweakDetail));
+    }
+
     partial void OnIsDeveloperChanged(bool value) => RebuildSteps();
     partial void OnIsPowerUserChanged(bool value) => RebuildSteps();
     partial void OnIsGamerChanged(bool value) => RebuildSteps();
@@ -143,14 +168,18 @@ public sealed partial class WizardShellViewModel : ViewModelBase
         if (IsGamer) _selectedProfiles.Add(UserProfile.Gamer);
         if (IsCasual) _selectedProfiles.Add(UserProfile.Casual);
 
+        _stepKeys.Clear();
+        _stepKeys.Add("Profile");
+        _stepKeys.Add("Config");
+        if (ShowDotfilesStep) _stepKeys.Add("Dotfiles");
+        _stepKeys.Add("Apps");
+        _stepKeys.Add("System Tweaks");
+        _stepKeys.Add("Review");
+        _stepKeys.Add("Deploy");
+
         StepNames.Clear();
-        StepNames.Add("Profile");
-        StepNames.Add("Config");
-        if (ShowDotfilesStep) StepNames.Add("Dotfiles");
-        StepNames.Add("Apps");
-        StepNames.Add("System Tweaks");
-        StepNames.Add("Review");
-        StepNames.Add("Deploy");
+        for (var i = 0; i < _stepKeys.Count; i++)
+            StepNames.Add($"{i + 1}. {_stepKeys[i]}");
 
         OnPropertyChanged(nameof(ShowDotfilesStep));
         OnPropertyChanged(nameof(CanGoBack));
@@ -190,7 +219,11 @@ public sealed partial class WizardShellViewModel : ViewModelBase
         ConfigPathNotGitWarning = Directory.Exists(ConfigRepoPath) && !ConfigIsGitRepo;
     }
 
-    partial void OnConfigRepoPathChanged(string value) => ValidateConfigPath();
+    partial void OnConfigRepoPathChanged(string value)
+    {
+        ValidateConfigPath();
+        _detectionRun = false;
+    }
 
     [RelayCommand]
     private void BrowseConfigRepo()
@@ -251,6 +284,54 @@ public sealed partial class WizardShellViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void SelectTweakCategory(string category)
+    {
+        FilteredTweaks.Clear();
+        if (!string.Equals(category, "Fonts", StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var tweak in Tweaks.Where(t => string.Equals(t.Category, category, StringComparison.OrdinalIgnoreCase)))
+                FilteredTweaks.Add(tweak);
+        }
+
+        SelectedTweakCategory = category;
+    }
+
+    [RelayCommand]
+    private void BackToTweakCategories()
+    {
+        SelectedTweakCategory = null;
+        RebuildTweakCategories();
+    }
+
+    private void RebuildTweakCategories()
+    {
+        TweakCategories.Clear();
+
+        var groups = Tweaks.GroupBy(t => t.Category, StringComparer.OrdinalIgnoreCase);
+        foreach (var group in groups.OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase))
+        {
+            var items = group.ToList();
+            TweakCategories.Add(new TweakCategoryCardModel(
+                group.Key,
+                group.Key,
+                description: null,
+                items.Count,
+                items.Count(t => t.IsSelected)));
+        }
+
+        var fontCount = DetectedFonts.Count + GalleryFonts.Count;
+        if (fontCount > 0)
+        {
+            TweakCategories.Add(new TweakCategoryCardModel(
+                "Fonts",
+                "Fonts",
+                "Detected & gallery nerd fonts",
+                fontCount,
+                DetectedFonts.Count(f => f.IsSelected) + GalleryFonts.Count(f => f.IsSelected)));
+        }
+    }
+
+    [RelayCommand]
     private void GoBack()
     {
         if (CanGoBack)
@@ -301,30 +382,39 @@ public sealed partial class WizardShellViewModel : ViewModelBase
             var appsTask = _detectionService.DetectAppsAsync(_selectedProfiles, cancellationToken);
             var tweaksTask = _detectionService.DetectTweaksAsync(_selectedProfiles, cancellationToken);
             var dotfilesTask = _detectionService.DetectDotfilesAsync(cancellationToken);
+            var fontsTask = _detectionService.DetectFontsAsync(cancellationToken);
 
-            await Task.WhenAll(appsTask, tweaksTask, dotfilesTask);
+            await Task.WhenAll(appsTask, tweaksTask, dotfilesTask, fontsTask);
 
             var appResult = appsTask.Result;
             var tweakResult = tweaksTask.Result;
             var dotfileResult = dotfilesTask.Result;
+            var fontResult = fontsTask.Result;
 
             YourApps.Clear();
             SuggestedApps.Clear();
             OtherApps.Clear();
             Tweaks.Clear();
             Dotfiles.Clear();
+            DetectedFonts.Clear();
+            GalleryFonts.Clear();
 
             foreach (var app in appResult.YourApps) { app.IsSelected = true; YourApps.Add(app); }
             foreach (var app in appResult.Suggested) SuggestedApps.Add(app);
             foreach (var app in appResult.OtherApps) OtherApps.Add(app);
             foreach (var tweak in tweakResult) Tweaks.Add(tweak);
             foreach (var df in dotfileResult) { df.IsSelected = df.IsSymlink; Dotfiles.Add(df); }
+            foreach (var f in fontResult.DetectedFonts) DetectedFonts.Add(f);
+            foreach (var f in fontResult.GalleryFonts) GalleryFonts.Add(f);
+
+            RebuildTweakCategories();
         }
         finally
         {
             IsLoadingDetection = false;
         }
 
+        _detectionRun = true;
         NotifySelectionCounts();
     }
 
@@ -377,6 +467,19 @@ public sealed partial class WizardShellViewModel : ViewModelBase
 
         try
         {
+            var selectedFontPaths = DetectedFonts
+                .Where(f => f.IsSelected && f.FullPath is not null)
+                .Select(f => f.FullPath!)
+                .ToList();
+
+            if (selectedFontPaths.Count > 0)
+            {
+                var fontResult = await _fontOnboardingService.OnboardAsync(
+                    selectedFontPaths, settings.ConfigRepoPath, cancellationToken);
+                DeployedCount += fontResult.CopiedFiles.Length;
+                ErrorCount += fontResult.Errors.Length;
+            }
+
             await _deployService.DeployAsync(
                 settings.ConfigRepoPath,
                 new DeployOptions
@@ -424,14 +527,38 @@ public sealed partial class WizardShellViewModel : ViewModelBase
         SelectedAppCount = YourApps.Concat(SuggestedApps).Concat(OtherApps).Count(a => a.IsSelected);
         SelectedDotfileCount = Dotfiles.Count(d => d.IsSelected);
         SelectedTweakCount = Tweaks.Count(t => t.IsSelected);
+        SelectedFontCount = DetectedFonts.Count(f => f.IsSelected) + GalleryFonts.Count(f => f.IsSelected);
         OnPropertyChanged(nameof(TotalSelectedCount));
     }
 
     public string GetCurrentStepName()
     {
-        if (CurrentStepIndex >= 0 && CurrentStepIndex < StepNames.Count)
-            return StepNames[CurrentStepIndex];
+        if (CurrentStepIndex >= 0 && CurrentStepIndex < _stepKeys.Count)
+            return _stepKeys[CurrentStepIndex];
         return string.Empty;
+    }
+
+    public bool CanNavigateToStep(int targetIndex)
+    {
+        if (targetIndex < 0 || targetIndex >= _stepKeys.Count)
+            return false;
+        if (IsDeploying || IsComplete || HasCrashed)
+            return false;
+
+        // Always allow going backward
+        if (targetIndex <= CurrentStepIndex)
+            return true;
+
+        // Forward: Config step requires a non-empty path
+        var configIndex = _stepKeys.IndexOf("Config");
+        if (targetIndex > configIndex && string.IsNullOrWhiteSpace(ConfigRepoPath))
+            return false;
+
+        // Forward past Config: detection must have run
+        if (targetIndex > configIndex && !_detectionRun)
+            return false;
+
+        return true;
     }
 }
 

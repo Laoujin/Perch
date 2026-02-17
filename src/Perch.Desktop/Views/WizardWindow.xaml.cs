@@ -1,9 +1,11 @@
 using System.ComponentModel;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 
+using Perch.Desktop.Models;
 using Perch.Desktop.ViewModels.Wizard;
 
 namespace Perch.Desktop.Views;
@@ -33,6 +35,14 @@ public partial class WizardWindow : FluentWindow
         {
             UpdateStepVisibility();
             ViewModel.NotifySelectionCounts();
+
+            if (e.PropertyName == nameof(WizardShellViewModel.CurrentStepIndex))
+                StepListBox.SelectedIndex = ViewModel.CurrentStepIndex;
+        }
+
+        if (e.PropertyName == nameof(WizardShellViewModel.SelectedTweakCategory))
+        {
+            UpdateTweakDetailPanelVisibility();
         }
     }
 
@@ -61,6 +71,23 @@ public partial class WizardWindow : FluentWindow
         DeployStep.Visibility = stepName == "Deploy" ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private void UpdateTweakDetailPanelVisibility()
+    {
+        var isFonts = string.Equals(ViewModel.SelectedTweakCategory, "Fonts", StringComparison.OrdinalIgnoreCase);
+        WizardTweakDetailPanel.Visibility = ViewModel.SelectedTweakCategory is not null && !isFonts
+            ? Visibility.Visible : Visibility.Collapsed;
+        WizardFontDetailPanel.Visibility = isFonts
+            ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void OnTweakCategoryCardClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: TweakCategoryCardModel card })
+        {
+            ViewModel.SelectTweakCategoryCommand.Execute(card.Category);
+        }
+    }
+
     private void OnOpenDashboard(object sender, RoutedEventArgs e)
     {
         WizardCompleted?.Invoke();
@@ -75,7 +102,7 @@ public partial class WizardWindow : FluentWindow
         if (lb.SelectedIndex < 0 || lb.SelectedIndex == ViewModel.CurrentStepIndex)
             return;
 
-        if (lb.SelectedIndex < ViewModel.CurrentStepIndex)
+        if (ViewModel.CanNavigateToStep(lb.SelectedIndex))
             ViewModel.CurrentStepIndex = lb.SelectedIndex;
         else
             lb.SelectedIndex = ViewModel.CurrentStepIndex;
