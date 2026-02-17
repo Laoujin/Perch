@@ -1,3 +1,5 @@
+using System.Runtime.Versioning;
+
 using NSubstitute;
 
 using Perch.Core.Registry;
@@ -6,6 +8,8 @@ using Perch.Core.Startup;
 namespace Perch.Core.Tests.Startup;
 
 [TestFixture]
+[Platform("Win")]
+[SupportedOSPlatform("windows")]
 public sealed class WindowsStartupServiceTests
 {
     private const string HkcuRunKey = @"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
