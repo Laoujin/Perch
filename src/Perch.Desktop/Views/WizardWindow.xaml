@@ -650,6 +650,8 @@
                                                     <Grid.RowDefinitions>
                                                         <RowDefinition Height="Auto" />
                                                         <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
                                                     </Grid.RowDefinitions>
 
                                                     <Grid Grid.Row="0">
@@ -684,16 +686,35 @@
                                                         Margin="0,4,0,0"
                                                         Visibility="{Binding Description, Converter={StaticResource CountToVisibilityConverter}}" />
 
-                                                    <ui:Button
-                                                        Grid.Row="2"
-                                                        Icon="{ui:SymbolIcon Eye16}"
-                                                        Command="{Binding PreviewCommand}"
-                                                        ToolTip="View Font"
-                                                        Padding="2"
-                                                        Height="22"
-                                                        Margin="0,4,0,0"
-                                                        HorizontalAlignment="Right"
-                                                        Visibility="{Binding FullPath, Converter={StaticResource CountToVisibilityConverter}}" />
+                                                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                                                        <ui:Button
+                                                            Icon="{ui:SymbolIcon TextFont16}"
+                                                            Command="{Binding ToggleExpandCommand}"
+                                                            ToolTip="Try font"
+                                                            Padding="2"
+                                                            Height="22"
+                                                            Margin="0,0,4,0" />
+                                                        <ui:Button
+                                                            Icon="{ui:SymbolIcon Eye16}"
+                                                            Command="{Binding PreviewCommand}"
+                                                            ToolTip="View Font"
+                                                            Padding="2"
+                                                            Height="22"
+                                                            Visibility="{Binding FullPath, Converter={StaticResource CountToVisibilityConverter}}" />
+                                                    </StackPanel>
+
+                                                    <ui:TextBox
+                                                        Grid.Row="3"
+                                                        Text="{Binding SampleText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                        FontFamily="{Binding Name}"
+                                                        FontSize="14"
+                                                        Foreground="White"
+                                                        TextWrapping="Wrap"
+                                                        AcceptsReturn="True"
+                                                        MinHeight="50"
+                                                        MaxHeight="100"
+                                                        Margin="0,8,0,0"
+                                                        Visibility="{Binding IsExpanded, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>

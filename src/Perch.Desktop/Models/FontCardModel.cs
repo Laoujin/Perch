@@ -22,6 +22,12 @@ public partial class FontCardModel : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
+    [ObservableProperty]
+    private bool _isExpanded;
+
+    [ObservableProperty]
+    private string _sampleText = "The quick brown fox jumps over the lazy dog";
+
     public FontCardModel(
         string id,
         string name,
@@ -50,6 +56,9 @@ public partial class FontCardModel : ObservableObject
         return Name.Contains(query, StringComparison.OrdinalIgnoreCase)
             || (Description?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false);
     }
+
+    [RelayCommand]
+    private void ToggleExpand() => IsExpanded = !IsExpanded;
 
     [RelayCommand]
     private void Preview()
