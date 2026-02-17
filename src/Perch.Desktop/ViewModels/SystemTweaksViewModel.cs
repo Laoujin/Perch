@@ -76,6 +76,11 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
         {
             return;
         }
+        catch
+        {
+            // Detection failure is non-fatal -- show whatever loaded
+            RebuildCategories();
+        }
         finally
         {
             IsLoading = false;

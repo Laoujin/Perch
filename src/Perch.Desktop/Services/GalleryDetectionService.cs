@@ -170,7 +170,16 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
     public async Task<FontDetectionResult> DetectFontsAsync(CancellationToken cancellationToken = default)
     {
         var systemFonts = await _fontScanner.ScanAsync(cancellationToken);
-        var galleryFonts = await _catalog.GetAllFontsAsync(cancellationToken);
+
+        ImmutableArray<FontCatalogEntry> galleryFonts;
+        try
+        {
+            galleryFonts = await _catalog.GetAllFontsAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            galleryFonts = [];
+        }
 
         var galleryByNormalized = new Dictionary<string, FontCatalogEntry>(StringComparer.OrdinalIgnoreCase);
         foreach (var gf in galleryFonts)
