@@ -662,5 +662,149 @@ public sealed class SystemTweaksViewModelTests
             Assert.That(_vm.SelectedCategory, Is.Null);
         });
     }
+
+    [Test]
+    public async Task RefreshAsync_PopulatesTweaksAndFonts()
+    {
+        var tweaks = ImmutableArray.Create(MakeTweak("tweak1", "Registry"), MakeTweak("tweak2", "Explorer"));
+        var fonts = new FontDetectionResult(
+            ImmutableArray.Create(MakeFont("Arial")),
+            ImmutableArray.Create(MakeFont("FiraCode")));
+
+        _detectionService.DetectTweaksAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(tweaks);
+        _detectionService.DetectFontsAsync(Arg.Any<CancellationToken>())
+            .Returns(fonts);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.Tweaks, Has.Count.EqualTo(2));
+            Assert.That(_vm.InstalledFonts, Has.Count.EqualTo(1));
+            Assert.That(_vm.NerdFonts, Has.Count.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task RefreshAsync_BuildsCategoriesFromTweaks()
+    {
+        var tweaks = ImmutableArray.Create(
+            MakeTweak("tweak1", "Registry"),
+            MakeTweak("tweak2", "Registry"),
+            MakeTweak("tweak3", "Explorer"));
+
+        _detectionService.DetectTweaksAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(tweaks);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+
+        Assert.That(_vm.Categories, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public async Task RefreshAsync_FontsCategoryAddedWhenFontsExist()
+    {
+        var fonts = new FontDetectionResult(
+            ImmutableArray.Create(MakeFont("Arial")),
+            ImmutableArray<FontCardModel>.Empty);
+
+        _detectionService.DetectFontsAsync(Arg.Any<CancellationToken>())
+            .Returns(fonts);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+
+        Assert.That(_vm.Categories.Any(c => c.Category == "Fonts"), Is.True);
+    }
+
+    [Test]
+    public async Task SelectCategory_FiltersTweaksForCategory()
+    {
+        var tweaks = ImmutableArray.Create(
+            MakeTweak("tweak1", "Registry"),
+            MakeTweak("tweak2", "Explorer"));
+
+        _detectionService.DetectTweaksAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(tweaks);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+        _vm.SelectCategoryCommand.Execute("Registry");
+
+        Assert.That(_vm.FilteredTweaks, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public async Task SelectCategory_Fonts_LeavesFilteredTweaksEmpty()
+    {
+        var tweaks = ImmutableArray.Create(MakeTweak("tweak1", "Registry"));
+        _detectionService.DetectTweaksAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(tweaks);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+        _vm.SelectCategoryCommand.Execute("Fonts");
+
+        Assert.That(_vm.FilteredTweaks, Is.Empty);
+    }
+
+    [Test]
+    public async Task FontSearchText_FiltersInstalledFontGroups()
+    {
+        var fonts = new FontDetectionResult(
+            ImmutableArray.Create(MakeFont("Arial"), MakeFont("Consolas")),
+            ImmutableArray<FontCardModel>.Empty);
+
+        _detectionService.DetectFontsAsync(Arg.Any<CancellationToken>())
+            .Returns(fonts);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+        Assert.That(_vm.FilteredInstalledFontGroups, Has.Count.EqualTo(2));
+
+        _vm.FontSearchText = "Arial";
+        Assert.That(_vm.FilteredInstalledFontGroups, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public async Task FontSearchText_FiltersNerdFonts()
+    {
+        var fonts = new FontDetectionResult(
+            ImmutableArray<FontCardModel>.Empty,
+            ImmutableArray.Create(MakeFont("FiraCode"), MakeFont("JetBrains")));
+
+        _detectionService.DetectFontsAsync(Arg.Any<CancellationToken>())
+            .Returns(fonts);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+        Assert.That(_vm.FilteredNerdFonts, Has.Count.EqualTo(2));
+
+        _vm.FontSearchText = "Fira";
+        Assert.That(_vm.FilteredNerdFonts, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public async Task SearchText_DoesNotFilterTweaks()
+    {
+        var tweaks = ImmutableArray.Create(MakeTweak("tweak1", "Registry"), MakeTweak("tweak2", "Explorer"));
+        _detectionService.DetectTweaksAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(tweaks);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+        _vm.SelectCategoryCommand.Execute("Registry");
+        Assert.That(_vm.FilteredTweaks, Has.Count.EqualTo(1));
+
+        // ApplyFilter() is empty — SearchText changes don't filter tweaks (known bug)
+        _vm.SearchText = "nonexistent";
+        Assert.That(_vm.FilteredTweaks, Has.Count.EqualTo(1));
+    }
+
+    private static TweakCardModel MakeTweak(string name, string category)
+    {
+        var entry = new TweakCatalogEntry(name, name, category, [], null, true, [], []);
+        return new TweakCardModel(entry, CardStatus.Detected);
+    }
+
+    private static FontCardModel MakeFont(string name)
+    {
+        return new FontCardModel(name, name, name, null, null, null, FontCardSource.Detected, [], CardStatus.Detected);
+    }
 }
 #endif
