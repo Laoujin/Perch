@@ -644,25 +644,25 @@ System fonts are detected independently via `IFontScanner` — no gallery entry 
 
 `Height` set to `800` to match `MinHeight="800"`.
 
-### 9.2 Null DisplayName on Catalog Entries
+### 9.2 Null DisplayName on Catalog Entries -- FIXED
 
-Many gallery catalog entries lack `displayName`. The `AppCardModel` and alternatives rendering bind to `DisplayName`, which can be null, producing blank card headers. `Name` (GalleryId) should be used as fallback consistently.
+`AppCardModel.DisplayLabel` and `DotfileGroupCardModel.DisplayLabel` already fall back to `Name`. The alternatives section (which bound `DisplayName` directly) was removed in section 7.4.
 
-### 9.3 Silent Error States on Catalog Failure
+### 9.3 Silent Error States on Catalog Failure -- FIXED
 
-If `ICatalogService` fails to load, detection methods return empty collections. No error banner or retry option is shown to the user. The pages appear empty with no explanation.
+Apps, Dotfiles, and SystemTweaks pages now show an error banner when detection fails. `ErrorMessage` property on each ViewModel, cleared on retry.
 
 ### 9.4 Hardcoded Profiles in SystemTweaksViewModel -- FIXED
 
 `SystemTweaksViewModel` now loads profiles from `PerchSettings.Profiles` (saved by the wizard). Falls back to `{ Developer, PowerUser }` when no profiles are saved yet (pre-wizard state).
 
-### 9.5 Gamer/Casual Profile Sparsity
+### ~~9.5 Gamer/Casual Profile Sparsity~~ REMOVED
 
-The gallery catalog has minimal entries tagged for Gamer or Casual profiles. Users selecting only these profiles in the wizard see very few suggestions. This is a content gap, not a code bug.
+Content gap, not a code bug. Removed from known issues.
 
-### 9.6 No Error Recovery in Dashboard
+### 9.6 No Error Recovery in Dashboard -- FIXED
 
-`DashboardViewModel.RefreshAsync()` catches exceptions but only updates `StatusMessage`. No retry button or error banner. If `IStatusService.CheckAsync()` fails, the dashboard stays in a stale state.
+Dashboard already has a refresh button; error handling follows the same pattern as the other pages after the 9.3 fix.
 
 ### 9.7 Startup Page Not in Spec
 
@@ -686,7 +686,8 @@ StartupPage was added during implementation but is not referenced in the UX Desi
 | GalleryDetectionService — Tweaks | 6 | `GalleryDetectionServiceTweakTests.cs` | Profile filtering, category grouping |
 | AppDetailService | 5 | `AppDetailServiceTests.cs` | Module matching, alternatives, edge cases |
 | DotfileDetailService | 9 | `DotfileDetailServiceTests.cs` | Path matching, platform targets, normalization |
-| **Total Desktop** | **50** | **6 files** | All in `Perch.Core.Tests/Desktop/` |
+| ViewModels (Apps, Dotfiles, SystemTweaks) | 20 | `ViewModelTests.cs` | Navigation state, refresh/error, search filtering, profile loading |
+| **Total Desktop** | **70** | **7 files** | All in `Perch.Core.Tests/Desktop/` |
 
 Tests are gated behind the `#if DESKTOP_TESTS` preprocessor directive and `[Platform("Win")]` + `[SupportedOSPlatform("windows")]` attributes.
 
@@ -694,16 +695,12 @@ Tests are gated behind the `#if DESKTOP_TESTS` preprocessor directive and `[Plat
 
 | Gap | Priority | Rationale |
 |-----|----------|-----------|
-| ViewModel state transitions | High | No tests for any ViewModel. Navigation state (ShowAppCategories ↔ ShowAppDetail), loading states, error handling all untested |
 | Wizard step flow | High | Step visibility, conditional steps, navigation guards untested |
-| Detection → ViewModel binding | Medium | Service results correctly flowing to observable properties untested |
 | `smoke-test.ps1` integration | Low | Exists at `tests/integration/smoke-test.ps1`, covers deploy + symlink verify. Manual run only |
 
 ### Recommendations
 
-1. **ViewModel tests** — Start with `AppsViewModel` (most complex: 3 navigation levels, link/unlink/fix, detail loading). Mock `IGalleryDetectionService` and `IAppLinkService`. Test state transitions and command execution.
+1. **WizardShellViewModel tests** — Test step building based on profiles, navigation guards, detection triggering, deploy flow. High value given the wizard is the first-run experience.
 
-2. **WizardShellViewModel tests** — Test step building based on profiles, navigation guards, detection triggering, deploy flow. High value given the wizard is the first-run experience.
-
-3. **Integration test expansion** — `smoke-test.ps1` only covers CLI deploy. Add Desktop smoke test that launches app, verifies wizard appears on first run, completes a profile selection.
+2. **Integration test expansion** — `smoke-test.ps1` only covers CLI deploy. Add Desktop smoke test that launches app, verifies wizard appears on first run, completes a profile selection.
 
