@@ -5,8 +5,12 @@ namespace Perch.Desktop.Converters;
 
 public sealed class CountToVisibilityConverter : IValueConverter
 {
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value is int count and > 0 ? Visibility.Visible : Visibility.Collapsed;
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) => value switch
+    {
+        int count when count > 0 => Visibility.Visible,
+        string s when s.Length > 0 => Visibility.Visible,
+        _ => Visibility.Collapsed,
+    };
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotSupportedException();
