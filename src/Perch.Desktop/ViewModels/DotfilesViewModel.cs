@@ -48,6 +48,7 @@ public sealed partial class DotfilesViewModel : ViewModelBase
     public bool ShowDetailView => SelectedDotfile is not null;
     public bool HasModule => Detail?.OwningModule is not null;
     public bool HasNoModule => Detail is not null && Detail.OwningModule is null;
+    public bool HasAlternatives => Detail is not null && Detail.Alternatives.Length > 0;
     public bool ShowStructuredView => HasModule && !ShowRawEditor;
     public bool ShowEditorView => HasModule && ShowRawEditor;
 
@@ -71,6 +72,7 @@ public sealed partial class DotfilesViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(HasModule));
         OnPropertyChanged(nameof(HasNoModule));
+        OnPropertyChanged(nameof(HasAlternatives));
         OnPropertyChanged(nameof(ShowStructuredView));
         OnPropertyChanged(nameof(ShowEditorView));
     }
