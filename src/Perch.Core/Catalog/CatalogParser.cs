@@ -124,7 +124,11 @@ public sealed class CatalogParser
             model.Reversible,
             ToImmutableTags(model.Profiles),
             model.Priority,
-            registryEntries);
+            registryEntries,
+            model.Script,
+            model.UndoScript,
+            ToImmutableTags(model.Suggests),
+            ToImmutableTags(model.Requires));
 
         return CatalogParseResult<TweakCatalogEntry>.Ok(entry);
     }

@@ -13,4 +13,8 @@ public sealed record TweakCatalogEntry(
     bool Reversible,
     ImmutableArray<string> Profiles,
     int Priority,
-    ImmutableArray<RegistryEntryDefinition> Registry);
+    ImmutableArray<RegistryEntryDefinition> Registry,
+    string? Script = null,
+    string? UndoScript = null,
+    ImmutableArray<string> Suggests = default,
+    ImmutableArray<string> Requires = default);

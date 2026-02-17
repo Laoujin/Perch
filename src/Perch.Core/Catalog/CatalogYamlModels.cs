@@ -44,6 +44,13 @@ internal sealed class TweakCatalogYamlModel
     public List<string>? Profiles { get; set; }
     public int Priority { get; set; }
     public List<TweakRegistryYamlModel>? Registry { get; set; }
+    public string? Script { get; set; }
+
+    [YamlMember(Alias = "undo-script")]
+    public string? UndoScript { get; set; }
+
+    public List<string>? Suggests { get; set; }
+    public List<string>? Requires { get; set; }
 }
 
 internal sealed class CatalogLinksYamlModel

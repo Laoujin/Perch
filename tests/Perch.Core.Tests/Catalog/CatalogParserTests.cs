@@ -526,6 +526,76 @@ public sealed class CatalogParserTests
     }
 
     [Test]
+    public void ParseTweak_WithScript_ParsesScriptAndUndoScript()
+    {
+        string yaml = """
+            name: Hide This PC Folders
+            category: Explorer/Navigation
+            tags: [explorer]
+            reversible: true
+            script: |
+              Remove-Item -Path 'HKLM:\test' -Recurse
+            undo-script: |
+              New-Item -Path 'HKLM:\test' -Force
+            """;
+
+        var result = _parser.ParseTweak(yaml, "hide-this-pc-folders");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Value!.Script, Does.Contain("Remove-Item"));
+            Assert.That(result.Value!.UndoScript, Does.Contain("New-Item"));
+            Assert.That(result.Value!.Registry, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void ParseTweak_WithSuggests_ParsesSuggestsList()
+    {
+        string yaml = """
+            name: Hide Copilot Button
+            category: Taskbar/Declutter
+            tags: [taskbar]
+            reversible: true
+            suggests: [disable-widgets, disable-chat-icon]
+            registry:
+              - key: HKCU\Software\Test
+                name: ShowCopilotButton
+                value: 0
+                type: dword
+            """;
+
+        var result = _parser.ParseTweak(yaml, "disable-copilot-button");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.Suggests, Has.Length.EqualTo(2));
+        Assert.That(result.Value!.Suggests[0], Is.EqualTo("disable-widgets"));
+    }
+
+    [Test]
+    public void ParseTweak_WithoutSuggests_SuggestsIsEmpty()
+    {
+        string yaml = """
+            name: Test Tweak
+            category: Test
+            tags: [test]
+            reversible: true
+            registry:
+              - key: HKCU\Software\Test
+                name: TestValue
+                value: 1
+                type: dword
+            """;
+
+        var result = _parser.ParseTweak(yaml, "test");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.Suggests, Is.Empty);
+        Assert.That(result.Value!.Requires, Is.Empty);
+    }
+
+    [Test]
     public void ParseTweak_WithStringDefaultValue_CoercesCorrectly()
     {
         string yaml = """
