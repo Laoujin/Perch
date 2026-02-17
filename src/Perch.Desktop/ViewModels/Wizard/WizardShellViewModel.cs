@@ -423,9 +423,9 @@ public sealed partial class WizardShellViewModel : ViewModelBase
                 if (string.IsNullOrWhiteSpace(ConfigRepoPath))
                     return;
 
+                var profileNames = _selectedProfiles.Select(p => p.ToString()).ToList();
                 var settings = await _settingsProvider.LoadAsync(cancellationToken);
-                if (!string.Equals(settings.ConfigRepoPath, ConfigRepoPath, StringComparison.Ordinal))
-                    await _settingsProvider.SaveAsync(settings with { ConfigRepoPath = ConfigRepoPath }, cancellationToken);
+                await _settingsProvider.SaveAsync(settings with { ConfigRepoPath = ConfigRepoPath, Profiles = profileNames }, cancellationToken);
 
                 if (!Directory.Exists(ConfigRepoPath))
                     Directory.CreateDirectory(ConfigRepoPath);
@@ -458,9 +458,9 @@ public sealed partial class WizardShellViewModel : ViewModelBase
                 if (string.IsNullOrWhiteSpace(ConfigRepoPath))
                     return false;
 
+                var profileNames = _selectedProfiles.Select(p => p.ToString()).ToList();
                 var settings = await _settingsProvider.LoadAsync(cancellationToken);
-                if (!string.Equals(settings.ConfigRepoPath, ConfigRepoPath, StringComparison.Ordinal))
-                    await _settingsProvider.SaveAsync(settings with { ConfigRepoPath = ConfigRepoPath }, cancellationToken);
+                await _settingsProvider.SaveAsync(settings with { ConfigRepoPath = ConfigRepoPath, Profiles = profileNames }, cancellationToken);
 
                 if (!Directory.Exists(ConfigRepoPath))
                     Directory.CreateDirectory(ConfigRepoPath);

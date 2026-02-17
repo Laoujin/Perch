@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Perch.Core.Config;
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
 
@@ -11,6 +12,7 @@ namespace Perch.Desktop.ViewModels;
 public sealed partial class SystemTweaksViewModel : ViewModelBase
 {
     private readonly IGalleryDetectionService _detectionService;
+    private readonly ISettingsProvider _settingsProvider;
 
     [ObservableProperty]
     private bool _isLoading;
@@ -37,9 +39,10 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     public bool ShowCategories => SelectedCategory is null;
     public bool ShowDetail => SelectedCategory is not null;
 
-    public SystemTweaksViewModel(IGalleryDetectionService detectionService)
+    public SystemTweaksViewModel(IGalleryDetectionService detectionService, ISettingsProvider settingsProvider)
     {
         _detectionService = detectionService;
+        _settingsProvider = settingsProvider;
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -58,7 +61,7 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
 
         try
         {
-            var profiles = new HashSet<UserProfile> { UserProfile.Developer, UserProfile.PowerUser };
+            var profiles = await LoadProfilesAsync(cancellationToken);
             var tweaksTask = _detectionService.DetectTweaksAsync(profiles, cancellationToken);
             var fontsTask = _detectionService.DetectFontsAsync(cancellationToken);
 
@@ -173,5 +176,24 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
 
     private void ApplyFilter()
     {
+    }
+
+    private async Task<HashSet<UserProfile>> LoadProfilesAsync(CancellationToken cancellationToken)
+    {
+        var settings = await _settingsProvider.LoadAsync(cancellationToken);
+        var profiles = new HashSet<UserProfile>();
+        if (settings.Profiles is { Count: > 0 })
+        {
+            foreach (var name in settings.Profiles)
+            {
+                if (Enum.TryParse<UserProfile>(name, ignoreCase: true, out var profile))
+                    profiles.Add(profile);
+            }
+        }
+
+        if (profiles.Count == 0)
+            profiles = [UserProfile.Developer, UserProfile.PowerUser];
+
+        return profiles;
     }
 }
