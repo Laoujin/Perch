@@ -10,9 +10,9 @@
     MinWidth="900" MinHeight="600"
     WindowStartupLocation="CenterScreen"
     ExtendsContentIntoTitleBar="True"
-    WindowBackdropType="Mica">
+    WindowBackdropType="None">
 
-    <Grid>
+    <Grid Background="#0E0E1A">
         <ui:NavigationView
             x:Name="RootNavigation"
             PaneDisplayMode="Left"
