@@ -15,6 +15,7 @@ public sealed class PowerShellScriptExecutor : IScriptExecutor
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true,
+            Environment = { ["TERM"] = "dumb", ["NO_COLOR"] = "1" },
         };
 
         using var process = new Process { StartInfo = startInfo };
