@@ -50,7 +50,8 @@ public sealed class CatalogParser
             ParseLinks(model.Links),
             ParseInstall(model.Install),
             ParseConfig(model.Config),
-            ParseExtensions(model.Extensions));
+            ParseExtensions(model.Extensions),
+            ParseKind(model.Kind));
 
         return CatalogParseResult<CatalogEntry>.Ok(entry);
     }
@@ -166,7 +167,8 @@ public sealed class CatalogParser
                 e.Id!,
                 e.Name!,
                 e.Category ?? "Uncategorized",
-                ToImmutableTags(e.Tags)))
+                ToImmutableTags(e.Tags),
+                ParseKind(e.Kind)))
             .ToImmutableArray();
     }
 
@@ -277,6 +279,13 @@ public sealed class CatalogParser
 
         return new CatalogCleanFilter(model.Files.ToImmutableArray(), rules.ToImmutableArray());
     }
+
+    private static CatalogKind ParseKind(string? kind) =>
+        kind?.ToLowerInvariant() switch
+        {
+            "dotfile" => CatalogKind.Dotfile,
+            _ => CatalogKind.App,
+        };
 
     private static CatalogExtensions? ParseExtensions(CatalogExtensionsYamlModel? model)
     {

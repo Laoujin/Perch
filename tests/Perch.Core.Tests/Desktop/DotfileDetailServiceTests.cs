@@ -6,7 +6,6 @@ using Perch.Core;
 using Perch.Core.Catalog;
 using Perch.Core.Config;
 using Perch.Core.Modules;
-using Perch.Core.Scanner;
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
 
@@ -108,12 +107,12 @@ public sealed class DotfileDetailServiceTests
         _settings.LoadAsync(Arg.Any<CancellationToken>())
             .Returns(new PerchSettings { ConfigRepoPath = null });
 
-        var card = MakeCard(".gitconfig");
-        var detail = await _service.LoadDetailAsync(card);
+        var group = MakeGroup("git", "Git");
+        var detail = await _service.LoadDetailAsync(group);
 
         Assert.Multiple(() =>
         {
-            Assert.That(detail.Card, Is.EqualTo(card));
+            Assert.That(detail.Group, Is.EqualTo(group));
             Assert.That(detail.OwningModule, Is.Null);
             Assert.That(detail.Manifest, Is.Null);
             Assert.That(detail.Alternatives, Is.Empty);
@@ -126,8 +125,8 @@ public sealed class DotfileDetailServiceTests
         _moduleDiscovery.DiscoverAsync(@"C:\config", Arg.Any<CancellationToken>())
             .Returns(new DiscoveryResult([], []));
 
-        var card = MakeCard(".gitconfig");
-        var detail = await _service.LoadDetailAsync(card);
+        var group = MakeGroup("git", "Git");
+        var detail = await _service.LoadDetailAsync(group);
 
         Assert.Multiple(() =>
         {
@@ -152,13 +151,44 @@ public sealed class DotfileDetailServiceTests
         Assert.That(result, Is.EqualTo(module));
     }
 
-    private static DotfileCardModel MakeCard(string name, string? fullPath = null) =>
-        new(new DetectedDotfile(
-            name,
-            fullPath ?? $@"C:\Users\test\{name}",
-            "test",
-            100,
-            DateTime.UtcNow,
-            false));
+    [Test]
+    public void FindOwningModuleByGalleryId_MatchesModuleName()
+    {
+        var module = new AppModule(
+            "git", "Git", true, @"C:\config\git",
+            [Platform.Windows],
+            [new LinkEntry(".gitconfig", @"%USERPROFILE%\.gitconfig", LinkType.Symlink)]);
+
+        var result = DotfileDetailService.FindOwningModuleByGalleryId([module], "git");
+
+        Assert.That(result, Is.EqualTo(module));
+    }
+
+    [Test]
+    public void FindOwningModuleByGalleryId_NoMatch_ReturnsNull()
+    {
+        var module = new AppModule(
+            "git", "Git", true, @"C:\config\git",
+            [Platform.Windows],
+            [new LinkEntry(".gitconfig", @"%USERPROFILE%\.gitconfig", LinkType.Symlink)]);
+
+        var result = DotfileDetailService.FindOwningModuleByGalleryId([module], "bash");
+
+        Assert.That(result, Is.Null);
+    }
+
+    private static DotfileGroupCardModel MakeGroup(string id, string name)
+    {
+        var entry = new CatalogEntry(
+            id, name, null, "Test", [], null, null, null, null, null, null, CatalogKind.Dotfile);
+        var files = ImmutableArray.Create(
+            new DotfileFileStatus(
+                $".{id}config",
+                $@"C:\Users\test\.{id}config",
+                true,
+                false,
+                CardStatus.Detected));
+        return new DotfileGroupCardModel(entry, files, CardStatus.Detected);
+    }
 }
 #endif

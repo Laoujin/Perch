@@ -6,18 +6,15 @@ namespace Perch.Core.Scanner;
 
 public sealed class SystemScanner : ISystemScanner
 {
-    private readonly IDotfileScanner _dotfileScanner;
     private readonly IFontScanner _fontScanner;
     private readonly IVsCodeService _vsCodeService;
     private readonly IEnumerable<IPackageManagerProvider> _packageProviders;
 
     public SystemScanner(
-        IDotfileScanner dotfileScanner,
         IFontScanner fontScanner,
         IVsCodeService vsCodeService,
         IEnumerable<IPackageManagerProvider> packageProviders)
     {
-        _dotfileScanner = dotfileScanner;
         _fontScanner = fontScanner;
         _vsCodeService = vsCodeService;
         _packageProviders = packageProviders;
@@ -43,9 +40,6 @@ public sealed class SystemScanner : ISystemScanner
             }
         }
 
-        progress?.Report("Looking for dotfiles...");
-        var dotfiles = await _dotfileScanner.ScanAsync(cancellationToken).ConfigureAwait(false);
-
         progress?.Report("Detecting installed fonts...");
         var fonts = await _fontScanner.ScanAsync(cancellationToken).ConfigureAwait(false);
 
@@ -56,7 +50,6 @@ public sealed class SystemScanner : ISystemScanner
             : ImmutableArray<DetectedVsCodeExtension>.Empty;
 
         return new SystemScanResult(
-            dotfiles,
             installedPackages.ToImmutableArray(),
             fonts,
             extensions,

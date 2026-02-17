@@ -6,7 +6,7 @@ using Perch.Core.Modules;
 namespace Perch.Desktop.Models;
 
 public sealed record DotfileDetail(
-    DotfileCardModel Card,
+    DotfileGroupCardModel Group,
     AppModule? OwningModule,
     AppManifest? Manifest,
     string? ManifestYaml,

@@ -11,4 +11,5 @@ public interface ICatalogService
     Task<ImmutableArray<CatalogEntry>> GetAllAppsAsync(CancellationToken cancellationToken = default);
     Task<ImmutableArray<FontCatalogEntry>> GetAllFontsAsync(CancellationToken cancellationToken = default);
     Task<ImmutableArray<TweakCatalogEntry>> GetAllTweaksAsync(CancellationToken cancellationToken = default);
+    Task<ImmutableArray<CatalogEntry>> GetAllDotfileAppsAsync(CancellationToken cancellationToken = default);
 }

@@ -11,4 +11,5 @@ public sealed record CatalogIndexEntry(
     string Id,
     string Name,
     string Category,
-    ImmutableArray<string> Tags);
+    ImmutableArray<string> Tags,
+    CatalogKind Kind = CatalogKind.App);

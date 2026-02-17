@@ -13,6 +13,7 @@ internal sealed class AppCatalogYamlModel
     public List<string>? Tags { get; set; }
     public string? Description { get; set; }
     public string? Logo { get; set; }
+    public string? Kind { get; set; }
     public CatalogLinksYamlModel? Links { get; set; }
     public InstallYamlModel? Install { get; set; }
     public CatalogConfigYamlModel? Config { get; set; }
@@ -118,4 +119,5 @@ internal sealed class CatalogIndexEntryYamlModel
     public string? Name { get; set; }
     public string? Category { get; set; }
     public List<string>? Tags { get; set; }
+    public string? Kind { get; set; }
 }

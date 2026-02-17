@@ -76,7 +76,7 @@
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate DataType="{x:Type models:DotfileCardModel}">
+                    <DataTemplate DataType="{x:Type models:DotfileGroupCardModel}">
                         <Border
                             Background="#1A1A2E"
                             BorderBrush="{Binding IsSelected, Converter={StaticResource BooleanToBorderBrushConverter}}"
@@ -87,7 +87,6 @@
                             Margin="0,0,12,12">
                             <Grid>
                                 <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
@@ -116,7 +115,7 @@
 
                                     <TextBlock
                                         Grid.Column="1"
-                                        Text="{Binding Name}"
+                                        Text="{Binding DisplayLabel}"
                                         FontSize="13"
                                         FontWeight="SemiBold"
                                         Foreground="White"
@@ -141,20 +140,9 @@
 
                                 <TextBlock
                                     Grid.Row="2"
-                                    Text="{Binding Group}"
+                                    Text="{Binding FileCountLabel}"
                                     FontSize="11"
                                     Foreground="#888888"
-                                    Margin="0,4,0,0"
-                                    Visibility="{Binding Group, Converter={StaticResource CountToVisibilityConverter}}" />
-
-                                <TextBlock
-                                    Grid.Row="3"
-                                    Text="{Binding FullPath, Converter={StaticResource PathEllipsisConverter}}"
-                                    ToolTip="{Binding FullPath}"
-                                    FontSize="10"
-                                    Foreground="#666666"
-                                    TextWrapping="Wrap"
-                                    MaxHeight="28"
                                     Margin="0,4,0,0" />
                             </Grid>
                         </Border>
@@ -178,7 +166,7 @@
                     Command="{Binding BackToGridCommand}"
                     Margin="0,0,12,0" />
                 <TextBlock
-                    Text="{Binding SelectedDotfile.Name}"
+                    Text="{Binding SelectedDotfile.DisplayLabel}"
                     FontSize="18"
                     FontWeight="SemiBold"
                     Foreground="White"
@@ -209,7 +197,6 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <controls:StatusRibbon
@@ -219,36 +206,52 @@
 
                             <TextBlock
                                 Grid.Row="1"
-                                Text="{Binding SelectedDotfile.FullPath}"
-                                ToolTip="{Binding SelectedDotfile.FullPath}"
-                                FontSize="12"
-                                Foreground="#888888"
-                                TextWrapping="Wrap"
-                                Margin="0,0,0,4" />
-
-                            <TextBlock
-                                Grid.Row="2"
-                                Text="{Binding SelectedDotfile.Group}"
+                                Text="{Binding SelectedDotfile.Category}"
                                 FontSize="11"
                                 Foreground="#888888"
-                                Margin="0,0,0,4"
-                                Visibility="{Binding SelectedDotfile.Group, Converter={StaticResource CountToVisibilityConverter}}" />
+                                Margin="0,0,0,4" />
 
-                            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,4">
-                                <TextBlock
-                                    FontSize="11"
-                                    Foreground="#888888"
-                                    Text="Symlink"
-                                    Visibility="{Binding SelectedDotfile.IsSymlink, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                <TextBlock
-                                    FontSize="11"
-                                    Foreground="#888888"
-                                    Text="Regular file"
-                                    Visibility="{Binding SelectedDotfile.IsSymlink, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
-                            </StackPanel>
+                            <!-- Individual files -->
+                            <ItemsControl Grid.Row="2" ItemsSource="{Binding SelectedDotfile.Files}" Margin="0,4,0,4">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,2">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <ui:SymbolIcon
+                                                Grid.Column="0"
+                                                FontSize="12"
+                                                Margin="0,0,6,0">
+                                                <ui:SymbolIcon.Style>
+                                                    <Style TargetType="ui:SymbolIcon">
+                                                        <Setter Property="Symbol" Value="Document24" />
+                                                        <Setter Property="Foreground" Value="#666666" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Status}" Value="Linked">
+                                                                <Setter Property="Symbol" Value="CheckmarkCircle24" />
+                                                                <Setter Property="Foreground" Value="#34D399" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Status}" Value="Drift">
+                                                                <Setter Property="Symbol" Value="Warning24" />
+                                                                <Setter Property="Foreground" Value="#F59E0B" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </ui:SymbolIcon.Style>
+                                            </ui:SymbolIcon>
+                                            <TextBlock Grid.Column="1" Text="{Binding FileName}" FontSize="11" Foreground="White" Margin="0,0,8,0" />
+                                            <TextBlock Grid.Column="2" Text="{Binding FullPath}" FontSize="10" Foreground="#666666"
+                                                       TextTrimming="CharacterEllipsis" ToolTip="{Binding FullPath}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
 
                             <!-- Module info -->
-                            <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,4,0,0">
+                            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,4,0,0">
                                 <ui:SymbolIcon
                                     Symbol="Box24"
                                     FontSize="14"

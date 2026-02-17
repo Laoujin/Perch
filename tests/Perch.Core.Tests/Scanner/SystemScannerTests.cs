@@ -10,7 +10,6 @@ namespace Perch.Core.Tests.Scanner;
 [TestFixture]
 public sealed class SystemScannerTests
 {
-    private IDotfileScanner _dotfileScanner = null!;
     private IFontScanner _fontScanner = null!;
     private IVsCodeService _vsCodeService = null!;
     private IPackageManagerProvider _packageProvider = null!;
@@ -19,20 +18,15 @@ public sealed class SystemScannerTests
     [SetUp]
     public void SetUp()
     {
-        _dotfileScanner = Substitute.For<IDotfileScanner>();
         _fontScanner = Substitute.For<IFontScanner>();
         _vsCodeService = Substitute.For<IVsCodeService>();
         _packageProvider = Substitute.For<IPackageManagerProvider>();
-        _scanner = new SystemScanner(_dotfileScanner, _fontScanner, _vsCodeService, [_packageProvider]);
+        _scanner = new SystemScanner(_fontScanner, _vsCodeService, [_packageProvider]);
     }
 
     [Test]
     public async Task ScanAsync_AggregatesAllScanners()
     {
-        var dotfiles = ImmutableArray.Create(
-            new DetectedDotfile(".gitconfig", "/home/user/.gitconfig", "Git", 100, DateTime.UtcNow, false));
-        _dotfileScanner.ScanAsync(Arg.Any<CancellationToken>()).Returns(dotfiles);
-
         var fonts = ImmutableArray.Create(
             new DetectedFont("JetBrainsMono", null, "/usr/share/fonts/JetBrainsMono.ttf"));
         _fontScanner.ScanAsync(Arg.Any<CancellationToken>()).Returns(fonts);
@@ -49,7 +43,6 @@ public sealed class SystemScannerTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(result.Dotfiles, Has.Length.EqualTo(1));
             Assert.That(result.InstalledFonts, Has.Length.EqualTo(1));
             Assert.That(result.VsCodeExtensions, Has.Length.EqualTo(1));
             Assert.That(result.InstalledPackages, Has.Length.EqualTo(1));
@@ -60,7 +53,6 @@ public sealed class SystemScannerTests
     [Test]
     public async Task ScanAsync_VsCodeNotInstalled_SkipsExtensions()
     {
-        _dotfileScanner.ScanAsync(Arg.Any<CancellationToken>()).Returns(ImmutableArray<DetectedDotfile>.Empty);
         _fontScanner.ScanAsync(Arg.Any<CancellationToken>()).Returns(ImmutableArray<DetectedFont>.Empty);
         _vsCodeService.IsInstalled.Returns(false);
         _packageProvider.ScanInstalledAsync(Arg.Any<CancellationToken>())
@@ -79,7 +71,6 @@ public sealed class SystemScannerTests
     [Test]
     public async Task ScanAsync_ReportsProgress()
     {
-        _dotfileScanner.ScanAsync(Arg.Any<CancellationToken>()).Returns(ImmutableArray<DetectedDotfile>.Empty);
         _fontScanner.ScanAsync(Arg.Any<CancellationToken>()).Returns(ImmutableArray<DetectedFont>.Empty);
         _vsCodeService.IsInstalled.Returns(false);
         _packageProvider.ScanInstalledAsync(Arg.Any<CancellationToken>())
@@ -97,7 +88,6 @@ public sealed class SystemScannerTests
     [Test]
     public async Task ScanAsync_PackageProviderError_CollectsWarning()
     {
-        _dotfileScanner.ScanAsync(Arg.Any<CancellationToken>()).Returns(ImmutableArray<DetectedDotfile>.Empty);
         _fontScanner.ScanAsync(Arg.Any<CancellationToken>()).Returns(ImmutableArray<DetectedFont>.Empty);
         _vsCodeService.IsInstalled.Returns(false);
         _packageProvider.ScanInstalledAsync(Arg.Any<CancellationToken>())

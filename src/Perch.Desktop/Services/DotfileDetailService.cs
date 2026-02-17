@@ -27,23 +27,32 @@ public sealed class DotfileDetailService : IDotfileDetailService
         _platformDetector = platformDetector;
     }
 
-    public async Task<DotfileDetail> LoadDetailAsync(DotfileCardModel card, CancellationToken cancellationToken = default)
+    public async Task<DotfileDetail> LoadDetailAsync(DotfileGroupCardModel group, CancellationToken cancellationToken = default)
     {
         var perchSettings = await _settings.LoadAsync(cancellationToken);
         var configRepoPath = perchSettings.ConfigRepoPath;
 
         if (string.IsNullOrWhiteSpace(configRepoPath))
         {
-            return new DotfileDetail(card, null, null, null, null, []);
+            return new DotfileDetail(group, null, null, null, null, []);
         }
 
         var discovery = await _moduleDiscovery.DiscoverAsync(configRepoPath, cancellationToken);
         var platform = _platformDetector.CurrentPlatform;
 
-        var owningModule = FindOwningModule(discovery.Modules, card.FullPath, platform);
+        var firstFilePath = group.Files.IsDefaultOrEmpty ? null : group.Files[0].FullPath;
+        var owningModule = firstFilePath is not null
+            ? FindOwningModule(discovery.Modules, firstFilePath, platform)
+            : FindOwningModuleByGalleryId(discovery.Modules, group.Id);
+
         if (owningModule is null)
         {
-            return new DotfileDetail(card, null, null, null, null, []);
+            owningModule = FindOwningModuleByGalleryId(discovery.Modules, group.Id);
+        }
+
+        if (owningModule is null)
+        {
+            return new DotfileDetail(group, null, null, null, null, []);
         }
 
         var manifestPath = Path.Combine(owningModule.ModulePath, "manifest.yaml");
@@ -61,9 +70,22 @@ public sealed class DotfileDetailService : IDotfileDetailService
             }
         }
 
-        var alternatives = await FindAlternativesAsync(manifest?.GalleryId, cancellationToken);
+        var alternatives = await FindAlternativesAsync(manifest?.GalleryId ?? group.Id, cancellationToken);
 
-        return new DotfileDetail(card, owningModule, manifest, manifestYaml, manifestPath, alternatives);
+        return new DotfileDetail(group, owningModule, manifest, manifestYaml, manifestPath, alternatives);
+    }
+
+    internal static AppModule? FindOwningModuleByGalleryId(
+        ImmutableArray<AppModule> modules,
+        string galleryId)
+    {
+        foreach (var module in modules)
+        {
+            if (string.Equals(module.Name, galleryId, StringComparison.OrdinalIgnoreCase))
+                return module;
+        }
+
+        return null;
     }
 
     internal static AppModule? FindOwningModule(

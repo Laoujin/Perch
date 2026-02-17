@@ -13,7 +13,6 @@ namespace Perch.Desktop.Services;
 public sealed class GalleryDetectionService : IGalleryDetectionService
 {
     private readonly ICatalogService _catalog;
-    private readonly IDotfileScanner _dotfileScanner;
     private readonly IFontScanner _fontScanner;
     private readonly IPlatformDetector _platformDetector;
     private readonly ISymlinkProvider _symlinkProvider;
@@ -40,7 +39,6 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
 
     public GalleryDetectionService(
         ICatalogService catalog,
-        IDotfileScanner dotfileScanner,
         IFontScanner fontScanner,
         IPlatformDetector platformDetector,
         ISymlinkProvider symlinkProvider,
@@ -48,7 +46,6 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         IEnumerable<IPackageManagerProvider> packageProviders)
     {
         _catalog = catalog;
-        _dotfileScanner = dotfileScanner;
         _fontScanner = fontScanner;
         _platformDetector = platformDetector;
         _symlinkProvider = symlinkProvider;
@@ -199,35 +196,98 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         return builder.ToImmutable();
     }
 
-    public async Task<ImmutableArray<DotfileCardModel>> DetectDotfilesAsync(
+    public async Task<ImmutableArray<DotfileGroupCardModel>> DetectDotfilesAsync(
         CancellationToken cancellationToken = default)
     {
-        var dotfiles = await _dotfileScanner.ScanAsync(cancellationToken);
+        var dotfileApps = await _catalog.GetAllDotfileAppsAsync(cancellationToken);
         var settings = await _settingsProvider.LoadAsync(cancellationToken);
+        var platform = _platformDetector.CurrentPlatform;
         var configRepoPath = settings.ConfigRepoPath;
 
-        return dotfiles
-            .Select(d =>
+        var builder = ImmutableArray.CreateBuilder<DotfileGroupCardModel>();
+
+        foreach (var app in dotfileApps)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (app.Config is null || app.Config.Links.IsDefaultOrEmpty)
+                continue;
+
+            var files = ImmutableArray.CreateBuilder<DotfileFileStatus>();
+            foreach (var link in app.Config.Links)
             {
-                var model = new DotfileCardModel(d);
-                if (d.IsSymlink && !string.IsNullOrEmpty(configRepoPath))
+                if (!link.Platforms.IsDefaultOrEmpty && !link.Platforms.Contains(platform))
+                    continue;
+
+                if (!link.Targets.TryGetValue(platform, out var targetPath))
+                    continue;
+
+                var resolved = Environment.ExpandEnvironmentVariables(targetPath.Replace('/', '\\'));
+                var exists = File.Exists(resolved) || Directory.Exists(resolved);
+                var isSymlink = exists && _symlinkProvider.IsSymlink(resolved);
+
+                var fileStatus = isSymlink ? CardStatus.Linked
+                    : exists ? CardStatus.Detected
+                    : CardStatus.NotInstalled;
+
+                if (isSymlink && !string.IsNullOrEmpty(configRepoPath))
                 {
-                    try
-                    {
-                        var target = new FileInfo(d.FullPath).LinkTarget;
-                        if (target != null)
-                        {
-                            var resolvedTarget = Path.GetFullPath(target, Path.GetDirectoryName(d.FullPath)!);
-                            var resolvedConfig = Path.GetFullPath(configRepoPath);
-                            if (!resolvedTarget.StartsWith(resolvedConfig, StringComparison.OrdinalIgnoreCase))
-                                model.Status = CardStatus.Drift;
-                        }
-                    }
-                    catch { }
+                    if (IsDrift(resolved, configRepoPath))
+                        fileStatus = CardStatus.Drift;
                 }
-                return model;
-            })
-            .ToImmutableArray();
+
+                files.Add(new DotfileFileStatus(
+                    Path.GetFileName(resolved),
+                    resolved,
+                    exists,
+                    isSymlink,
+                    fileStatus));
+            }
+
+            if (files.Count == 0)
+                continue;
+
+            var groupStatus = ResolveGroupStatus(files);
+            builder.Add(new DotfileGroupCardModel(app, files.ToImmutable(), groupStatus));
+        }
+
+        return builder.ToImmutable();
+    }
+
+    private static CardStatus ResolveGroupStatus(ImmutableArray<DotfileFileStatus>.Builder files)
+    {
+        bool allLinked = true;
+        bool anyDrift = false;
+        bool anyDetected = false;
+
+        foreach (var file in files)
+        {
+            if (file.Status == CardStatus.Drift) anyDrift = true;
+            if (file.Status == CardStatus.Detected) anyDetected = true;
+            if (file.Status != CardStatus.Linked) allLinked = false;
+        }
+
+        if (anyDrift) return CardStatus.Drift;
+        if (allLinked) return CardStatus.Linked;
+        if (anyDetected) return CardStatus.Detected;
+        return CardStatus.NotInstalled;
+    }
+
+    private static bool IsDrift(string resolvedPath, string configRepoPath)
+    {
+        try
+        {
+            var linkTarget = new FileInfo(resolvedPath).LinkTarget;
+            if (linkTarget is null) return false;
+
+            var resolvedTarget = Path.GetFullPath(linkTarget, Path.GetDirectoryName(resolvedPath)!);
+            var resolvedConfig = Path.GetFullPath(configRepoPath);
+            return !resolvedTarget.StartsWith(resolvedConfig, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public async Task<FontDetectionResult> DetectFontsAsync(CancellationToken cancellationToken = default)

@@ -345,6 +345,71 @@ public sealed class CatalogParserTests
     }
 
     [Test]
+    public void ParseApp_WithKindDotfile_SetsKindToDotfile()
+    {
+        string yaml = """
+            name: Git
+            kind: dotfile
+            category: Development/Version Control
+            config:
+              links:
+                - source: .gitconfig
+                  target:
+                    windows: "%USERPROFILE%/.gitconfig"
+            """;
+
+        var result = _parser.ParseApp(yaml, "git");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.Kind, Is.EqualTo(CatalogKind.Dotfile));
+    }
+
+    [Test]
+    public void ParseApp_WithoutKind_DefaultsToApp()
+    {
+        string yaml = """
+            name: TestApp
+            config:
+              links:
+                - source: settings.json
+                  target:
+                    windows: "%APPDATA%/TestApp/settings.json"
+            """;
+
+        var result = _parser.ParseApp(yaml, "testapp");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.Kind, Is.EqualTo(CatalogKind.App));
+    }
+
+    [Test]
+    public void ParseIndex_WithKindDotfile_SetsKindOnIndexEntry()
+    {
+        string yaml = """
+            apps:
+              - id: git
+                name: Git
+                category: Development
+                tags: [vcs]
+                kind: dotfile
+              - id: vscode
+                name: Visual Studio Code
+                category: Development
+                tags: [editor]
+            """;
+
+        var result = _parser.ParseIndex(yaml);
+
+        Assert.That(result.IsSuccess, Is.True);
+        var index = result.Value!;
+        Assert.Multiple(() =>
+        {
+            Assert.That(index.Apps[0].Kind, Is.EqualTo(CatalogKind.Dotfile));
+            Assert.That(index.Apps[1].Kind, Is.EqualTo(CatalogKind.App));
+        });
+    }
+
+    [Test]
     public void ParseApp_AllNewFields_ParsedCorrectly()
     {
         string yaml = """

@@ -15,7 +15,7 @@ public sealed partial class DotfilesViewModel : ViewModelBase
     private readonly IGalleryDetectionService _detectionService;
     private readonly IDotfileDetailService _detailService;
 
-    private ImmutableArray<DotfileCardModel> _allDotfiles = [];
+    private ImmutableArray<DotfileGroupCardModel> _allDotfiles = [];
 
     [ObservableProperty]
     private bool _isLoading;
@@ -33,7 +33,7 @@ public sealed partial class DotfilesViewModel : ViewModelBase
     private int _selectedCount;
 
     [ObservableProperty]
-    private DotfileCardModel? _selectedDotfile;
+    private DotfileGroupCardModel? _selectedDotfile;
 
     [ObservableProperty]
     private DotfileDetail? _detail;
@@ -52,7 +52,7 @@ public sealed partial class DotfilesViewModel : ViewModelBase
     public bool ShowStructuredView => HasModule && !ShowRawEditor;
     public bool ShowEditorView => HasModule && ShowRawEditor;
 
-    public ObservableCollection<DotfileCardModel> Dotfiles { get; } = [];
+    public ObservableCollection<DotfileGroupCardModel> Dotfiles { get; } = [];
 
     public DotfilesViewModel(IGalleryDetectionService detectionService, IDotfileDetailService detailService)
     {
@@ -62,7 +62,7 @@ public sealed partial class DotfilesViewModel : ViewModelBase
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
 
-    partial void OnSelectedDotfileChanged(DotfileCardModel? value)
+    partial void OnSelectedDotfileChanged(DotfileGroupCardModel? value)
     {
         OnPropertyChanged(nameof(ShowCardGrid));
         OnPropertyChanged(nameof(ShowDetailView));
@@ -84,7 +84,7 @@ public sealed partial class DotfilesViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private async Task ConfigureAsync(DotfileCardModel card, CancellationToken cancellationToken)
+    private async Task ConfigureAsync(DotfileGroupCardModel card, CancellationToken cancellationToken)
     {
         SelectedDotfile = card;
         Detail = null;

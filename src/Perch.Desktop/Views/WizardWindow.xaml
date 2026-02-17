@@ -291,7 +291,7 @@
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type models:DotfileCardModel}">
+                            <DataTemplate DataType="{x:Type models:DotfileGroupCardModel}">
                                 <Border
                                     Background="#1A1A2E"
                                     BorderBrush="{Binding IsSelected, Converter={StaticResource BooleanToBorderBrushConverter}}"
@@ -302,7 +302,6 @@
                                     Margin="0,0,12,12">
                                     <Grid>
                                         <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
                                             <RowDefinition Height="Auto" />
@@ -330,7 +329,7 @@
 
                                             <TextBlock
                                                 Grid.Column="1"
-                                                Text="{Binding Name}"
+                                                Text="{Binding DisplayLabel}"
                                                 FontSize="13"
                                                 FontWeight="SemiBold"
                                                 Foreground="White"
@@ -345,18 +344,9 @@
 
                                         <TextBlock
                                             Grid.Row="2"
-                                            Text="{Binding Group}"
+                                            Text="{Binding FileCountLabel}"
                                             FontSize="11"
                                             Foreground="#888888"
-                                            Margin="0,4,0,0"
-                                            Visibility="{Binding Group, Converter={StaticResource CountToVisibilityConverter}}" />
-
-                                        <TextBlock
-                                            Grid.Row="3"
-                                            Text="{Binding FullPath}"
-                                            FontSize="10"
-                                            Foreground="#666666"
-                                            TextTrimming="CharacterEllipsis"
                                             Margin="0,4,0,0" />
                                     </Grid>
                                 </Border>

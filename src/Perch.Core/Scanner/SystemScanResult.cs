@@ -5,7 +5,6 @@ using Perch.Core.Packages;
 namespace Perch.Core.Scanner;
 
 public sealed record SystemScanResult(
-    ImmutableArray<DetectedDotfile> Dotfiles,
     ImmutableArray<InstalledPackage> InstalledPackages,
     ImmutableArray<DetectedFont> InstalledFonts,
     ImmutableArray<DetectedVsCodeExtension> VsCodeExtensions,

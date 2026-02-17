@@ -5,6 +5,12 @@ using Perch.Core.Modules;
 
 namespace Perch.Core.Catalog;
 
+public enum CatalogKind
+{
+    App,
+    Dotfile,
+}
+
 public sealed record CatalogEntry(
     string Id,
     string Name,
@@ -16,7 +22,8 @@ public sealed record CatalogEntry(
     CatalogLinks? Links,
     InstallDefinition? Install,
     CatalogConfigDefinition? Config,
-    CatalogExtensions? Extensions);
+    CatalogExtensions? Extensions,
+    CatalogKind Kind = CatalogKind.App);
 
 public sealed record CatalogLinks(string? Website, string? Docs, string? GitHub);
 
