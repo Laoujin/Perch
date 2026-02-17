@@ -55,6 +55,9 @@ public sealed partial class WizardShellViewModel : ViewModelBase
     private bool _configPathNotGitWarning;
 
     [ObservableProperty]
+    private bool _configPathNotExistWarning;
+
+    [ObservableProperty]
     private string _cloneUrl = string.Empty;
 
     [ObservableProperty]
@@ -204,12 +207,16 @@ public sealed partial class WizardShellViewModel : ViewModelBase
         {
             ConfigIsGitRepo = false;
             ConfigPathNotGitWarning = false;
+            ConfigPathNotExistWarning = false;
             return;
         }
 
+        var exists = Directory.Exists(ConfigRepoPath);
+        ConfigPathNotExistWarning = !exists;
+
         var gitDir = Path.Combine(ConfigRepoPath, ".git");
-        ConfigIsGitRepo = Directory.Exists(gitDir) || File.Exists(gitDir);
-        ConfigPathNotGitWarning = Directory.Exists(ConfigRepoPath) && !ConfigIsGitRepo;
+        ConfigIsGitRepo = exists && (Directory.Exists(gitDir) || File.Exists(gitDir));
+        ConfigPathNotGitWarning = exists && !ConfigIsGitRepo;
     }
 
     partial void OnConfigRepoPathChanged(string value)
@@ -337,7 +344,36 @@ public sealed partial class WizardShellViewModel : ViewModelBase
         if (!CanGoNext)
             return;
 
-        await NavigateToStepAsync(CurrentStepIndex + 1, cancellationToken);
+        var target = CurrentStepIndex + 1;
+
+        try
+        {
+            var configIndex = _stepKeys.IndexOf("Config");
+            if (CurrentStepIndex <= configIndex && target > configIndex)
+            {
+                if (string.IsNullOrWhiteSpace(ConfigRepoPath))
+                    return;
+
+                var settings = await _settingsProvider.LoadAsync(cancellationToken);
+                if (!string.Equals(settings.ConfigRepoPath, ConfigRepoPath, StringComparison.Ordinal))
+                    await _settingsProvider.SaveAsync(settings with { ConfigRepoPath = ConfigRepoPath }, cancellationToken);
+
+                if (!Directory.Exists(ConfigRepoPath))
+                    Directory.CreateDirectory(ConfigRepoPath);
+
+                await RunDetectionAsync(cancellationToken);
+            }
+
+            CurrentStepIndex = target;
+        }
+        catch (OperationCanceledException)
+        {
+            // cancelled — don't show crash page
+        }
+        catch (Exception ex)
+        {
+            ShowCrash(ex);
+        }
     }
 
     public async Task<bool> NavigateToStepAsync(int targetIndex, CancellationToken cancellationToken = default)
@@ -356,6 +392,9 @@ public sealed partial class WizardShellViewModel : ViewModelBase
                 var settings = await _settingsProvider.LoadAsync(cancellationToken);
                 if (!string.Equals(settings.ConfigRepoPath, ConfigRepoPath, StringComparison.Ordinal))
                     await _settingsProvider.SaveAsync(settings with { ConfigRepoPath = ConfigRepoPath }, cancellationToken);
+
+                if (!Directory.Exists(ConfigRepoPath))
+                    Directory.CreateDirectory(ConfigRepoPath);
 
                 await RunDetectionAsync(cancellationToken);
             }

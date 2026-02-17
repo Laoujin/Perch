@@ -226,6 +226,16 @@
                         </StackPanel>
                     </Border>
 
+                    <Border Background="#263B82F6" CornerRadius="6" Padding="12,8" Margin="0,0,0,8"
+                            Visibility="{Binding ConfigPathNotExistWarning, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <StackPanel Orientation="Horizontal">
+                            <ui:SymbolIcon Symbol="Info24" FontSize="16" Foreground="#3B82F6" />
+                            <TextBlock FontSize="12" Foreground="#3B82F6" Margin="8,0,0,0"
+                                       VerticalAlignment="Center"
+                                       Text="This folder does not exist yet. Perch will create it." />
+                        </StackPanel>
+                    </Border>
+
                     <!-- Clone option -->
                     <Border Background="#1A1A2E" CornerRadius="8" Padding="16" Margin="0,12,0,0">
                         <StackPanel>
