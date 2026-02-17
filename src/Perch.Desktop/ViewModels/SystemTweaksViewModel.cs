@@ -19,6 +19,9 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     private string _searchText = string.Empty;
 
     [ObservableProperty]
+    private string _fontSearchText = string.Empty;
+
+    [ObservableProperty]
     private int _selectedCount;
 
     [ObservableProperty]
@@ -28,7 +31,11 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     public ObservableCollection<TweakCardModel> FilteredTweaks { get; } = [];
     public ObservableCollection<FontCardModel> InstalledFonts { get; } = [];
     public ObservableCollection<FontCardModel> NerdFonts { get; } = [];
+    public ObservableCollection<FontFamilyGroupModel> FilteredInstalledFontGroups { get; } = [];
+    public ObservableCollection<FontCardModel> FilteredNerdFonts { get; } = [];
     public ObservableCollection<TweakCategoryCardModel> Categories { get; } = [];
+
+    private List<FontFamilyGroupModel> _allInstalledFontGroups = [];
 
     public bool ShowCategories => SelectedCategory is null;
     public bool ShowDetail => SelectedCategory is not null;
@@ -39,6 +46,7 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
+    partial void OnFontSearchTextChanged(string value) => ApplyFontFilter();
 
     partial void OnSelectedCategoryChanged(string? value)
     {
@@ -69,6 +77,7 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
             foreach (var f in fontResult.InstalledFonts) InstalledFonts.Add(f);
             foreach (var f in fontResult.NerdFonts) NerdFonts.Add(f);
 
+            BuildFontGroups();
             RebuildCategories();
             ApplyFilter();
         }
@@ -133,6 +142,38 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     {
         SelectedCategory = null;
         RebuildCategories();
+    }
+
+    private void BuildFontGroups()
+    {
+        _allInstalledFontGroups = InstalledFonts
+            .GroupBy(f => f.FamilyName ?? f.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new FontFamilyGroupModel(g.Key, g))
+            .ToList();
+
+        ApplyFontFilter();
+    }
+
+    private void ApplyFontFilter()
+    {
+        var query = FontSearchText;
+
+        FilteredInstalledFontGroups.Clear();
+        foreach (var group in _allInstalledFontGroups)
+        {
+            if (group.MatchesSearch(query))
+                FilteredInstalledFontGroups.Add(group);
+        }
+
+        FilteredNerdFonts.Clear();
+        foreach (var font in NerdFonts)
+        {
+            if (font.MatchesSearch(query))
+                FilteredNerdFonts.Add(font);
+        }
+
+        UpdateSelectedCount();
     }
 
     private void ApplyFilter()
