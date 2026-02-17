@@ -81,6 +81,12 @@ public partial class AppsPage : Page
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 
+    private void OnStartupToggleChanged(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.ToggleAppStartupCommand.CanExecute(null))
+            ViewModel.ToggleAppStartupCommand.Execute(null);
+    }
+
     private static AppCardModel? GetAppModel(object sender) =>
         (sender as AppCard)?.DataContext as AppCardModel;
 }

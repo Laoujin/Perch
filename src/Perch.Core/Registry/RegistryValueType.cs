@@ -6,4 +6,5 @@ public enum RegistryValueType
     DWord,
     QWord,
     ExpandString,
+    Binary,
 }

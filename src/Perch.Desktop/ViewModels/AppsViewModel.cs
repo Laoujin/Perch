@@ -5,6 +5,7 @@ using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
+using Perch.Core.Startup;
 using Perch.Core.Symlinks;
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
@@ -16,6 +17,7 @@ public sealed partial class AppsViewModel : ViewModelBase
     private readonly IGalleryDetectionService _detectionService;
     private readonly IAppLinkService _appLinkService;
     private readonly IAppDetailService _detailService;
+    private readonly IStartupService _startupService;
 
     [ObservableProperty]
     private bool _isLoading;
@@ -38,6 +40,9 @@ public sealed partial class AppsViewModel : ViewModelBase
     [ObservableProperty]
     private bool _showRawEditor;
 
+    [ObservableProperty]
+    private bool _isInStartup;
+
     public ObservableCollection<AppCategoryCardModel> AppCategories { get; } = [];
     public ObservableCollection<AppCategoryGroup> FilteredCategoryApps { get; } = [];
 
@@ -56,11 +61,13 @@ public sealed partial class AppsViewModel : ViewModelBase
     public AppsViewModel(
         IGalleryDetectionService detectionService,
         IAppLinkService appLinkService,
-        IAppDetailService detailService)
+        IAppDetailService detailService,
+        IStartupService startupService)
     {
         _detectionService = detectionService;
         _appLinkService = appLinkService;
         _detailService = detailService;
+        _startupService = startupService;
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -100,10 +107,17 @@ public sealed partial class AppsViewModel : ViewModelBase
         SelectedApp = card;
         AppDetail = null;
         IsLoadingAppDetail = true;
+        IsInStartup = false;
 
         try
         {
-            AppDetail = await _detailService.LoadDetailAsync(card, cancellationToken);
+            var detailTask = _detailService.LoadDetailAsync(card, cancellationToken);
+            var startupTask = _startupService.GetAllAsync(cancellationToken);
+            await Task.WhenAll(detailTask, startupTask);
+
+            AppDetail = detailTask.Result;
+            IsInStartup = startupTask.Result.Any(s =>
+                s.Name.Equals(card.Name, StringComparison.OrdinalIgnoreCase));
         }
         catch (OperationCanceledException)
         {
@@ -112,6 +126,29 @@ public sealed partial class AppsViewModel : ViewModelBase
         finally
         {
             IsLoadingAppDetail = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task ToggleAppStartupAsync()
+    {
+        if (SelectedApp is null)
+            return;
+
+        var startupEntries = await _startupService.GetAllAsync();
+        var existing = startupEntries.FirstOrDefault(s =>
+            s.Name.Equals(SelectedApp.Name, StringComparison.OrdinalIgnoreCase));
+
+        if (existing is not null)
+        {
+            await _startupService.RemoveAsync(existing);
+            IsInStartup = false;
+        }
+        else
+        {
+            var command = SelectedApp.Install?.Winget ?? SelectedApp.Install?.Choco ?? SelectedApp.Name;
+            await _startupService.AddAsync(SelectedApp.Name, command, StartupSource.RegistryCurrentUser);
+            IsInStartup = true;
         }
     }
 

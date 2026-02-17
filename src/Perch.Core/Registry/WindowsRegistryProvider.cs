@@ -20,13 +20,49 @@ public sealed class WindowsRegistryProvider : IRegistryProvider
         key.SetValue(valueName, value, ToRegistryValueKind(kind));
     }
 
+    public IReadOnlyList<RegistryValueEntry> EnumerateValues(string keyPath)
+    {
+        ParseKeyPath(keyPath, out RegistryKey hive, out string subKey);
+        using RegistryKey? key = hive.OpenSubKey(subKey);
+        if (key is null)
+            return [];
+
+        var names = key.GetValueNames();
+        var entries = new List<RegistryValueEntry>(names.Length);
+        foreach (var name in names)
+        {
+            var value = key.GetValue(name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
+            var kind = key.GetValueKind(name);
+            entries.Add(new RegistryValueEntry(name, value, FromRegistryValueKind(kind)));
+        }
+        return entries;
+    }
+
+    public void DeleteValue(string keyPath, string valueName)
+    {
+        ParseKeyPath(keyPath, out RegistryKey hive, out string subKey);
+        using RegistryKey? key = hive.OpenSubKey(subKey, writable: true);
+        key?.DeleteValue(valueName, throwOnMissingValue: false);
+    }
+
     private static RegistryValueKind ToRegistryValueKind(RegistryValueType kind) =>
         kind switch
         {
             RegistryValueType.DWord => RegistryValueKind.DWord,
             RegistryValueType.QWord => RegistryValueKind.QWord,
             RegistryValueType.ExpandString => RegistryValueKind.ExpandString,
+            RegistryValueType.Binary => RegistryValueKind.Binary,
             _ => RegistryValueKind.String,
+        };
+
+    private static RegistryValueType FromRegistryValueKind(RegistryValueKind kind) =>
+        kind switch
+        {
+            RegistryValueKind.DWord => RegistryValueType.DWord,
+            RegistryValueKind.QWord => RegistryValueType.QWord,
+            RegistryValueKind.ExpandString => RegistryValueType.ExpandString,
+            RegistryValueKind.Binary => RegistryValueType.Binary,
+            _ => RegistryValueType.String,
         };
 
     private static void ParseKeyPath(string keyPath, out RegistryKey hive, out string subKey)

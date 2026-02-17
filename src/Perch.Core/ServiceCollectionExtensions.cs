@@ -11,6 +11,7 @@ using Perch.Core.Modules;
 using Perch.Core.Packages;
 using Perch.Core.Registry;
 using Perch.Core.Scanner;
+using Perch.Core.Startup;
 using Perch.Core.Status;
 using Perch.Core.Symlinks;
 using Perch.Core.Templates;
@@ -30,6 +31,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<ISymlinkProvider, WindowsSymlinkProvider>();
             services.AddSingleton<IFileLockDetector, WindowsFileLockDetector>();
             services.AddSingleton<IRegistryProvider, WindowsRegistryProvider>();
+            services.AddSingleton<IStartupService, WindowsStartupService>();
             services.AddSingleton<IPackageManagerProvider, ChocolateyPackageManagerProvider>();
             services.AddSingleton<IPackageManagerProvider, WingetPackageManagerProvider>();
         }
@@ -38,6 +40,7 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<ISymlinkProvider, UnixSymlinkProvider>();
             services.AddSingleton<IFileLockDetector, UnixFileLockDetector>();
             services.AddSingleton<IRegistryProvider, NoOpRegistryProvider>();
+            services.AddSingleton<IStartupService, NoOpStartupService>();
         }
         if (OperatingSystem.IsLinux())
         {

@@ -227,6 +227,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
                             <controls:StatusRibbon
@@ -353,6 +354,33 @@
                                     VerticalAlignment="Center"
                                     Text="No module found" />
                             </StackPanel>
+
+                            <!-- Start with Windows toggle -->
+                            <Grid Grid.Row="6" Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:SymbolIcon
+                                    Grid.Column="0"
+                                    Symbol="Play24"
+                                    FontSize="14"
+                                    Foreground="#888888"
+                                    Margin="0,0,6,0"
+                                    VerticalAlignment="Center" />
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Text="Start with Windows"
+                                    FontSize="12"
+                                    Foreground="White"
+                                    VerticalAlignment="Center" />
+                                <ui:ToggleSwitch
+                                    Grid.Column="2"
+                                    IsChecked="{Binding IsInStartup, Mode=OneWay}"
+                                    Checked="OnStartupToggleChanged"
+                                    Unchecked="OnStartupToggleChanged" />
+                            </Grid>
                         </Grid>
                     </Border>
 

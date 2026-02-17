@@ -47,6 +47,8 @@ public partial class App : Application
             services.AddSingleton<AppsViewModel>();
             services.AddSingleton<SystemTweaksPage>();
             services.AddSingleton<SystemTweaksViewModel>();
+            services.AddSingleton<StartupPage>();
+            services.AddSingleton<StartupViewModel>();
             services.AddSingleton<SettingsPage>();
             services.AddSingleton<SettingsViewModel>();
 
