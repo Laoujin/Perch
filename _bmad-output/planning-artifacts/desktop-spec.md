@@ -28,7 +28,7 @@ Last updated: 2026-02-17
 - `GalleryDetectionService.WarmUpAsync()` fires on startup (fire-and-forget)
 - Unhandled exceptions → `CrashWindow` (dashboard mode) or wizard crash overlay (wizard mode)
 
-**DI registration:** All pages registered as Singleton; WizardWindow registered as Transient. Core services via `AddPerchCore()`. Three Desktop-specific services: `GalleryDetectionService`, `AppDetailService`, `DotfileDetailService`.
+**Desktop-specific services:** `GalleryDetectionService`, `AppDetailService`, `DotfileDetailService`. Core services via `AddPerchCore()`.
 
 **Navigation shell** (`MainWindow.xaml`):
 - `FluentWindow` — 1200x850, MinWidth=900, MinHeight=600
@@ -207,9 +207,7 @@ Only shown for Developer or PowerUser profiles.
 - Startup toggle → `IStartupService` enable/disable
 - External link buttons (Website/GitHub) → open in browser
 - Back buttons at each level
-- **Dead: drag-drop zone** — `AddDroppedFiles` only logs
-- **Dead: YAML editor toggle** — `ShowRawEditor` exists, read-only display
-- **Dead: Alternatives section** — binds `DisplayName` which is often null
+- **Dead UI:** drag-drop, YAML editor, alternatives — see section 7 (items 7.1, 7.2, 7.4)
 
 **States:**
 - `ShowAppCategories` — category grid
@@ -242,10 +240,7 @@ Header shows "X of Y linked" via MultiBinding.
 - Settings gear → detail view with file-level status
 - File status icons: Linked (green CheckmarkCircle24), Drift (orange Warning24), Unlinked (gray Document24)
 - Shows owning module name or "No module found"
-- **Dead: drag-drop zone** — `AddDroppedFiles` only logs
-- **Dead: YAML editor toggle** — read-only
-- **Dead: Alternatives section** — null DisplayName
-- **Dead: DeployBar** — shows selected count + clear, but no deploy command wired
+- **Dead UI:** drag-drop, YAML editor, alternatives, DeployBar — see section 7 (items 7.1-7.4)
 
 **States:**
 - `ShowCardGrid` — card grid view
@@ -281,7 +276,7 @@ Font category detail:
 - Toggle selects/deselects tweaks or fonts
 - Font family expand/collapse
 - Font sample text editing
-- **Dead: DeployBar** — shows count + clear, but no apply/deploy command
+- **Dead UI:** DeployBar — see section 7 (item 7.3)
 
 **States:**
 - `ShowCategories` — category grid
@@ -441,7 +436,7 @@ Font category detail:
 
 **Layout:** Count display + Clear button + Deploy button.
 
-**Used in:** DotfilesPage (row 2), SystemTweaksPage (row 2). **Neither page wires `DeployRequested` to an actual deploy command** — dead UI.
+**Used in:** DotfilesPage (row 2), SystemTweaksPage (row 2). **Note:** `DeployRequested` is unwired — see section 7.3.
 
 ### 4.6 TierSectionHeader
 
@@ -599,7 +594,9 @@ Items confirmed in code that are non-functional or half-wired. Recommended for r
 
 **Status:** `ClearRequested` event is wired. `DeployRequested` event is **not connected to any command**. Selecting items shows the bar but Deploy does nothing.
 
-**Remove:** DeployBar from both pages. Keep selection state if needed for future batch operations, but remove the non-functional deploy UI.
+**Note:** SystemTweaksViewModel has selection tracking but no command to apply selected tweaks — tweaks can only be applied through the wizard deploy step. The dashboard page is browse-only despite having selection UI.
+
+**Remove:** DeployBar from both pages. Selection toggles can stay for future use, but remove the non-functional deploy UI.
 
 ### 7.4 Alternatives Section (Apps + Dotfiles detail views)
 
@@ -608,22 +605,6 @@ Items confirmed in code that are non-functional or half-wired. Recommended for r
 **Status:** Loads via `AppDetailService` / `DotfileDetailService`. Binds `DisplayName` which is **null for many catalog entries**, causing blank cards. `HasAlternatives` visibility check passes but cards render without names.
 
 **Remove:** Alternatives UI sections. The data loading in services can stay (low cost), but the broken display should go.
-
-### 7.5 Apply Tweaks in Main App
-
-**What:** SystemTweaksViewModel has selection tracking (`IsSelected` on tweak cards, `SelectedCount` on DeployBar) but no command to apply selected tweaks.
-
-**Status:** Tweaks can only be applied through the wizard deploy step. The dashboard System Tweaks page is browse-only despite having selection UI.
-
-**Action:** Covered by 7.3 (DeployBar removal). Selection toggles can stay for future use but remove the DeployBar that implies batch apply.
-
-### 7.6 Add to Startup Entry Point
-
-**What:** `AddToStartupCommand` concept referenced in brainstorm. StartupViewModel has toggle/remove but no "Add new" UI.
-
-**Status:** No Add button or dialog exists in StartupPage.xaml. Users can only manage existing entries.
-
-**Action:** Not dead UI per se (nothing broken to remove), but a noted gap. Leave as-is — feature not started.
 
 ---
 
@@ -711,6 +692,10 @@ The gallery catalog has minimal entries tagged for Gamer or Casual profiles. Use
 
 StartupPage was added during implementation but is not referenced in the UX Design Specification or Architecture document. It works correctly but lacks spec backing.
 
+### 9.8 No "Add to Startup" Entry Point
+
+`AddToStartupCommand` concept referenced in brainstorm. StartupViewModel has toggle/remove but no "Add new" UI. No Add button or dialog exists in StartupPage.xaml — users can only manage existing entries. Feature not started.
+
 ---
 
 ## 10. Test Strategy
@@ -746,18 +731,3 @@ Tests are gated behind `#if DESKTOP_TESTS` preprocessor directive and `[Platform
 
 3. **Integration test expansion** — `smoke-test.ps1` only covers CLI deploy. Add Desktop smoke test that launches app, verifies wizard appears on first run, completes a profile selection.
 
----
-
-## Converters
-
-For reference, the following value converters are used across the Desktop UI:
-
-| Converter | Input → Output |
-|-----------|---------------|
-| `BooleanToVisibilityConverter` | bool → Visible/Collapsed |
-| `InverseBooleanToVisibilityConverter` | bool → Collapsed/Visible |
-| `CountToVisibilityConverter` | int → Visible if > 0 |
-| `NullToVisibilityConverter` | object → Visible if not null |
-| `BooleanToBorderBrushConverter` | bool → accent or transparent border |
-| `InverseBooleanConverter` | bool → !bool |
-| `BooleanToChevronConverter` | bool → chevron direction icon |
