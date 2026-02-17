@@ -375,6 +375,63 @@ public sealed class WizardShellViewModelTests
         Assert.That(_vm.AppCategories, Has.Count.EqualTo(2));
     }
 
+    [Test]
+    public async Task Detection_PopulatesTweaks()
+    {
+        var tweak = MakeTweak("disable-telemetry", "Privacy");
+        _detectionService.DetectTweaksAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(tweak));
+
+        _vm.ConfigRepoPath = Path.GetTempPath();
+        _vm.CurrentStepIndex = 1;
+        await _vm.GoNextCommand.ExecuteAsync(null);
+
+        Assert.That(_vm.Tweaks, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public async Task Detection_PopulatesFonts()
+    {
+        var installed = MakeFont("Arial");
+        var nerd = MakeFont("FiraCode");
+        _detectionService.DetectFontsAsync(Arg.Any<CancellationToken>())
+            .Returns(new FontDetectionResult(
+                ImmutableArray.Create(installed),
+                ImmutableArray.Create(nerd)));
+
+        _vm.ConfigRepoPath = Path.GetTempPath();
+        _vm.CurrentStepIndex = 1;
+        await _vm.GoNextCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.InstalledFonts, Has.Count.EqualTo(1));
+            Assert.That(_vm.NerdFonts, Has.Count.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public async Task TotalSelectedCount_SumsAllCategories()
+    {
+        var app = MakeApp("vscode", "Development/IDEs");
+        var dotfile = MakeDotfile("bashrc", CardStatus.Linked);
+
+        _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(new GalleryDetectionResult(
+                ImmutableArray.Create(app),
+                ImmutableArray<AppCardModel>.Empty,
+                ImmutableArray<AppCardModel>.Empty));
+        _detectionService.DetectDotfilesAsync(Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(dotfile));
+
+        _vm.ConfigRepoPath = Path.GetTempPath();
+        _vm.CurrentStepIndex = 1;
+        await _vm.GoNextCommand.ExecuteAsync(null);
+
+        // YourApps auto-selected + linked dotfile auto-selected
+        Assert.That(_vm.TotalSelectedCount, Is.EqualTo(2));
+    }
+
     // --- App category navigation ---
 
     [Test]
@@ -519,6 +576,29 @@ public sealed class WizardShellViewModelTests
     }
 
     [Test]
+    public async Task DeployAsync_SetsIsDeployingDuringDeploy()
+    {
+        _settingsProvider.LoadAsync(Arg.Any<CancellationToken>())
+            .Returns(new PerchSettings { ConfigRepoPath = Path.GetTempPath() });
+
+        var isDeployingDuringDeploy = false;
+        _deployService.DeployAsync(Arg.Any<string>(), Arg.Any<DeployOptions>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                isDeployingDuringDeploy = _vm.IsDeploying;
+                return 0;
+            });
+
+        await _vm.DeployCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(isDeployingDuringDeploy, Is.True);
+            Assert.That(_vm.IsDeploying, Is.False);
+        });
+    }
+
+    [Test]
     public async Task DeployAsync_Success_SetsCompleteState()
     {
         _settingsProvider.LoadAsync(Arg.Any<CancellationToken>())
@@ -533,8 +613,69 @@ public sealed class WizardShellViewModelTests
         {
             Assert.That(_vm.IsComplete, Is.True);
             Assert.That(_vm.IsDeploying, Is.False);
+            Assert.That(_vm.HasErrors, Is.False);
+            Assert.That(_vm.DeployStatusMessage, Does.Contain("All done"));
             Assert.That(_vm.CurrentStepIndex, Is.EqualTo(_vm.StepNames.Count - 1));
         });
+    }
+
+    [Test]
+    public async Task DeployAsync_Cancellation_SetsHasErrors()
+    {
+        _settingsProvider.LoadAsync(Arg.Any<CancellationToken>())
+            .Returns(new PerchSettings { ConfigRepoPath = Path.GetTempPath() });
+
+        _deployService.DeployAsync(Arg.Any<string>(), Arg.Any<DeployOptions>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new OperationCanceledException());
+
+        await _vm.DeployCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.HasErrors, Is.True);
+            Assert.That(_vm.IsComplete, Is.True);
+            Assert.That(_vm.DeployStatusMessage, Does.Contain("Completed with"));
+        });
+    }
+
+    [Test]
+    public async Task DeployAsync_FontOnboarding_WhenFontsSelected()
+    {
+        _settingsProvider.LoadAsync(Arg.Any<CancellationToken>())
+            .Returns(new PerchSettings { ConfigRepoPath = Path.GetTempPath() });
+
+        _deployService.DeployAsync(Arg.Any<string>(), Arg.Any<DeployOptions>(), Arg.Any<CancellationToken>())
+            .Returns(0);
+
+        _fontOnboardingService.OnboardAsync(
+            Arg.Any<IReadOnlyList<string>>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(new FontOnboardingResult(
+                ImmutableArray.Create("font1.ttf"),
+                ImmutableArray<string>.Empty));
+
+        var font = new FontCardModel("arial", "Arial", "Arial", null, null, @"C:\fonts\arial.ttf", FontCardSource.Detected, [], CardStatus.Detected);
+        font.IsSelected = true;
+        _vm.InstalledFonts.Add(font);
+
+        await _vm.DeployCommand.ExecuteAsync(null);
+
+        await _fontOnboardingService.Received(1).OnboardAsync(
+            Arg.Any<IReadOnlyList<string>>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task DeployAsync_NoFontsSelected_SkipsFontOnboarding()
+    {
+        _settingsProvider.LoadAsync(Arg.Any<CancellationToken>())
+            .Returns(new PerchSettings { ConfigRepoPath = Path.GetTempPath() });
+
+        _deployService.DeployAsync(Arg.Any<string>(), Arg.Any<DeployOptions>(), Arg.Any<CancellationToken>())
+            .Returns(0);
+
+        await _vm.DeployCommand.ExecuteAsync(null);
+
+        await _fontOnboardingService.DidNotReceive().OnboardAsync(
+            Arg.Any<IReadOnlyList<string>>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -625,6 +766,17 @@ public sealed class WizardShellViewModelTests
     {
         var entry = new CatalogEntry(name, name, name, "Shell", [], null, null, null, null, null, null, CatalogKind.Dotfile);
         return new DotfileGroupCardModel(entry, [], status);
+    }
+
+    private static TweakCardModel MakeTweak(string name, string category)
+    {
+        var entry = new TweakCatalogEntry(name, name, category, [], null, true, [], []);
+        return new TweakCardModel(entry, CardStatus.Detected);
+    }
+
+    private static FontCardModel MakeFont(string name)
+    {
+        return new FontCardModel(name, name, name, null, null, null, FontCardSource.Detected, [], CardStatus.Detected);
     }
 }
 #endif
