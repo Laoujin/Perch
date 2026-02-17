@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using Perch.Core;
 using Perch.Core.Catalog;
 using Perch.Core.Config;
+using Perch.Core.Packages;
 using Perch.Core.Scanner;
 using Perch.Core.Symlinks;
 using Perch.Desktop.Models;
@@ -17,6 +18,7 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
     private readonly IPlatformDetector _platformDetector;
     private readonly ISymlinkProvider _symlinkProvider;
     private readonly ISettingsProvider _settingsProvider;
+    private readonly IEnumerable<IPackageManagerProvider> _packageProviders;
 
     // Category-to-profile mapping for "Suggested" tier
     private static readonly Dictionary<string, UserProfile[]> _profileCategoryMap = new(StringComparer.OrdinalIgnoreCase)
@@ -39,7 +41,8 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         IFontScanner fontScanner,
         IPlatformDetector platformDetector,
         ISymlinkProvider symlinkProvider,
-        ISettingsProvider settingsProvider)
+        ISettingsProvider settingsProvider,
+        IEnumerable<IPackageManagerProvider> packageProviders)
     {
         _catalog = catalog;
         _dotfileScanner = dotfileScanner;
@@ -47,6 +50,7 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         _platformDetector = platformDetector;
         _symlinkProvider = symlinkProvider;
         _settingsProvider = settingsProvider;
+        _packageProviders = packageProviders;
     }
 
     public async Task<GalleryDetectionResult> DetectAppsAsync(
@@ -56,6 +60,7 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         var allApps = await _catalog.GetAllAppsAsync(cancellationToken);
         var settings = await _settingsProvider.LoadAsync(cancellationToken);
         var platform = _platformDetector.CurrentPlatform;
+        var installedIds = await ScanInstalledPackageIdsAsync(cancellationToken);
 
         var yourApps = ImmutableArray.CreateBuilder<AppCardModel>();
         var suggested = ImmutableArray.CreateBuilder<AppCardModel>();
@@ -63,7 +68,7 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
 
         foreach (var app in allApps)
         {
-            var detected = IsAppDetectedOnFilesystem(app, platform);
+            var detected = IsAppDetected(app, platform, installedIds);
             var linked = detected && IsAppLinked(app, platform, settings.ConfigRepoPath);
 
             CardStatus status;
@@ -97,24 +102,49 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         var allApps = await _catalog.GetAllAppsAsync(cancellationToken);
         var settings = await _settingsProvider.LoadAsync(cancellationToken);
         var platform = _platformDetector.CurrentPlatform;
+        var installedIds = await ScanInstalledPackageIdsAsync(cancellationToken);
         var builder = ImmutableArray.CreateBuilder<AppCardModel>();
 
         foreach (var app in allApps)
         {
-            var status = ResolveStatus(app, platform, settings.ConfigRepoPath);
+            var status = ResolveStatus(app, platform, settings.ConfigRepoPath, installedIds);
             builder.Add(new AppCardModel(app, CardTier.Other, status));
         }
 
         return builder.ToImmutable();
     }
 
-    private CardStatus ResolveStatus(CatalogEntry app, Platform platform, string? configRepoPath)
+    private CardStatus ResolveStatus(CatalogEntry app, Platform platform, string? configRepoPath, HashSet<string> installedIds)
     {
-        var detected = IsAppDetectedOnFilesystem(app, platform);
+        var detected = IsAppDetected(app, platform, installedIds);
         var linked = detected && IsAppLinked(app, platform, configRepoPath);
         if (linked) return CardStatus.Linked;
         if (detected) return CardStatus.Detected;
         return CardStatus.NotInstalled;
+    }
+
+    private async Task<HashSet<string>> ScanInstalledPackageIdsAsync(CancellationToken cancellationToken)
+    {
+        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var provider in _packageProviders)
+        {
+            try
+            {
+                var result = await provider.ScanInstalledAsync(cancellationToken);
+                if (result.IsAvailable)
+                {
+                    foreach (var pkg in result.Packages)
+                        ids.Add(pkg.Name);
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Non-fatal — continue with other providers
+            }
+        }
+
+        return ids;
     }
 
     public async Task<ImmutableArray<TweakCardModel>> DetectTweaksAsync(
@@ -237,19 +267,27 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
                .Replace("-", "", StringComparison.Ordinal)
                .Replace("_", "", StringComparison.Ordinal);
 
-    private bool IsAppDetectedOnFilesystem(CatalogEntry app, Platform platform)
+    private bool IsAppDetected(CatalogEntry app, Platform platform, HashSet<string> installedIds)
     {
-        if (app.Config is null || app.Config.Links.IsDefaultOrEmpty)
-            return false;
-
-        foreach (var link in app.Config.Links)
+        if (app.Install is not null)
         {
-            if (!link.Targets.TryGetValue(platform, out var targetPath))
-                continue;
-
-            var resolved = Environment.ExpandEnvironmentVariables(targetPath.Replace('/', '\\'));
-            if (File.Exists(resolved) || Directory.Exists(resolved))
+            if (app.Install.Winget is not null && installedIds.Contains(app.Install.Winget))
                 return true;
+            if (app.Install.Choco is not null && installedIds.Contains(app.Install.Choco))
+                return true;
+        }
+
+        if (app.Config is not null && !app.Config.Links.IsDefaultOrEmpty)
+        {
+            foreach (var link in app.Config.Links)
+            {
+                if (!link.Targets.TryGetValue(platform, out var targetPath))
+                    continue;
+
+                var resolved = Environment.ExpandEnvironmentVariables(targetPath.Replace('/', '\\'));
+                if (File.Exists(resolved) || Directory.Exists(resolved))
+                    return true;
+            }
         }
 
         return false;
