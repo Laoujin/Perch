@@ -185,8 +185,89 @@
                     VerticalAlignment="Center" />
             </StackPanel>
 
-            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                <StackPanel x:Name="DetailContent" />
+            <!-- Detail loading spinner -->
+            <ui:ProgressRing
+                Grid.Row="1"
+                IsIndeterminate="True"
+                Width="32"
+                Height="32"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Visibility="{Binding IsLoadingDetail, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+            <!-- Detail content -->
+            <ScrollViewer
+                Grid.Row="1"
+                VerticalScrollBarVisibility="Auto"
+                Visibility="{Binding IsLoadingDetail, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                <StackPanel Margin="0,0,0,16">
+                    <!-- Card info -->
+                    <Border Background="#1A1A2E" CornerRadius="8" Padding="16" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <controls:StatusRibbon
+                                Grid.Row="0"
+                                Status="{Binding SelectedDotfile.Status}"
+                                Margin="0,0,0,8" />
+
+                            <TextBlock
+                                Grid.Row="1"
+                                Text="{Binding SelectedDotfile.FullPath}"
+                                ToolTip="{Binding SelectedDotfile.FullPath}"
+                                FontSize="12"
+                                Foreground="#888888"
+                                TextWrapping="Wrap"
+                                Margin="0,0,0,4" />
+
+                            <TextBlock
+                                Grid.Row="2"
+                                Text="{Binding SelectedDotfile.Group}"
+                                FontSize="11"
+                                Foreground="#888888"
+                                Margin="0,0,0,4"
+                                Visibility="{Binding SelectedDotfile.Group, Converter={StaticResource CountToVisibilityConverter}}" />
+
+                            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,4">
+                                <TextBlock
+                                    FontSize="11"
+                                    Foreground="#888888"
+                                    Text="Symlink"
+                                    Visibility="{Binding SelectedDotfile.IsSymlink, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <TextBlock
+                                    FontSize="11"
+                                    Foreground="#888888"
+                                    Text="Regular file"
+                                    Visibility="{Binding SelectedDotfile.IsSymlink, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                            </StackPanel>
+
+                            <!-- Module info -->
+                            <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,4,0,0">
+                                <ui:SymbolIcon
+                                    Symbol="Box24"
+                                    FontSize="14"
+                                    Foreground="#888888"
+                                    Margin="0,0,6,0" />
+                                <TextBlock
+                                    FontSize="11"
+                                    Foreground="#10B981"
+                                    Text="{Binding Detail.OwningModule.DisplayName}"
+                                    Visibility="{Binding HasModule, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                <TextBlock
+                                    FontSize="11"
+                                    Foreground="#666666"
+                                    Text="No module found"
+                                    Visibility="{Binding HasNoModule, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </StackPanel>
             </ScrollViewer>
         </Grid>
 

@@ -12,6 +12,7 @@ namespace Perch.Desktop.ViewModels;
 public sealed partial class DotfilesViewModel : ViewModelBase
 {
     private readonly IGalleryDetectionService _detectionService;
+    private readonly IDotfileDetailService _detailService;
 
     private ImmutableArray<DotfileCardModel> _allDotfiles = [];
 
@@ -33,14 +34,23 @@ public sealed partial class DotfilesViewModel : ViewModelBase
     [ObservableProperty]
     private DotfileCardModel? _selectedDotfile;
 
+    [ObservableProperty]
+    private DotfileDetail? _detail;
+
+    [ObservableProperty]
+    private bool _isLoadingDetail;
+
     public bool ShowCardGrid => SelectedDotfile is null;
     public bool ShowDetailView => SelectedDotfile is not null;
+    public bool HasModule => Detail?.OwningModule is not null;
+    public bool HasNoModule => Detail is not null && Detail.OwningModule is null;
 
     public ObservableCollection<DotfileCardModel> Dotfiles { get; } = [];
 
-    public DotfilesViewModel(IGalleryDetectionService detectionService)
+    public DotfilesViewModel(IGalleryDetectionService detectionService, IDotfileDetailService detailService)
     {
         _detectionService = detectionService;
+        _detailService = detailService;
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -51,11 +61,39 @@ public sealed partial class DotfilesViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowDetailView));
     }
 
-    [RelayCommand]
-    private void Configure(DotfileCardModel card) => SelectedDotfile = card;
+    partial void OnDetailChanged(DotfileDetail? value)
+    {
+        OnPropertyChanged(nameof(HasModule));
+        OnPropertyChanged(nameof(HasNoModule));
+    }
 
     [RelayCommand]
-    private void BackToGrid() => SelectedDotfile = null;
+    private async Task ConfigureAsync(DotfileCardModel card, CancellationToken cancellationToken)
+    {
+        SelectedDotfile = card;
+        Detail = null;
+        IsLoadingDetail = true;
+
+        try
+        {
+            Detail = await _detailService.LoadDetailAsync(card, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        finally
+        {
+            IsLoadingDetail = false;
+        }
+    }
+
+    [RelayCommand]
+    private void BackToGrid()
+    {
+        SelectedDotfile = null;
+        Detail = null;
+    }
 
     [RelayCommand]
     private async Task RefreshAsync(CancellationToken cancellationToken)
