@@ -22,9 +22,6 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     private string _fontSearchText = string.Empty;
 
     [ObservableProperty]
-    private int _selectedCount;
-
-    [ObservableProperty]
     private string? _selectedCategory;
 
     public ObservableCollection<TweakCardModel> Tweaks { get; } = [];
@@ -172,31 +169,9 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
             if (font.MatchesSearch(query))
                 FilteredNerdFonts.Add(font);
         }
-
-        UpdateSelectedCount();
     }
 
     private void ApplyFilter()
     {
-        UpdateSelectedCount();
-    }
-
-    public void UpdateSelectedCount()
-    {
-        SelectedCount = Tweaks.Count(t => t.IsSelected)
-            + InstalledFonts.Count(f => f.IsSelected)
-            + NerdFonts.Count(f => f.IsSelected);
-    }
-
-    public void ClearSelection()
-    {
-        foreach (var tweak in Tweaks)
-            tweak.IsSelected = false;
-        foreach (var font in InstalledFonts)
-            font.IsSelected = false;
-        foreach (var font in NerdFonts)
-            font.IsSelected = false;
-        SelectedCount = 0;
-        RebuildCategories();
     }
 }

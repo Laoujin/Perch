@@ -17,7 +17,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- Header -->
@@ -456,12 +455,6 @@
                 </ScrollViewer>
             </Grid>
         </Grid>
-
-        <!-- Deploy bar -->
-        <controls:DeployBar
-            Grid.Row="2"
-            SelectedCount="{Binding SelectedCount}"
-            ClearRequested="OnClearRequested" />
     </Grid>
 
 </Page>

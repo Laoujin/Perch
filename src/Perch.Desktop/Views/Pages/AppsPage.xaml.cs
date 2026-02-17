@@ -58,23 +58,6 @@ public partial class AppsPage : Page
             ViewModel.ConfigureAppCommand.Execute(app);
     }
 
-    private void OnDropZoneDragOver(object sender, DragEventArgs e)
-    {
-        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop)
-            ? DragDropEffects.Copy
-            : DragDropEffects.None;
-        e.Handled = true;
-    }
-
-    private void OnDropZoneDrop(object sender, DragEventArgs e)
-    {
-        if (e.Data.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0)
-        {
-            if (ViewModel.AddDroppedFilesCommand.CanExecute(files))
-                ViewModel.AddDroppedFilesCommand.Execute(files);
-        }
-    }
-
     private void OnExternalLinkClick(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: string url } && !string.IsNullOrEmpty(url))

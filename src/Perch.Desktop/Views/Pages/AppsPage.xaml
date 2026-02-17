@@ -384,31 +384,13 @@
                         </Grid>
                     </Border>
 
-                    <!-- UI / YAML toggle (only when module found) -->
-                    <StackPanel
-                        Orientation="Horizontal"
-                        Margin="0,0,0,12"
-                        Visibility="{Binding HasModule, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <ui:Button
-                            Content="UI"
-                            Margin="0,0,4,0"
-                            Padding="12,4"
-                            Command="{Binding ToggleEditorCommand}"
-                            IsEnabled="{Binding ShowRawEditor}" />
-                        <ui:Button
-                            Content="YAML"
-                            Padding="12,4"
-                            Command="{Binding ToggleEditorCommand}"
-                            IsEnabled="{Binding ShowRawEditor, Converter={StaticResource InverseBooleanConverter}}" />
-                    </StackPanel>
-
                     <!-- Structured view (links, hooks, registry) -->
                     <Border
                         Background="#1A1A2E"
                         CornerRadius="8"
                         Padding="16"
                         Margin="0,0,0,12"
-                        Visibility="{Binding ShowStructuredView, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        Visibility="{Binding HasModule, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel>
                             <!-- Links -->
                             <TextBlock Text="Links" FontSize="13" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8" />
@@ -456,93 +438,6 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- YAML editor view -->
-                    <Border
-                        Background="#1A1A2E"
-                        CornerRadius="8"
-                        Padding="16"
-                        Margin="0,0,0,12"
-                        Visibility="{Binding ShowEditorView, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBox
-                            Text="{Binding AppDetail.ManifestYaml, Mode=OneWay}"
-                            AcceptsReturn="True"
-                            IsReadOnly="True"
-                            FontFamily="Consolas"
-                            FontSize="12"
-                            Foreground="#CCCCCC"
-                            Background="Transparent"
-                            BorderThickness="0"
-                            TextWrapping="Wrap"
-                            MaxHeight="400"
-                            VerticalScrollBarVisibility="Auto" />
-                    </Border>
-
-                    <!-- Drag & drop zone (only when module found) -->
-                    <Border
-                        Background="Transparent"
-                        BorderBrush="#444444"
-                        BorderThickness="1"
-                        CornerRadius="8"
-                        Padding="24"
-                        Margin="0,0,0,12"
-                        AllowDrop="True"
-                        DragOver="OnDropZoneDragOver"
-                        Drop="OnDropZoneDrop"
-                        Visibility="{Binding HasModule, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="BorderBrush" Value="#444444" />
-                                <Style.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="BorderBrush" Value="#10B981" />
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <StackPanel HorizontalAlignment="Center">
-                            <ui:SymbolIcon
-                                Symbol="ArrowDownload24"
-                                FontSize="24"
-                                Foreground="#666666"
-                                HorizontalAlignment="Center"
-                                Margin="0,0,0,8" />
-                            <TextBlock
-                                Text="Drop files here to add as symlinks"
-                                FontSize="12"
-                                Foreground="#666666"
-                                HorizontalAlignment="Center" />
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Alternative apps -->
-                    <StackPanel
-                        Margin="0,0,0,12"
-                        Visibility="{Binding HasAlternatives, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock
-                            Text="Alternatives"
-                            FontSize="14"
-                            FontWeight="SemiBold"
-                            Foreground="White"
-                            Margin="0,0,0,8" />
-                        <ItemsControl ItemsSource="{Binding AppDetail.Alternatives}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <controls:AppCard
-                                        DisplayLabel="{Binding Name}"
-                                        Description="{Binding Description}"
-                                        Category="{Binding Category}"
-                                        Website="{Binding Links.Website}"
-                                        GitHub="{Binding Links.GitHub}"
-                                        Margin="0,0,12,12" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
         </Grid>

@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -38,9 +37,6 @@ public sealed partial class AppsViewModel : ViewModelBase
     private bool _isLoadingAppDetail;
 
     [ObservableProperty]
-    private bool _showRawEditor;
-
-    [ObservableProperty]
     private bool _isInStartup;
 
     public ObservableCollection<AppCategoryCardModel> AppCategories { get; } = [];
@@ -52,10 +48,6 @@ public sealed partial class AppsViewModel : ViewModelBase
 
     public bool HasModule => AppDetail?.OwningModule is not null;
     public bool HasNoModule => AppDetail is not null && AppDetail.OwningModule is null;
-    public bool HasAlternatives => AppDetail is not null && AppDetail.Alternatives.Length > 0;
-    public bool ShowStructuredView => HasModule && !ShowRawEditor;
-    public bool ShowEditorView => HasModule && ShowRawEditor;
-
     private ImmutableArray<AppCardModel> _allApps = [];
 
     public AppsViewModel(
@@ -90,15 +82,6 @@ public sealed partial class AppsViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(HasModule));
         OnPropertyChanged(nameof(HasNoModule));
-        OnPropertyChanged(nameof(HasAlternatives));
-        OnPropertyChanged(nameof(ShowStructuredView));
-        OnPropertyChanged(nameof(ShowEditorView));
-    }
-
-    partial void OnShowRawEditorChanged(bool value)
-    {
-        OnPropertyChanged(nameof(ShowStructuredView));
-        OnPropertyChanged(nameof(ShowEditorView));
     }
 
     [RelayCommand]
@@ -157,16 +140,6 @@ public sealed partial class AppsViewModel : ViewModelBase
     {
         SelectedApp = null;
         AppDetail = null;
-        ShowRawEditor = false;
-    }
-
-    [RelayCommand]
-    private void ToggleEditor() => ShowRawEditor = !ShowRawEditor;
-
-    [RelayCommand]
-    private void AddDroppedFiles(string[] files)
-    {
-        Trace.TraceInformation("{0} file(s) queued for linking", files.Length);
     }
 
     [RelayCommand]

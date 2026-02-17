@@ -30,11 +30,6 @@ public partial class SystemTweaksPage : Page
             ViewModel.RefreshCommand.Execute(null);
     }
 
-    private void OnClearRequested(object sender, RoutedEventArgs e)
-    {
-        ViewModel.ClearSelection();
-    }
-
     private void OnCategoryCardClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: TweakCategoryCardModel card })
