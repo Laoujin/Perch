@@ -68,7 +68,7 @@
         <ScrollViewer
             Grid.Row="1"
             VerticalScrollBarVisibility="Auto"
-            Visibility="{Binding IsLoading, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+            Visibility="{Binding ShowCardGrid, Converter={StaticResource BooleanToVisibilityConverter}}">
             <ItemsControl ItemsSource="{Binding Dotfiles}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -103,6 +103,7 @@
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
 
                                     <ui:SymbolIcon
@@ -122,8 +123,18 @@
                                         VerticalAlignment="Center"
                                         TextTrimming="CharacterEllipsis" />
 
-                                    <ui:ToggleSwitch
+                                    <ui:Button
                                         Grid.Column="2"
+                                        Icon="{ui:SymbolIcon Settings24}"
+                                        Appearance="Secondary"
+                                        Padding="4"
+                                        Margin="4,0"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding DataContext.ConfigureCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                        CommandParameter="{Binding}" />
+
+                                    <ui:ToggleSwitch
+                                        Grid.Column="3"
                                         IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                         VerticalAlignment="Center" />
                                 </Grid>
@@ -151,6 +162,33 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </ScrollViewer>
+
+        <!-- Detail view -->
+        <Grid
+            Grid.Row="1"
+            Visibility="{Binding ShowDetailView, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                <ui:Button
+                    Icon="{ui:SymbolIcon ArrowLeft24}"
+                    Command="{Binding BackToGridCommand}"
+                    Margin="0,0,12,0" />
+                <TextBlock
+                    Text="{Binding SelectedDotfile.Name}"
+                    FontSize="18"
+                    FontWeight="SemiBold"
+                    Foreground="White"
+                    VerticalAlignment="Center" />
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="DetailContent" />
+            </ScrollViewer>
+        </Grid>
 
         <!-- Deploy bar -->
         <controls:DeployBar

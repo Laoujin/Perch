@@ -30,6 +30,12 @@ public sealed partial class DotfilesViewModel : ViewModelBase
     [ObservableProperty]
     private int _selectedCount;
 
+    [ObservableProperty]
+    private DotfileCardModel? _selectedDotfile;
+
+    public bool ShowCardGrid => SelectedDotfile is null;
+    public bool ShowDetailView => SelectedDotfile is not null;
+
     public ObservableCollection<DotfileCardModel> Dotfiles { get; } = [];
 
     public DotfilesViewModel(IGalleryDetectionService detectionService)
@@ -38,6 +44,18 @@ public sealed partial class DotfilesViewModel : ViewModelBase
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
+
+    partial void OnSelectedDotfileChanged(DotfileCardModel? value)
+    {
+        OnPropertyChanged(nameof(ShowCardGrid));
+        OnPropertyChanged(nameof(ShowDetailView));
+    }
+
+    [RelayCommand]
+    private void Configure(DotfileCardModel card) => SelectedDotfile = card;
+
+    [RelayCommand]
+    private void BackToGrid() => SelectedDotfile = null;
 
     [RelayCommand]
     private async Task RefreshAsync(CancellationToken cancellationToken)
