@@ -70,6 +70,8 @@ public partial class App : Application
 
         await _host.StartAsync();
 
+        _ = Services.GetRequiredService<IGalleryDetectionService>().WarmUpAsync();
+
         var settings = await Services.GetRequiredService<ISettingsProvider>().LoadAsync();
         var isFirstRun = string.IsNullOrWhiteSpace(settings.ConfigRepoPath);
 

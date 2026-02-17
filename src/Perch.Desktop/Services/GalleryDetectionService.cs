@@ -20,6 +20,9 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
     private readonly ISettingsProvider _settingsProvider;
     private readonly IEnumerable<IPackageManagerProvider> _packageProviders;
 
+    private readonly SemaphoreSlim _packageScanLock = new(1, 1);
+    private HashSet<string>? _cachedInstalledIds;
+
     // Category-to-profile mapping for "Suggested" tier
     private static readonly Dictionary<string, UserProfile[]> _profileCategoryMap = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -51,6 +54,15 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         _symlinkProvider = symlinkProvider;
         _settingsProvider = settingsProvider;
         _packageProviders = packageProviders;
+    }
+
+    public async Task WarmUpAsync(CancellationToken cancellationToken = default)
+    {
+        await Task.WhenAll(
+            _catalog.GetAllAppsAsync(cancellationToken),
+            _catalog.GetAllTweaksAsync(cancellationToken),
+            _catalog.GetAllFontsAsync(cancellationToken),
+            ScanInstalledPackageIdsAsync(cancellationToken));
     }
 
     public async Task<GalleryDetectionResult> DetectAppsAsync(
@@ -125,27 +137,48 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
 
     private async Task<HashSet<string>> ScanInstalledPackageIdsAsync(CancellationToken cancellationToken)
     {
-        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (_cachedInstalledIds is not null)
+            return _cachedInstalledIds;
 
-        foreach (var provider in _packageProviders)
+        await _packageScanLock.WaitAsync(cancellationToken);
+        try
         {
-            try
+            if (_cachedInstalledIds is not null)
+                return _cachedInstalledIds;
+
+            var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var tasks = _packageProviders.Select(async provider =>
             {
-                var result = await provider.ScanInstalledAsync(cancellationToken);
+                try
+                {
+                    return await provider.ScanInstalledAsync(cancellationToken);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    return PackageManagerScanResult.Unavailable(ex.Message);
+                }
+            });
+
+            var results = await Task.WhenAll(tasks);
+            foreach (var result in results)
+            {
                 if (result.IsAvailable)
                 {
                     foreach (var pkg in result.Packages)
                         ids.Add(pkg.Name);
                 }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                // Non-fatal — continue with other providers
-            }
-        }
 
-        return ids;
+            _cachedInstalledIds = ids;
+            return ids;
+        }
+        finally
+        {
+            _packageScanLock.Release();
+        }
     }
+
+    public void InvalidatePackageCache() => _cachedInstalledIds = null;
 
     public async Task<ImmutableArray<TweakCardModel>> DetectTweaksAsync(
         IReadOnlySet<UserProfile> selectedProfiles,

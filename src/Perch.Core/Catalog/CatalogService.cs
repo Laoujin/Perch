@@ -8,6 +8,10 @@ public sealed class CatalogService : ICatalogService
     private readonly ICatalogCache _cache;
     private readonly CatalogParser _parser;
 
+    private ImmutableArray<CatalogEntry>? _allApps;
+    private ImmutableArray<FontCatalogEntry>? _allFonts;
+    private ImmutableArray<TweakCatalogEntry>? _allTweaks;
+
     public CatalogService(ICatalogFetcher fetcher, ICatalogCache cache, CatalogParser parser)
     {
         _fetcher = fetcher;
@@ -50,6 +54,9 @@ public sealed class CatalogService : ICatalogService
 
     public async Task<ImmutableArray<CatalogEntry>> GetAllAppsAsync(CancellationToken cancellationToken = default)
     {
+        if (_allApps.HasValue)
+            return _allApps.Value;
+
         var index = await GetIndexAsync(cancellationToken).ConfigureAwait(false);
         var apps = new List<CatalogEntry>();
         foreach (var entry in index.Apps)
@@ -62,11 +69,16 @@ public sealed class CatalogService : ICatalogService
             }
         }
 
-        return apps.ToImmutableArray();
+        var result = apps.ToImmutableArray();
+        _allApps = result;
+        return result;
     }
 
     public async Task<ImmutableArray<FontCatalogEntry>> GetAllFontsAsync(CancellationToken cancellationToken = default)
     {
+        if (_allFonts.HasValue)
+            return _allFonts.Value;
+
         var index = await GetIndexAsync(cancellationToken).ConfigureAwait(false);
         var fonts = new List<FontCatalogEntry>();
         foreach (var entry in index.Fonts)
@@ -79,11 +91,16 @@ public sealed class CatalogService : ICatalogService
             }
         }
 
-        return fonts.ToImmutableArray();
+        var result = fonts.ToImmutableArray();
+        _allFonts = result;
+        return result;
     }
 
     public async Task<ImmutableArray<TweakCatalogEntry>> GetAllTweaksAsync(CancellationToken cancellationToken = default)
     {
+        if (_allTweaks.HasValue)
+            return _allTweaks.Value;
+
         var index = await GetIndexAsync(cancellationToken).ConfigureAwait(false);
         var tweaks = new List<TweakCatalogEntry>();
         foreach (var entry in index.Tweaks)
@@ -96,7 +113,27 @@ public sealed class CatalogService : ICatalogService
             }
         }
 
-        return tweaks.ToImmutableArray();
+        var result = tweaks.ToImmutableArray();
+        _allTweaks = result;
+        return result;
+    }
+
+    public async Task<ImmutableArray<CatalogEntry>> GetAllDotfileAppsAsync(CancellationToken cancellationToken = default)
+    {
+        var index = await GetIndexAsync(cancellationToken).ConfigureAwait(false);
+        var dotfileEntries = index.Apps.Where(e => e.Kind == CatalogKind.Dotfile);
+        var apps = new List<CatalogEntry>();
+        foreach (var entry in dotfileEntries)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var app = await GetAppAsync(entry.Id, cancellationToken).ConfigureAwait(false);
+            if (app != null)
+            {
+                apps.Add(app);
+            }
+        }
+
+        return apps.ToImmutableArray();
     }
 
     private async Task<string> FetchWithCacheAsync(string path, CancellationToken cancellationToken)

@@ -6,6 +6,7 @@ namespace Perch.Desktop.Services;
 
 public interface IGalleryDetectionService
 {
+    Task WarmUpAsync(CancellationToken cancellationToken = default);
     Task<GalleryDetectionResult> DetectAppsAsync(IReadOnlySet<UserProfile> selectedProfiles, CancellationToken cancellationToken = default);
     Task<ImmutableArray<AppCardModel>> DetectAllAppsAsync(CancellationToken cancellationToken = default);
     Task<ImmutableArray<TweakCardModel>> DetectTweaksAsync(IReadOnlySet<UserProfile> selectedProfiles, CancellationToken cancellationToken = default);
