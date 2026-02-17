@@ -8,6 +8,7 @@ using NSubstitute.ExceptionExtensions;
 using Perch.Core.Catalog;
 using Perch.Core.Config;
 using Perch.Core.Deploy;
+using Perch.Core.Modules;
 using Perch.Core.Startup;
 using Perch.Core.Symlinks;
 using Perch.Desktop.Models;
@@ -302,6 +303,92 @@ public sealed class DotfilesViewModelTests
 
         _vm.SearchText = "bash";
         Assert.That(_vm.Dotfiles, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public async Task ConfigureAsync_SetsSelectedDotfileAndLoadsDetail()
+    {
+        var group = MakeDotfileGroup("bashrc", CardStatus.Linked);
+        var detail = new DotfileDetail(group, null, null, null, null, []);
+        _detailService.LoadDetailAsync(group, Arg.Any<CancellationToken>())
+            .Returns(detail);
+
+        await _vm.ConfigureCommand.ExecuteAsync(group);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.SelectedDotfile, Is.EqualTo(group));
+            Assert.That(_vm.Detail, Is.EqualTo(detail));
+            Assert.That(_vm.ShowDetailView, Is.True);
+        });
+    }
+
+    [Test]
+    public async Task ConfigureAsync_SetsIsLoadingDetail()
+    {
+        var group = MakeDotfileGroup("bashrc", CardStatus.Linked);
+        var isLoadingDuringLoad = false;
+        _detailService.LoadDetailAsync(group, Arg.Any<CancellationToken>())
+            .Returns(callInfo =>
+            {
+                isLoadingDuringLoad = _vm.IsLoadingDetail;
+                return new DotfileDetail(group, null, null, null, null, []);
+            });
+
+        await _vm.ConfigureCommand.ExecuteAsync(group);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(isLoadingDuringLoad, Is.True);
+            Assert.That(_vm.IsLoadingDetail, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task LinkedCount_OnlyCountsLinkedStatus()
+    {
+        var dotfiles = ImmutableArray.Create(
+            MakeDotfileGroup("bashrc", CardStatus.Linked),
+            MakeDotfileGroup("gitconfig", CardStatus.Detected),
+            MakeDotfileGroup("vimrc", CardStatus.Linked));
+
+        _detectionService.DetectDotfilesAsync(Arg.Any<CancellationToken>())
+            .Returns(dotfiles);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.LinkedCount, Is.EqualTo(2));
+            Assert.That(_vm.TotalCount, Is.EqualTo(3));
+        });
+    }
+
+    [Test]
+    public async Task HasModule_WhenDetailHasOwningModule_ReturnsTrue()
+    {
+        var group = MakeDotfileGroup("bashrc", CardStatus.Linked);
+        var module = new AppModule("bash", "Bash", true, "/modules/bash", [], []);
+        var detail = new DotfileDetail(group, module, null, null, null, []);
+        _detailService.LoadDetailAsync(group, Arg.Any<CancellationToken>())
+            .Returns(detail);
+
+        await _vm.ConfigureCommand.ExecuteAsync(group);
+
+        Assert.That(_vm.HasModule, Is.True);
+    }
+
+    [Test]
+    public async Task HasNoModule_WhenDetailHasNullModule_ReturnsTrue()
+    {
+        var group = MakeDotfileGroup("bashrc", CardStatus.Linked);
+        var detail = new DotfileDetail(group, null, null, null, null, []);
+        _detailService.LoadDetailAsync(group, Arg.Any<CancellationToken>())
+            .Returns(detail);
+
+        await _vm.ConfigureCommand.ExecuteAsync(group);
+
+        Assert.That(_vm.HasNoModule, Is.True);
     }
 
     private static DotfileGroupCardModel MakeDotfileGroup(string name, CardStatus status)
