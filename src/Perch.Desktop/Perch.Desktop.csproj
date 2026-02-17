@@ -9,6 +9,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Perch.Core.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="WPF-UI" />
     <PackageReference Include="WPF-UI.Abstractions" />
     <PackageReference Include="WPF-UI.DependencyInjection" />
