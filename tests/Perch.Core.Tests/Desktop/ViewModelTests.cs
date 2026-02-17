@@ -192,6 +192,161 @@ public sealed class AppsViewModelTests
         Assert.That(_vm.AppCategories, Has.Count.EqualTo(1));
     }
 
+    [Test]
+    public async Task LinkAppAsync_OnSuccess_SetsStatusToLinked()
+    {
+        var card = MakeCard("vscode", "Development/IDEs");
+        _appLinkService.LinkAppAsync(card.CatalogEntry, Arg.Any<CancellationToken>())
+            .Returns(new List<DeployResult> { new("vscode", "s", "t", ResultLevel.Ok, "ok") });
+
+        await _vm.LinkAppCommand.ExecuteAsync(card);
+
+        Assert.That(card.Status, Is.EqualTo(CardStatus.Linked));
+    }
+
+    [Test]
+    public async Task LinkAppAsync_OnError_DoesNotChangeStatus()
+    {
+        var card = MakeCard("vscode", "Development/IDEs");
+        _appLinkService.LinkAppAsync(card.CatalogEntry, Arg.Any<CancellationToken>())
+            .Returns(new List<DeployResult> { new("vscode", "s", "t", ResultLevel.Error, "fail") });
+
+        await _vm.LinkAppCommand.ExecuteAsync(card);
+
+        Assert.That(card.Status, Is.EqualTo(CardStatus.Detected));
+    }
+
+    [Test]
+    public async Task UnlinkAppAsync_OnSuccess_SetsStatusToDetected()
+    {
+        var card = MakeCard("vscode", "Development/IDEs", CardStatus.Linked);
+        _appLinkService.UnlinkAppAsync(card.CatalogEntry, Arg.Any<CancellationToken>())
+            .Returns(new List<DeployResult> { new("vscode", "s", "t", ResultLevel.Ok, "ok") });
+
+        await _vm.UnlinkAppCommand.ExecuteAsync(card);
+
+        Assert.That(card.Status, Is.EqualTo(CardStatus.Detected));
+    }
+
+    [Test]
+    public async Task FixAppAsync_OnSuccess_SetsStatusToLinked()
+    {
+        var card = MakeCard("vscode", "Development/IDEs", CardStatus.Broken);
+        _appLinkService.FixAppLinksAsync(card.CatalogEntry, Arg.Any<CancellationToken>())
+            .Returns(new List<DeployResult> { new("vscode", "s", "t", ResultLevel.Ok, "ok") });
+
+        await _vm.FixAppCommand.ExecuteAsync(card);
+
+        Assert.That(card.Status, Is.EqualTo(CardStatus.Linked));
+    }
+
+    [Test]
+    public async Task ToggleAppStartupAsync_ExistingEntry_RemovesIt()
+    {
+        var card = MakeCard("vscode", "Development/IDEs");
+        var detail = new AppDetail(card, null, null, null, null, []);
+        _detailService.LoadDetailAsync(card, Arg.Any<CancellationToken>())
+            .Returns(detail);
+
+        var startupEntry = new StartupEntry("vscode", "vscode", "vscode.exe", null, StartupSource.RegistryCurrentUser, true);
+        _startupService.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns(new List<StartupEntry> { startupEntry });
+
+        await _vm.ConfigureAppCommand.ExecuteAsync(card);
+        Assert.That(_vm.IsInStartup, Is.True);
+
+        await _vm.ToggleAppStartupCommand.ExecuteAsync(null);
+
+        Assert.That(_vm.IsInStartup, Is.False);
+        await _startupService.Received(1).RemoveAsync(startupEntry, Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task ToggleAppStartupAsync_NoEntry_AddsIt()
+    {
+        var card = MakeCard("vscode", "Development/IDEs");
+        var detail = new AppDetail(card, null, null, null, null, []);
+        _detailService.LoadDetailAsync(card, Arg.Any<CancellationToken>())
+            .Returns(detail);
+        _startupService.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns(new List<StartupEntry>());
+
+        await _vm.ConfigureAppCommand.ExecuteAsync(card);
+        Assert.That(_vm.IsInStartup, Is.False);
+
+        await _vm.ToggleAppStartupCommand.ExecuteAsync(null);
+
+        Assert.That(_vm.IsInStartup, Is.True);
+        await _startupService.Received(1).AddAsync(
+            "vscode", "vscode", StartupSource.RegistryCurrentUser, Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task ConfigureApp_ChecksStartupStatus()
+    {
+        var card = MakeCard("vscode", "Development/IDEs");
+        var detail = new AppDetail(card, null, null, null, null, []);
+        _detailService.LoadDetailAsync(card, Arg.Any<CancellationToken>())
+            .Returns(detail);
+
+        var startupEntry = new StartupEntry("vscode", "vscode", "vscode.exe", null, StartupSource.RegistryCurrentUser, true);
+        _startupService.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns(new List<StartupEntry> { startupEntry });
+
+        await _vm.ConfigureAppCommand.ExecuteAsync(card);
+
+        Assert.That(_vm.IsInStartup, Is.True);
+    }
+
+    [Test]
+    public async Task SelectCategory_PopulatesFilteredCategoryApps()
+    {
+        var apps = ImmutableArray.Create(
+            MakeCard("vscode", "Development/IDEs"),
+            MakeCard("rider", "Development/IDEs"),
+            MakeCard("vlc", "Media/Players"));
+
+        _detectionService.DetectAllAppsAsync(Arg.Any<CancellationToken>())
+            .Returns(apps);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+        _vm.SelectCategoryCommand.Execute("Development");
+
+        Assert.That(_vm.FilteredCategoryApps, Has.Count.EqualTo(1));
+        Assert.That(_vm.FilteredCategoryApps[0].Apps, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public async Task HasModule_WhenDetailHasOwningModule_ReturnsTrue()
+    {
+        var card = MakeCard("vscode", "Development/IDEs");
+        var module = new AppModule("vscode", "VS Code", true, "/modules/vscode", [], []);
+        var detail = new AppDetail(card, module, null, null, null, []);
+        _detailService.LoadDetailAsync(card, Arg.Any<CancellationToken>())
+            .Returns(detail);
+        _startupService.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns(new List<StartupEntry>());
+
+        await _vm.ConfigureAppCommand.ExecuteAsync(card);
+
+        Assert.That(_vm.HasModule, Is.True);
+    }
+
+    [Test]
+    public async Task HasNoModule_WhenDetailHasNullModule_ReturnsTrue()
+    {
+        var card = MakeCard("vscode", "Development/IDEs");
+        var detail = new AppDetail(card, null, null, null, null, []);
+        _detailService.LoadDetailAsync(card, Arg.Any<CancellationToken>())
+            .Returns(detail);
+        _startupService.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns(new List<StartupEntry>());
+
+        await _vm.ConfigureAppCommand.ExecuteAsync(card);
+
+        Assert.That(_vm.HasNoModule, Is.True);
+    }
+
     private static AppCardModel MakeCard(string name, string category, CardStatus status = CardStatus.Detected)
     {
         var entry = new CatalogEntry(name, name, name, category, [], null, null, null, null, null, null);
