@@ -65,7 +65,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:StatusItemViewModel}">
                         <Border
-                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                             BorderBrush="#2A2A3E"
                             BorderThickness="1"
                             CornerRadius="8"

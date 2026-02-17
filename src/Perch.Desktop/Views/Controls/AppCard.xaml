@@ -6,7 +6,7 @@
     xmlns:controls="clr-namespace:Perch.Desktop.Views.Controls">
     <Border
         x:Name="CardBorder"
-        Background="{DynamicResource ControlFillColorDefaultBrush}"
+        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
         BorderBrush="#2A2A3E"
         BorderThickness="1"
         CornerRadius="8"

@@ -65,7 +65,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type models:TweakCategoryCardModel}">
                         <Border
-                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                             BorderBrush="#333350"
                             BorderThickness="1"
                             CornerRadius="8"
@@ -145,7 +145,7 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type models:TweakCardModel}">
                             <Border
-                                Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                                 BorderBrush="{Binding IsSelected, Converter={StaticResource BooleanToBorderBrushConverter}}"
                                 BorderThickness="1"
                                 CornerRadius="8"
@@ -223,7 +223,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type models:FontCardModel}">
                                     <Border
-                                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                                         BorderBrush="{Binding IsSelected, Converter={StaticResource BooleanToBorderBrushConverter}}"
                                         BorderThickness="1"
                                         CornerRadius="8"
@@ -300,7 +300,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type models:FontCardModel}">
                                     <Border
-                                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                        Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
                                         BorderBrush="{Binding IsSelected, Converter={StaticResource BooleanToBorderBrushConverter}}"
                                         BorderThickness="1"
                                         CornerRadius="8"
