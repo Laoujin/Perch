@@ -192,7 +192,7 @@ Only shown for Developer or PowerUser profiles.
 **Layout:** Three-level navigation:
 1. **Categories** — card grid of `AppCategoryCardModel` (icon + name + count)
 2. **Category detail** — `FilteredCategoryApps` grouped by `AppCategoryGroup` with `TierSectionHeader` (YourApps/Suggested/Other) + `AppCard` per app
-3. **App config detail** — full detail view with manifest, startup toggle, alternatives
+3. **App config detail** — full detail view with manifest, startup toggle
 
 **Data:**
 - `AppCategories` — from `DetectAllAppsAsync()` with category grouping
@@ -207,8 +207,6 @@ Only shown for Developer or PowerUser profiles.
 - Startup toggle → `IStartupService` enable/disable
 - External link buttons (Website/GitHub) → open in browser
 - Back buttons at each level
-- **Dead UI:** drag-drop, YAML editor, alternatives — see section 7 (items 7.1, 7.2, 7.4)
-
 **States:**
 - `ShowAppCategories` — category grid
 - `ShowAppDetail` — category drill-in with grouped apps
@@ -216,7 +214,7 @@ Only shown for Developer or PowerUser profiles.
 - `IsLoadingAppDetail` — loading spinner during detail fetch
 - Per-card: `CardStatus` drives StatusRibbon + button visibility (CanLink/CanUnlink/CanFix)
 
-**Done when:** Three-level drill-in works. Link/Unlink/Fix operations succeed and update card status in real-time. App detail shows manifest info. Search filters across all levels. Dead UI removed (see section 7).
+**Done when:** Three-level drill-in works. Link/Unlink/Fix operations succeed and update card status in real-time. App detail shows manifest info. Search filters across all levels.
 
 ### 3.3 Dotfiles
 
@@ -224,7 +222,7 @@ Only shown for Developer or PowerUser profiles.
 
 **Layout:** Two views toggled by visibility:
 1. **Card grid** — WrapPanel of dotfile group cards (icon + name + file count + toggle + settings gear)
-2. **Detail view** — selected dotfile with file list, manifest sections, alternatives
+2. **Detail view** — selected dotfile with file list, manifest sections
 
 Header shows "X of Y linked" via MultiBinding.
 
@@ -240,14 +238,12 @@ Header shows "X of Y linked" via MultiBinding.
 - Settings gear → detail view with file-level status
 - File status icons: Linked (green CheckmarkCircle24), Drift (orange Warning24), Unlinked (gray Document24)
 - Shows owning module name or "No module found"
-- **Dead UI:** drag-drop, YAML editor, alternatives, DeployBar — see section 7 (items 7.1-7.4)
-
 **States:**
 - `ShowCardGrid` — card grid view
 - `ShowDetailView` — detail view
 - Per-group: computed status from file statuses (Linked/Drift/Broken)
 
-**Done when:** Card grid shows all detected dotfile groups with accurate status. Detail view shows per-file status. Linked/Total counts correct. Dead UI removed.
+**Done when:** Card grid shows all detected dotfile groups with accurate status. Detail view shows per-file status. Linked/Total counts correct.
 
 ### 3.4 System Tweaks
 
@@ -269,21 +265,19 @@ Font category detail:
 - `FilteredTweaks` — non-font tweaks for selected category
 - `FilteredNerdFonts` — gallery fonts
 - `FilteredInstalledFontGroups` — system fonts grouped by `FontFamilyGroupModel`
-- **Hardcoded profiles:** `{ UserProfile.Developer, UserProfile.PowerUser }` — does not use actual selected profiles
+- Profiles loaded from `PerchSettings.Profiles` (falls back to Developer + PowerUser if not yet saved)
 
 **Interactions:**
 - Category card click → detail view
 - Toggle selects/deselects tweaks or fonts
 - Font family expand/collapse
 - Font sample text editing
-- **Dead UI:** DeployBar — see section 7 (item 7.3)
-
 **States:**
 - `ShowCategories` — category grid
 - `ShowCategoryDetail` — tweak or font detail
 - Font detail has nested expand/collapse per family
 
-**Done when:** Category drill-in works. Tweak cards show registry info. Font preview renders in actual font. Profile filtering uses real selected profiles (not hardcoded). Dead UI removed.
+**Done when:** Category drill-in works. Tweak cards show registry info. Font preview renders in actual font. Profile filtering uses saved profiles from settings.
 
 ### 3.5 Startup
 
@@ -436,7 +430,7 @@ Font category detail:
 
 **Layout:** Count display + Clear button + Deploy button.
 
-**Used in:** DotfilesPage (row 2), SystemTweaksPage (row 2). **Note:** `DeployRequested` is unwired — see section 7.3.
+**Used in:** Wizard only (removed from DotfilesPage and SystemTweaksPage — see section 7.3).
 
 ### 4.6 TierSectionHeader
 
@@ -646,9 +640,9 @@ System fonts are detected independently via `IFontScanner` — no gallery entry 
 
 ## 9. Known Issues
 
-### 9.1 Wizard MinHeight > Height
+### 9.1 Wizard MinHeight > Height -- FIXED
 
-**File:** `WizardWindow.xaml` — `Height="720"` but `MinHeight="800"`. The MinHeight wins, so the window always opens at 800px tall despite the Height declaration. Either set `Height="800"` or lower `MinHeight` to match.
+`Height` set to `800` to match `MinHeight="800"`.
 
 ### 9.2 Null DisplayName on Catalog Entries
 
@@ -658,9 +652,9 @@ Many gallery catalog entries lack `displayName`. The `AppCardModel` and alternat
 
 If `ICatalogService` fails to load, detection methods return empty collections. No error banner or retry option is shown to the user. The pages appear empty with no explanation.
 
-### 9.4 Hardcoded Profiles in SystemTweaksViewModel
+### 9.4 Hardcoded Profiles in SystemTweaksViewModel -- FIXED
 
-`SystemTweaksViewModel` uses hardcoded `{ UserProfile.Developer, UserProfile.PowerUser }` instead of the user's actual selected profiles from settings. This means Gamer/Casual users see results filtered for Developer/PowerUser.
+`SystemTweaksViewModel` now loads profiles from `PerchSettings.Profiles` (saved by the wizard). Falls back to `{ Developer, PowerUser }` when no profiles are saved yet (pre-wizard state).
 
 ### 9.5 Gamer/Casual Profile Sparsity
 
