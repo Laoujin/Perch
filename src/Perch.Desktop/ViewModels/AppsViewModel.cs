@@ -21,7 +21,14 @@ public sealed partial class AppsViewModel : ViewModelBase
     [ObservableProperty]
     private string _searchText = string.Empty;
 
-    public ObservableCollection<AppCategoryGroup> GroupedApps { get; } = [];
+    [ObservableProperty]
+    private string? _selectedAppCategory;
+
+    public ObservableCollection<AppCategoryCardModel> AppCategories { get; } = [];
+    public ObservableCollection<AppCategoryGroup> FilteredCategoryApps { get; } = [];
+
+    public bool ShowAppCategories => SelectedAppCategory is null;
+    public bool ShowAppDetail => SelectedAppCategory is not null;
 
     private ImmutableArray<AppCardModel> _allApps = [];
 
@@ -32,6 +39,12 @@ public sealed partial class AppsViewModel : ViewModelBase
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
+
+    partial void OnSelectedAppCategoryChanged(string? value)
+    {
+        OnPropertyChanged(nameof(ShowAppCategories));
+        OnPropertyChanged(nameof(ShowAppDetail));
+    }
 
     [RelayCommand]
     private async Task RefreshAsync(CancellationToken cancellationToken)
@@ -57,25 +70,74 @@ public sealed partial class AppsViewModel : ViewModelBase
     {
         if (_allApps.IsDefaultOrEmpty)
         {
-            GroupedApps.Clear();
+            AppCategories.Clear();
+            FilteredCategoryApps.Clear();
             return;
         }
+
+        if (SelectedAppCategory is not null)
+        {
+            RebuildCategoryDetail(SelectedAppCategory);
+        }
+
+        RebuildCategories();
+    }
+
+    private void RebuildCategories()
+    {
+        AppCategories.Clear();
 
         var filtered = _allApps.Where(a => a.MatchesSearch(SearchText));
 
         var groups = filtered
-            .GroupBy(a => a.Category)
-            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
-            .Select(g => new AppCategoryGroup(
-                g.Key,
-                new ObservableCollection<AppCardModel>(
-                    g.OrderBy(a => StatusSortOrder(a.Status))
-                     .ThenBy(a => a.DisplayLabel, StringComparer.OrdinalIgnoreCase))))
-            .ToList();
+            .GroupBy(a => a.BroadCategory, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
 
-        GroupedApps.Clear();
         foreach (var group in groups)
-            GroupedApps.Add(group);
+        {
+            var items = group.ToList();
+            AppCategories.Add(new AppCategoryCardModel(
+                group.Key,
+                group.Key,
+                items.Count,
+                items.Count(a => a.IsSelected)));
+        }
+    }
+
+    [RelayCommand]
+    private void SelectCategory(string broadCategory)
+    {
+        RebuildCategoryDetail(broadCategory);
+        SelectedAppCategory = broadCategory;
+    }
+
+    [RelayCommand]
+    private void BackToCategories()
+    {
+        SelectedAppCategory = null;
+        RebuildCategories();
+    }
+
+    private void RebuildCategoryDetail(string broadCategory)
+    {
+        FilteredCategoryApps.Clear();
+
+        var filtered = _allApps
+            .Where(a => string.Equals(a.BroadCategory, broadCategory, StringComparison.OrdinalIgnoreCase))
+            .Where(a => a.MatchesSearch(SearchText));
+
+        var subGroups = filtered
+            .GroupBy(a => a.SubCategory, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in subGroups)
+        {
+            FilteredCategoryApps.Add(new AppCategoryGroup(
+                group.Key,
+                new ObservableCollection<AppCardModel>(
+                    group.OrderBy(a => StatusSortOrder(a.Status))
+                         .ThenBy(a => a.DisplayLabel, StringComparer.OrdinalIgnoreCase))));
+        }
     }
 
     private static int StatusSortOrder(CardStatus status) => status switch

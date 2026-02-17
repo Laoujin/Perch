@@ -11,6 +11,7 @@ using Perch.Core.Fonts;
 
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
+using Perch.Desktop.ViewModels;
 
 namespace Perch.Desktop.ViewModels.Wizard;
 
@@ -98,6 +99,8 @@ public sealed partial class WizardShellViewModel : ViewModelBase
     public ObservableCollection<TweakCardModel> FilteredTweaks { get; } = [];
     public ObservableCollection<FontCardModel> DetectedFonts { get; } = [];
     public ObservableCollection<FontCardModel> GalleryFonts { get; } = [];
+    public ObservableCollection<AppCategoryCardModel> AppCategories { get; } = [];
+    public ObservableCollection<AppCategoryGroup> FilteredAppsByCategory { get; } = [];
     public ObservableCollection<TweakCategoryCardModel> TweakCategories { get; } = [];
     public ObservableCollection<DeployResultItemViewModel> DeployResults { get; } = [];
 
@@ -114,7 +117,13 @@ public sealed partial class WizardShellViewModel : ViewModelBase
     private int _selectedFontCount;
 
     [ObservableProperty]
+    private string? _selectedAppCategory;
+
+    [ObservableProperty]
     private string? _selectedTweakCategory;
+
+    public bool ShowAppCategories => SelectedAppCategory is null;
+    public bool ShowAppDetail => SelectedAppCategory is not null;
 
     public bool ShowTweakCategories => SelectedTweakCategory is null;
     public bool ShowTweakDetail => SelectedTweakCategory is not null;
@@ -147,6 +156,12 @@ public sealed partial class WizardShellViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanGoBack));
         OnPropertyChanged(nameof(CanGoNext));
         OnPropertyChanged(nameof(ShowDeploy));
+    }
+
+    partial void OnSelectedAppCategoryChanged(string? value)
+    {
+        OnPropertyChanged(nameof(ShowAppCategories));
+        OnPropertyChanged(nameof(ShowAppDetail));
     }
 
     partial void OnSelectedTweakCategoryChanged(string? value)
@@ -281,6 +296,60 @@ public sealed partial class WizardShellViewModel : ViewModelBase
 
         var lastSep = Math.Max(name.LastIndexOf('/'), name.LastIndexOf(':'));
         return lastSep >= 0 ? name[(lastSep + 1)..] : "perch-config";
+    }
+
+    [RelayCommand]
+    private void SelectAppCategory(string broadCategory)
+    {
+        RebuildAppCategoryDetail(broadCategory);
+        SelectedAppCategory = broadCategory;
+    }
+
+    [RelayCommand]
+    private void BackToAppCategories()
+    {
+        SelectedAppCategory = null;
+        RebuildAppCategories();
+    }
+
+    private void RebuildAppCategories()
+    {
+        AppCategories.Clear();
+
+        var allApps = YourApps.Concat(SuggestedApps).Concat(OtherApps);
+        var groups = allApps
+            .GroupBy(a => a.BroadCategory, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in groups)
+        {
+            var items = group.ToList();
+            AppCategories.Add(new AppCategoryCardModel(
+                group.Key,
+                group.Key,
+                items.Count,
+                items.Count(a => a.IsSelected)));
+        }
+    }
+
+    private void RebuildAppCategoryDetail(string broadCategory)
+    {
+        FilteredAppsByCategory.Clear();
+
+        var allApps = YourApps.Concat(SuggestedApps).Concat(OtherApps)
+            .Where(a => string.Equals(a.BroadCategory, broadCategory, StringComparison.OrdinalIgnoreCase));
+
+        var subGroups = allApps
+            .GroupBy(a => a.SubCategory, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in subGroups)
+        {
+            FilteredAppsByCategory.Add(new AppCategoryGroup(
+                group.Key,
+                new ObservableCollection<AppCardModel>(
+                    group.OrderBy(a => a.DisplayLabel, StringComparer.OrdinalIgnoreCase))));
+        }
     }
 
     [RelayCommand]
@@ -448,6 +517,7 @@ public sealed partial class WizardShellViewModel : ViewModelBase
             foreach (var f in fontResult.GalleryFonts) GalleryFonts.Add(f);
 
             RebuildTweakCategories();
+            RebuildAppCategories();
         }
         finally
         {

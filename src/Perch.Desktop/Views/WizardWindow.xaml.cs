@@ -77,6 +77,14 @@ public partial class WizardWindow : FluentWindow
             ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private void OnAppCategoryCardClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: AppCategoryCardModel card })
+        {
+            ViewModel.SelectAppCategoryCommand.Execute(card.BroadCategory);
+        }
+    }
+
     private void OnTweakCategoryCardClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: TweakCategoryCardModel card })

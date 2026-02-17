@@ -31,6 +31,8 @@ public partial class AppCardModel : ObservableObject
     private bool _isExpanded;
 
     public string DisplayLabel => DisplayName ?? Name;
+    public string BroadCategory => Category.Split('/')[0];
+    public string SubCategory => Category.Contains('/') ? Category[(Category.IndexOf('/') + 1)..] : Category;
 
     public bool CanLink => Status == CardStatus.Detected;
     public bool CanUnlink => Status == CardStatus.Linked;

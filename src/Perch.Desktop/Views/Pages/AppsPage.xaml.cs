@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 using Perch.Desktop.Models;
 using Perch.Desktop.ViewModels;
@@ -22,6 +23,14 @@ public partial class AppsPage : Page
     {
         if (ViewModel.RefreshCommand.CanExecute(null))
             ViewModel.RefreshCommand.Execute(null);
+    }
+
+    private void OnAppCategoryCardClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: AppCategoryCardModel card })
+        {
+            ViewModel.SelectCategoryCommand.Execute(card.BroadCategory);
+        }
     }
 
     private void OnLinkRequested(object sender, RoutedEventArgs e)
