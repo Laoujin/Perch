@@ -47,6 +47,12 @@ public partial class AppsPage : Page
         }
     }
 
+    private void OnExpandRequested(object sender, RoutedEventArgs e)
+    {
+        if (GetAppModel(sender) is { } app)
+            app.IsExpanded = !app.IsExpanded;
+    }
+
     private static AppCardModel? GetAppModel(object sender) =>
         (sender as AppCard)?.DataContext as AppCardModel;
 }

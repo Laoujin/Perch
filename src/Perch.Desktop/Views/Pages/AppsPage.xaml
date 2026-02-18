@@ -121,11 +121,14 @@
                                     Description="{Binding Description}"
                                     Category="{Binding Category}"
                                     Status="{Binding Status}"
-                                    Website="{Binding Website}"
                                     GitHub="{Binding GitHub}"
                                     IsManaged="{Binding IsManaged}"
                                     CanToggle="{Binding CanToggle}"
+                                    IsSuggested="{Binding IsSuggested}"
+                                    KindBadge="{Binding KindBadge}"
+                                    Tags="{Binding Tags}"
                                     ToggleChanged="OnToggleChanged"
+                                    ExpandRequested="OnExpandRequested"
                                     Margin="0,0,12,12" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -150,11 +153,14 @@
                                     Description="{Binding Description}"
                                     Category="{Binding Category}"
                                     Status="{Binding Status}"
-                                    Website="{Binding Website}"
                                     GitHub="{Binding GitHub}"
                                     IsManaged="{Binding IsManaged}"
                                     CanToggle="{Binding CanToggle}"
+                                    IsSuggested="{Binding IsSuggested}"
+                                    KindBadge="{Binding KindBadge}"
+                                    Tags="{Binding Tags}"
                                     ToggleChanged="OnToggleChanged"
+                                    ExpandRequested="OnExpandRequested"
                                     Margin="0,0,12,12" />
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -257,11 +263,14 @@
                                                     Description="{Binding Description}"
                                                     Category="{Binding Category}"
                                                     Status="{Binding Status}"
-                                                    Website="{Binding Website}"
                                                     GitHub="{Binding GitHub}"
                                                     IsManaged="{Binding IsManaged}"
                                                     CanToggle="{Binding CanToggle}"
+                                                    IsSuggested="{Binding IsSuggested}"
+                                                    KindBadge="{Binding KindBadge}"
+                                                    Tags="{Binding Tags}"
                                                     ToggleChanged="OnToggleChanged"
+                                                    ExpandRequested="OnExpandRequested"
                                                     Margin="0,0,12,12" />
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>

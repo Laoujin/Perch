@@ -36,6 +36,15 @@ public partial class AppCardModel : ObservableObject
 
     public bool IsManaged => Status is CardStatus.Linked or CardStatus.Drift or CardStatus.Broken;
     public bool CanToggle => Status != CardStatus.NotInstalled;
+    public bool IsSuggested => Tier == CardTier.Suggested;
+
+    public string? KindBadge => CatalogEntry.Kind switch
+    {
+        CatalogKind.CliTool => "cli-tool",
+        CatalogKind.Runtime => "runtime",
+        CatalogKind.Dotfile => "dotfile",
+        _ => null,
+    };
 
     public AppCardModel(CatalogEntry entry, CardTier tier, CardStatus status)
     {
