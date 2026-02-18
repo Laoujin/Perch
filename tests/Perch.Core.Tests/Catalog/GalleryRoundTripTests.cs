@@ -44,7 +44,7 @@ public sealed class GalleryRoundTripTests
         var index = ParseIndex();
         foreach (var entry in index.Apps)
         {
-            var path = Path.Combine(GalleryRoot, "apps", $"{entry.Id}.yaml");
+            var path = ResolvePath(entry, "apps");
             Assert.That(File.Exists(path), Is.True, $"Missing app file for index entry '{entry.Id}'");
         }
     }
@@ -55,7 +55,7 @@ public sealed class GalleryRoundTripTests
         var index = ParseIndex();
         foreach (var entry in index.Fonts)
         {
-            var path = Path.Combine(GalleryRoot, "fonts", $"{entry.Id}.yaml");
+            var path = ResolvePath(entry, "fonts");
             Assert.That(File.Exists(path), Is.True, $"Missing font file for index entry '{entry.Id}'");
         }
     }
@@ -66,7 +66,7 @@ public sealed class GalleryRoundTripTests
         var index = ParseIndex();
         foreach (var entry in index.Tweaks)
         {
-            var path = Path.Combine(GalleryRoot, "tweaks", $"{entry.Id}.yaml");
+            var path = ResolvePath(entry, "tweaks");
             Assert.That(File.Exists(path), Is.True, $"Missing tweak file for index entry '{entry.Id}'");
         }
     }
@@ -107,6 +107,14 @@ public sealed class GalleryRoundTripTests
         Assert.That(hasRegistry || hasScript, Is.True, $"Tweak '{id}' has no registry entries or script");
     }
 
+    private string ResolvePath(CatalogIndexEntry entry, string fallbackType)
+    {
+        if (entry.Path != null)
+            return Path.Combine(GalleryRoot, entry.Path.Replace('/', Path.DirectorySeparatorChar));
+
+        return Path.Combine(GalleryRoot, fallbackType, $"{entry.Id}.yaml");
+    }
+
     private CatalogIndex ParseIndex()
     {
         var yaml = File.ReadAllText(Path.Combine(GalleryRoot, "index.yaml"));
@@ -115,13 +123,13 @@ public sealed class GalleryRoundTripTests
         return result.Value!;
     }
 
-    private static IEnumerable<string> AppFiles() => GetYamlFiles("apps");
-    private static IEnumerable<string> FontFiles() => GetYamlFiles("fonts");
-    private static IEnumerable<string> TweakFiles() => GetYamlFiles("tweaks");
+    private static IEnumerable<string> AppFiles() => GetYamlFilesRecursive("apps");
+    private static IEnumerable<string> FontFiles() => GetYamlFilesRecursive("fonts");
+    private static IEnumerable<string> TweakFiles() => GetYamlFilesRecursive("tweaks");
 
-    private static IEnumerable<string> GetYamlFiles(string subfolder)
+    private static IEnumerable<string> GetYamlFilesRecursive(string subfolder)
     {
         var dir = Path.Combine(GalleryRoot, subfolder);
-        return Directory.Exists(dir) ? Directory.GetFiles(dir, "*.yaml") : [];
+        return Directory.Exists(dir) ? Directory.GetFiles(dir, "*.yaml", SearchOption.AllDirectories) : [];
     }
 }

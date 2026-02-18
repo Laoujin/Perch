@@ -188,7 +188,8 @@ public sealed class CatalogParser
                 ToImmutableTags(e.Tags),
                 ParseKind(e.Kind),
                 ToImmutableTags(e.Profiles),
-                e.Hidden))
+                e.Hidden,
+                e.Path))
             .ToImmutableArray();
     }
 

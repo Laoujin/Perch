@@ -170,4 +170,5 @@ internal sealed class CatalogIndexEntryYamlModel
     public string? Kind { get; set; }
     public List<string>? Profiles { get; set; }
     public bool Hidden { get; set; }
+    public string? Path { get; set; }
 }

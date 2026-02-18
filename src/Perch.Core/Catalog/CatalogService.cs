@@ -33,7 +33,8 @@ public sealed class CatalogService : ICatalogService
 
     public async Task<CatalogEntry?> GetAppAsync(string id, CancellationToken cancellationToken = default)
     {
-        string content = await FetchWithCacheAsync($"apps/{id}.yaml", cancellationToken).ConfigureAwait(false);
+        string path = await ResolvePathAsync("apps", id, cancellationToken).ConfigureAwait(false);
+        string content = await FetchWithCacheAsync(path, cancellationToken).ConfigureAwait(false);
         var result = _parser.ParseApp(content, id);
         return result.Value;
     }
@@ -47,7 +48,8 @@ public sealed class CatalogService : ICatalogService
 
     public async Task<TweakCatalogEntry?> GetTweakAsync(string id, CancellationToken cancellationToken = default)
     {
-        string content = await FetchWithCacheAsync($"tweaks/{id}.yaml", cancellationToken).ConfigureAwait(false);
+        string path = await ResolvePathAsync("tweaks", id, cancellationToken).ConfigureAwait(false);
+        string content = await FetchWithCacheAsync(path, cancellationToken).ConfigureAwait(false);
         var result = _parser.ParseTweak(content, id);
         return result.Value;
     }
@@ -62,10 +64,12 @@ public sealed class CatalogService : ICatalogService
         foreach (var entry in index.Apps)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var app = await GetAppAsync(entry.Id, cancellationToken).ConfigureAwait(false);
-            if (app != null)
+            var fetchPath = entry.Path ?? $"apps/{entry.Id}.yaml";
+            string content = await FetchWithCacheAsync(fetchPath, cancellationToken).ConfigureAwait(false);
+            var parsed = _parser.ParseApp(content, entry.Id);
+            if (parsed.Value != null)
             {
-                apps.Add(app);
+                apps.Add(parsed.Value);
             }
         }
 
@@ -84,10 +88,12 @@ public sealed class CatalogService : ICatalogService
         foreach (var entry in index.Fonts)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var font = await GetFontAsync(entry.Id, cancellationToken).ConfigureAwait(false);
-            if (font != null)
+            var fetchPath = entry.Path ?? $"fonts/{entry.Id}.yaml";
+            string content = await FetchWithCacheAsync(fetchPath, cancellationToken).ConfigureAwait(false);
+            var parsed = _parser.ParseFont(content, entry.Id);
+            if (parsed.Value != null)
             {
-                fonts.Add(font);
+                fonts.Add(parsed.Value);
             }
         }
 
@@ -106,10 +112,12 @@ public sealed class CatalogService : ICatalogService
         foreach (var entry in index.Tweaks)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var tweak = await GetTweakAsync(entry.Id, cancellationToken).ConfigureAwait(false);
-            if (tweak != null)
+            var fetchPath = entry.Path ?? $"tweaks/{entry.Id}.yaml";
+            string content = await FetchWithCacheAsync(fetchPath, cancellationToken).ConfigureAwait(false);
+            var parsed = _parser.ParseTweak(content, entry.Id);
+            if (parsed.Value != null)
             {
-                tweaks.Add(tweak);
+                tweaks.Add(parsed.Value);
             }
         }
 
@@ -126,14 +134,31 @@ public sealed class CatalogService : ICatalogService
         foreach (var entry in dotfileEntries)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var app = await GetAppAsync(entry.Id, cancellationToken).ConfigureAwait(false);
-            if (app != null)
+            var fetchPath = entry.Path ?? $"apps/{entry.Id}.yaml";
+            string content = await FetchWithCacheAsync(fetchPath, cancellationToken).ConfigureAwait(false);
+            var parsed = _parser.ParseApp(content, entry.Id);
+            if (parsed.Value != null)
             {
-                apps.Add(app);
+                apps.Add(parsed.Value);
             }
         }
 
         return apps.ToImmutableArray();
+    }
+
+    private async Task<string> ResolvePathAsync(string type, string id, CancellationToken cancellationToken)
+    {
+        var index = await GetIndexAsync(cancellationToken).ConfigureAwait(false);
+        var entries = type switch
+        {
+            "apps" => index.Apps,
+            "fonts" => index.Fonts,
+            "tweaks" => index.Tweaks,
+            _ => ImmutableArray<CatalogIndexEntry>.Empty,
+        };
+
+        var entry = entries.FirstOrDefault(e => e.Id == id);
+        return entry?.Path ?? $"{type}/{id}.yaml";
     }
 
     private async Task<string> FetchWithCacheAsync(string path, CancellationToken cancellationToken)
