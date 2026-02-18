@@ -1082,6 +1082,54 @@ Some Perch operations require admin: writing to HKLM registry keys, installing s
 2. How does this interact with the Desktop app — should it request elevation at startup or per-action?
 3. Can we batch multiple privileged operations into a single elevation prompt?
 
+### Story 6.9: Windows Service Startup Management
+
+As a developer,
+I want to declaratively manage Windows service startup types (Disabled, Manual, Automatic) via Perch,
+So that I can disable telemetry services and other unwanted background services as part of my machine config.
+
+**Acceptance Criteria:**
+
+**Given** a module manifest or gallery entry with a `services:` section listing service names and desired startup types
+**When** the deploy engine processes the entry on Windows
+**Then** the specified services have their startup type changed to match the desired state
+
+**Given** a service that is already set to the desired startup type
+**When** deploy runs
+**Then** no change is made (idempotent) and the service shows status "Applied"
+
+**Given** the engine is running on Linux or macOS
+**When** Windows service entries are encountered
+**Then** they are skipped with an Info result ("Windows only")
+
+**Given** the user runs `perch status`
+**When** a managed service has drifted from the desired startup type
+**Then** the service shows status "Drifted" with current and desired startup types
+
+### Story 6.10: Startup Folder Link Management
+
+As a developer,
+I want to manage Windows Startup folder entries by dropping shortcut files (.lnk) into the Startup folder via Perch,
+So that I can declaratively control which apps launch at login.
+
+**Acceptance Criteria:**
+
+**Given** a module manifest with a `startup:` section listing apps with their executable path and optional arguments
+**When** the deploy engine processes the entry
+**Then** a .lnk shortcut is created in the user's Startup folder (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`)
+
+**Given** a startup shortcut already exists with the correct target
+**When** deploy runs
+**Then** no change is made (idempotent) and the entry shows status "Applied"
+
+**Given** the user disables a startup entry via Perch
+**When** the undo runs
+**Then** the .lnk file is removed from the Startup folder
+
+**Given** the user runs `perch status`
+**When** a managed startup shortcut is missing or points to a different target
+**Then** the entry shows status "Drifted"
+
 ## Epic 7: Secrets Management
 
 Developer can manage configs containing secrets via template placeholders resolved from 1Password at deploy time. Secret-containing files are generated (not symlinked) and git-ignored.
