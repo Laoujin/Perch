@@ -200,6 +200,7 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
 
             var model = new TweakCardModel(tweak, status);
             model.AppliedCount = detection.Entries.Count(e => e.IsApplied);
+            model.DetectedEntries = detection.Entries;
 
             if (model.MatchesProfile(selectedProfiles))
             {
@@ -359,6 +360,15 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
             {
                 matchedGallery = entry;
                 matchedGalleryIds.Add(entry.Id);
+            }
+            else if (font.FamilyName is not null)
+            {
+                var normalizedFamily = NormalizeFontName(font.FamilyName);
+                if (galleryByNormalized.TryGetValue(normalizedFamily, out var familyEntry))
+                {
+                    matchedGallery = familyEntry;
+                    matchedGalleryIds.Add(familyEntry.Id);
+                }
             }
 
             detected.Add(new FontCardModel(

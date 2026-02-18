@@ -9,8 +9,10 @@ using Perch.Core.Catalog;
 using Perch.Core.Config;
 using Perch.Core.Deploy;
 using Perch.Core.Modules;
+using Perch.Core.Registry;
 using Perch.Core.Startup;
 using Perch.Core.Symlinks;
+using Perch.Core.Tweaks;
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
 using Perch.Desktop.ViewModels;
@@ -599,6 +601,8 @@ public sealed class SystemTweaksViewModelTests
 {
     private IGalleryDetectionService _detectionService = null!;
     private ISettingsProvider _settingsProvider = null!;
+    private IStartupService _startupService = null!;
+    private ITweakService _tweakService = null!;
     private SystemTweaksViewModel _vm = null!;
 
     [SetUp]
@@ -606,6 +610,8 @@ public sealed class SystemTweaksViewModelTests
     {
         _detectionService = Substitute.For<IGalleryDetectionService>();
         _settingsProvider = Substitute.For<ISettingsProvider>();
+        _startupService = Substitute.For<IStartupService>();
+        _tweakService = Substitute.For<ITweakService>();
 
         _settingsProvider.LoadAsync(Arg.Any<CancellationToken>())
             .Returns(new PerchSettings { Profiles = ["Developer"] });
@@ -616,8 +622,10 @@ public sealed class SystemTweaksViewModelTests
             .Returns(new FontDetectionResult(
                 ImmutableArray<FontCardModel>.Empty,
                 ImmutableArray<FontCardModel>.Empty));
+        _startupService.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<StartupEntry>());
 
-        _vm = new SystemTweaksViewModel(_detectionService, _settingsProvider);
+        _vm = new SystemTweaksViewModel(_detectionService, _settingsProvider, _startupService, _tweakService);
     }
 
     [Test]
@@ -677,13 +685,13 @@ public sealed class SystemTweaksViewModelTests
     [Test]
     public async Task SelectCategory_NavigatesToDetail()
     {
-        _vm.SelectCategoryCommand.Execute("Registry");
+        _vm.SelectCategoryCommand.Execute("System Tweaks");
 
         Assert.Multiple(() =>
         {
             Assert.That(_vm.ShowDetail, Is.True);
             Assert.That(_vm.ShowCategories, Is.False);
-            Assert.That(_vm.SelectedCategory, Is.EqualTo("Registry"));
+            Assert.That(_vm.SelectedCategory, Is.EqualTo("System Tweaks"));
         });
 
         await Task.CompletedTask;
@@ -692,13 +700,28 @@ public sealed class SystemTweaksViewModelTests
     [Test]
     public void BackToCategories_ResetsNavigation()
     {
-        _vm.SelectCategoryCommand.Execute("Registry");
+        _vm.SelectCategoryCommand.Execute("System Tweaks");
         _vm.BackToCategoriesCommand.Execute(null);
 
         Assert.Multiple(() =>
         {
             Assert.That(_vm.ShowCategories, Is.True);
             Assert.That(_vm.SelectedCategory, Is.Null);
+        });
+    }
+
+    [Test]
+    public void BackToSubCategories_ResetsSubCategory()
+    {
+        _vm.SelectCategoryCommand.Execute("System Tweaks");
+        _vm.SelectSubCategoryCommand.Execute("Registry");
+        _vm.BackToSubCategoriesCommand.Execute(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.ShowSubCategories, Is.True);
+            Assert.That(_vm.ShowTweakCards, Is.False);
+            Assert.That(_vm.SelectedSubCategory, Is.Null);
         });
     }
 
@@ -726,7 +749,7 @@ public sealed class SystemTweaksViewModelTests
     }
 
     [Test]
-    public async Task RefreshAsync_BuildsCategoriesFromTweaks()
+    public async Task RefreshAsync_BuildsSingleSystemTweaksCategory()
     {
         var tweaks = ImmutableArray.Create(
             MakeTweak("tweak1", "Registry"),
@@ -738,7 +761,8 @@ public sealed class SystemTweaksViewModelTests
 
         await _vm.RefreshCommand.ExecuteAsync(null);
 
-        Assert.That(_vm.Categories, Has.Count.EqualTo(2));
+        Assert.That(_vm.Categories.Any(c => c.Category == "System Tweaks"), Is.True);
+        Assert.That(_vm.Categories.First(c => c.Category == "System Tweaks").ItemCount, Is.EqualTo(3));
     }
 
     [Test]
@@ -757,19 +781,48 @@ public sealed class SystemTweaksViewModelTests
     }
 
     [Test]
-    public async Task SelectCategory_FiltersTweaksForCategory()
+    public async Task SelectSubCategory_FiltersTweaksForSubCategory()
     {
         var tweaks = ImmutableArray.Create(
             MakeTweak("tweak1", "Registry"),
-            MakeTweak("tweak2", "Explorer"));
+            MakeTweak("tweak2", "Registry"),
+            MakeTweak("tweak3", "Registry"),
+            MakeTweak("tweak4", "Explorer"),
+            MakeTweak("tweak5", "Explorer"),
+            MakeTweak("tweak6", "Explorer"));
 
         _detectionService.DetectTweaksAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
             .Returns(tweaks);
 
         await _vm.RefreshCommand.ExecuteAsync(null);
-        _vm.SelectCategoryCommand.Execute("Registry");
+        _vm.SelectCategoryCommand.Execute("System Tweaks");
+        _vm.SelectSubCategoryCommand.Execute("Registry");
 
-        Assert.That(_vm.FilteredTweaks, Has.Count.EqualTo(1));
+        Assert.That(_vm.FilteredTweaks, Has.Count.EqualTo(3));
+    }
+
+    [Test]
+    public async Task SelectCategory_SystemTweaks_BuildsSubCategories()
+    {
+        var tweaks = ImmutableArray.Create(
+            MakeTweak("tweak1", "Registry"),
+            MakeTweak("tweak2", "Registry"),
+            MakeTweak("tweak3", "Registry"),
+            MakeTweak("tweak4", "Explorer"),
+            MakeTweak("tweak5", "Explorer"),
+            MakeTweak("tweak6", "Explorer"));
+
+        _detectionService.DetectTweaksAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(tweaks);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+        _vm.SelectCategoryCommand.Execute("System Tweaks");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.ShowSubCategories, Is.True);
+            Assert.That(_vm.SubCategories, Has.Count.EqualTo(2));
+        });
     }
 
     [Test]
@@ -822,17 +875,203 @@ public sealed class SystemTweaksViewModelTests
     [Test]
     public async Task SearchText_DoesNotFilterTweaks()
     {
-        var tweaks = ImmutableArray.Create(MakeTweak("tweak1", "Registry"), MakeTweak("tweak2", "Explorer"));
+        var tweaks = ImmutableArray.Create(
+            MakeTweak("tweak1", "Registry"),
+            MakeTweak("tweak2", "Registry"),
+            MakeTweak("tweak3", "Registry"),
+            MakeTweak("tweak4", "Explorer"),
+            MakeTweak("tweak5", "Explorer"),
+            MakeTweak("tweak6", "Explorer"));
         _detectionService.DetectTweaksAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
             .Returns(tweaks);
 
         await _vm.RefreshCommand.ExecuteAsync(null);
-        _vm.SelectCategoryCommand.Execute("Registry");
-        Assert.That(_vm.FilteredTweaks, Has.Count.EqualTo(1));
+        _vm.SelectCategoryCommand.Execute("System Tweaks");
+        _vm.SelectSubCategoryCommand.Execute("Registry");
+        Assert.That(_vm.FilteredTweaks, Has.Count.EqualTo(3));
 
-        // ApplyFilter() is empty — SearchText changes don't filter tweaks (known bug)
         _vm.SearchText = "nonexistent";
-        Assert.That(_vm.FilteredTweaks, Has.Count.EqualTo(1));
+        Assert.That(_vm.FilteredTweaks, Has.Count.EqualTo(3));
+    }
+
+    [Test]
+    public async Task RefreshAsync_SetsIsSuggestedOnMatchingTweaks()
+    {
+        // TweakCatalogEntry: Id, Name, Category, Tags, Description, Reversible, Profiles, Registry
+        var entry1 = new TweakCatalogEntry("tweak1", "tweak1", "Explorer", [], null, true, ["developer"], []);
+        var entry2 = new TweakCatalogEntry("tweak2", "tweak2", "Explorer", [], null, true, ["gamer"], []);
+        var tweaks = ImmutableArray.Create(
+            new TweakCardModel(entry1, CardStatus.Detected),
+            new TweakCardModel(entry2, CardStatus.Detected));
+
+        _detectionService.DetectTweaksAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(tweaks);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.Tweaks[0].IsSuggested, Is.True);
+            Assert.That(_vm.Tweaks[1].IsSuggested, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task SetProfileFilter_FiltersSubCategories()
+    {
+        var entry1 = new TweakCatalogEntry("tweak1", "tweak1", "Explorer", [], null, true, ["developer"], []);
+        var entry2 = new TweakCatalogEntry("tweak2", "tweak2", "Explorer", [], null, true, ["developer"], []);
+        var entry3 = new TweakCatalogEntry("tweak3", "tweak3", "Explorer", [], null, true, ["developer"], []);
+        var entry4 = new TweakCatalogEntry("tweak4", "tweak4", "Privacy", [], null, true, ["gamer"], []);
+        var entry5 = new TweakCatalogEntry("tweak5", "tweak5", "Privacy", [], null, true, ["gamer"], []);
+        var entry6 = new TweakCatalogEntry("tweak6", "tweak6", "Privacy", [], null, true, ["gamer"], []);
+        var tweaks = ImmutableArray.Create(
+            new TweakCardModel(entry1, CardStatus.Detected),
+            new TweakCardModel(entry2, CardStatus.Detected),
+            new TweakCardModel(entry3, CardStatus.Detected),
+            new TweakCardModel(entry4, CardStatus.Detected),
+            new TweakCardModel(entry5, CardStatus.Detected),
+            new TweakCardModel(entry6, CardStatus.Detected));
+
+        _detectionService.DetectTweaksAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(tweaks);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+        _vm.SelectCategoryCommand.Execute("System Tweaks");
+
+        // Default filter is "Suggested" — only developer tweaks visible
+        Assert.That(_vm.SubCategories.Count(c => c.Category == "Explorer"), Is.EqualTo(1));
+
+        _vm.SetProfileFilterCommand.Execute("All");
+        Assert.That(_vm.SubCategories, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public async Task SmallSubCategories_MergedIntoOther()
+    {
+        var tweaks = ImmutableArray.Create(
+            MakeTweak("tweak1", "Explorer"),
+            MakeTweak("tweak2", "Explorer"),
+            MakeTweak("tweak3", "Explorer"),
+            MakeTweak("tweak4", "Privacy"),
+            MakeTweak("tweak5", "Tiny"));
+
+        _detectionService.DetectTweaksAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(tweaks);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+        _vm.SelectCategoryCommand.Execute("System Tweaks");
+        _vm.SetProfileFilterCommand.Execute("All");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.SubCategories.Any(c => c.Category == "Explorer"), Is.True);
+            Assert.That(_vm.SubCategories.Any(c => c.Category == "Other"), Is.True);
+            Assert.That(_vm.SubCategories.Any(c => c.Category == "Tiny"), Is.False);
+            Assert.That(_vm.SubCategories.Any(c => c.Category == "Privacy"), Is.False);
+        });
+    }
+
+    [Test]
+    public void ApplyTweak_CallsServiceAndRefreshesCard()
+    {
+        var reg = ImmutableArray.Create(new RegistryEntryDefinition("HKCU\\Test", "Val", 0, RegistryValueType.DWord));
+        var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", [], null, true, [], reg);
+        var card = new TweakCardModel(entry, CardStatus.NotInstalled);
+
+        var appliedDetection = new TweakDetectionResult(
+            TweakStatus.Applied,
+            ImmutableArray.Create(new RegistryEntryStatus(reg[0], 0, true)));
+        _tweakService.Apply(entry).Returns(new TweakOperationResult(ResultLevel.Ok, []));
+        _tweakService.Detect(entry).Returns(appliedDetection);
+
+        _vm.ApplyTweakCommand.Execute(card);
+
+        _tweakService.Received(1).Apply(entry);
+        Assert.That(card.Status, Is.EqualTo(CardStatus.Detected));
+        Assert.That(card.AppliedCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void RevertTweak_CallsServiceAndRefreshesCard()
+    {
+        var reg = ImmutableArray.Create(new RegistryEntryDefinition("HKCU\\Test", "Val", 0, RegistryValueType.DWord, 1));
+        var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", [], null, true, [], reg);
+        var card = new TweakCardModel(entry, CardStatus.Detected);
+
+        var revertedDetection = new TweakDetectionResult(
+            TweakStatus.NotApplied,
+            ImmutableArray.Create(new RegistryEntryStatus(reg[0], 1, false)));
+        _tweakService.Revert(entry).Returns(new TweakOperationResult(ResultLevel.Ok, []));
+        _tweakService.Detect(entry).Returns(revertedDetection);
+
+        _vm.RevertTweakCommand.Execute(card);
+
+        _tweakService.Received(1).Revert(entry);
+        Assert.That(card.Status, Is.EqualTo(CardStatus.NotInstalled));
+        Assert.That(card.AppliedCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void TweakCardModel_IsAllApplied_WhenAllEntriesApplied()
+    {
+        var reg = ImmutableArray.Create(new RegistryEntryDefinition("HKCU\\Test", "Val", 0, RegistryValueType.DWord));
+        var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", [], null, true, [], reg);
+        var card = new TweakCardModel(entry, CardStatus.Detected) { AppliedCount = 1 };
+
+        Assert.That(card.IsAllApplied, Is.True);
+    }
+
+    [Test]
+    public void TweakCardModel_IsAllApplied_FalseWhenPartial()
+    {
+        var reg = ImmutableArray.Create(
+            new RegistryEntryDefinition("HKCU\\Test", "Val1", 0, RegistryValueType.DWord),
+            new RegistryEntryDefinition("HKCU\\Test", "Val2", 1, RegistryValueType.DWord));
+        var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", [], null, true, [], reg);
+        var card = new TweakCardModel(entry, CardStatus.Drift) { AppliedCount = 1 };
+
+        Assert.That(card.IsAllApplied, Is.False);
+    }
+
+    [Test]
+    public void TweakCardModel_RestartRequired_TrueWhenTagged()
+    {
+        var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", ["restart"], null, true, [], []);
+        var card = new TweakCardModel(entry, CardStatus.Detected);
+
+        Assert.That(card.RestartRequired, Is.True);
+    }
+
+    [Test]
+    public void TweakCardModel_RestartRequired_FalseWhenNoTag()
+    {
+        var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", ["privacy"], null, true, [], []);
+        var card = new TweakCardModel(entry, CardStatus.Detected);
+
+        Assert.That(card.RestartRequired, Is.False);
+    }
+
+    [Test]
+    public void TweakCardModel_RegistryKeyCountText_Singular()
+    {
+        var reg = ImmutableArray.Create(new RegistryEntryDefinition("HKCU\\Test", "Val", 0, RegistryValueType.DWord));
+        var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", [], null, true, [], reg);
+        var card = new TweakCardModel(entry, CardStatus.Detected);
+
+        Assert.That(card.RegistryKeyCountText, Is.EqualTo("1 registry key"));
+    }
+
+    [Test]
+    public void TweakCardModel_RegistryKeyCountText_Plural()
+    {
+        var reg = ImmutableArray.Create(
+            new RegistryEntryDefinition("HKCU\\Test", "Val1", 0, RegistryValueType.DWord),
+            new RegistryEntryDefinition("HKCU\\Test", "Val2", 1, RegistryValueType.DWord));
+        var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", [], null, true, [], reg);
+        var card = new TweakCardModel(entry, CardStatus.Detected);
+
+        Assert.That(card.RegistryKeyCountText, Is.EqualTo("2 registry keys"));
     }
 
     private static TweakCardModel MakeTweak(string name, string category)

@@ -77,22 +77,13 @@
                 </ui:NavigationViewItem>
 
                 <ui:NavigationViewItem
-                    Content="System Tweaks"
-                    ToolTip="System Tweaks"
+                    Content="Windows Tweaks"
                     TargetPageType="{x:Type pages:SystemTweaksPage}">
                     <ui:NavigationViewItem.Icon>
                         <ui:SymbolIcon Symbol="Wrench24" />
                     </ui:NavigationViewItem.Icon>
                 </ui:NavigationViewItem>
 
-                <ui:NavigationViewItem
-                    Content="Startup"
-                    ToolTip="Startup"
-                    TargetPageType="{x:Type pages:StartupPage}">
-                    <ui:NavigationViewItem.Icon>
-                        <ui:SymbolIcon Symbol="Play24" />
-                    </ui:NavigationViewItem.Icon>
-                </ui:NavigationViewItem>
             </ui:NavigationView.MenuItems>
 
             <ui:NavigationView.FooterMenuItems>
