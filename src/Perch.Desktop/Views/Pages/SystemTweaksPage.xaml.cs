@@ -44,12 +44,38 @@ public partial class SystemTweaksPage : Page
             group.IsExpanded = !group.IsExpanded;
     }
 
+    private void OnStartupToggleChecked(object sender, RoutedEventArgs e)
+    {
+        if (GetStartupCardModel(sender) is { IsEnabled: false } card)
+            ViewModel.ToggleStartupEnabledCommand.Execute(card);
+    }
+
+    private void OnStartupToggleUnchecked(object sender, RoutedEventArgs e)
+    {
+        if (GetStartupCardModel(sender) is { IsEnabled: true } card)
+            ViewModel.ToggleStartupEnabledCommand.Execute(card);
+    }
+
+    private void OnStartupRemoveClick(object sender, RoutedEventArgs e)
+    {
+        if (GetStartupCardModel(sender) is { } card)
+            ViewModel.RemoveStartupItemCommand.Execute(card);
+    }
+
     private void UpdateDetailPanelVisibility()
     {
-        var isFonts = string.Equals(ViewModel.SelectedCategory, "Fonts", StringComparison.OrdinalIgnoreCase);
-        TweakDetailPanel.Visibility = ViewModel.SelectedCategory is not null && !isFonts
+        var category = ViewModel.SelectedCategory;
+        var isFonts = string.Equals(category, "Fonts", StringComparison.OrdinalIgnoreCase);
+        var isStartup = string.Equals(category, "Startup", StringComparison.OrdinalIgnoreCase);
+
+        TweakDetailPanel.Visibility = category is not null && !isFonts && !isStartup
             ? Visibility.Visible : Visibility.Collapsed;
         FontDetailPanel.Visibility = isFonts
             ? Visibility.Visible : Visibility.Collapsed;
+        StartupDetailPanel.Visibility = isStartup
+            ? Visibility.Visible : Visibility.Collapsed;
     }
+
+    private static StartupCardModel? GetStartupCardModel(object sender) =>
+        (sender as FrameworkElement)?.DataContext as StartupCardModel;
 }

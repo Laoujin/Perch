@@ -223,6 +223,120 @@
                 </ItemsControl>
             </ScrollViewer>
 
+            <!-- Startup items for Startup category -->
+            <Grid Grid.Row="1" x:Name="StartupDetailPanel" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <ui:TextBox
+                    Grid.Row="0"
+                    PlaceholderText="Search startup items..."
+                    Text="{Binding StartupSearchText, UpdateSourceTrigger=PropertyChanged}"
+                    Width="250"
+                    HorizontalAlignment="Left"
+                    Margin="0,0,0,12" />
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock
+                            x:Name="StartupEmptyState"
+                            Text="No startup items found"
+                            FontSize="12"
+                            Foreground="#666666"
+                            Margin="0,0,0,12"
+                            Visibility="Collapsed" />
+
+                        <ItemsControl ItemsSource="{Binding FilteredStartupItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type models:StartupCardModel}">
+                                    <Border
+                                        Background="#1A1A2E"
+                                        BorderBrush="#333350"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12"
+                                        Margin="0,0,0,8">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                                <RowDefinition Height="Auto" />
+                                            </Grid.RowDefinitions>
+
+                                            <Grid Grid.Row="0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <TextBlock
+                                                    Grid.Column="0"
+                                                    Text="{Binding Name}"
+                                                    FontSize="13"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="White"
+                                                    TextTrimming="CharacterEllipsis"
+                                                    ToolTip="{Binding Name}"
+                                                    VerticalAlignment="Center" />
+
+                                                <ui:ToggleSwitch
+                                                    Grid.Column="1"
+                                                    IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                                    Checked="OnStartupToggleChecked"
+                                                    Unchecked="OnStartupToggleUnchecked" />
+                                            </Grid>
+
+                                            <TextBox
+                                                Grid.Row="1"
+                                                Text="{Binding Command, Mode=OneWay}"
+                                                IsReadOnly="True"
+                                                BorderThickness="0"
+                                                Background="Transparent"
+                                                FontFamily="Cascadia Code,Consolas,Courier New"
+                                                FontSize="11"
+                                                Foreground="#888888"
+                                                Margin="0,4,0,0"
+                                                Padding="0" />
+
+                                            <Grid Grid.Row="2" Margin="0,8,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border
+                                                    Grid.Column="0"
+                                                    Background="#252545"
+                                                    CornerRadius="4"
+                                                    Padding="6,2"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Center">
+                                                    <TextBlock
+                                                        Text="{Binding SourceLabel}"
+                                                        FontSize="10"
+                                                        Foreground="#10B981" />
+                                                </Border>
+
+                                                <ui:Button
+                                                    Grid.Column="1"
+                                                    Icon="{ui:SymbolIcon Delete24}"
+                                                    ToolTip="Remove from startup"
+                                                    Padding="4"
+                                                    Height="26"
+                                                    VerticalAlignment="Center"
+                                                    Click="OnStartupRemoveClick" />
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
             <!-- Font cards for Fonts category -->
             <Grid Grid.Row="1" x:Name="FontDetailPanel">
                 <Grid.RowDefinitions>

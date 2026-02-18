@@ -599,6 +599,7 @@ public sealed class SystemTweaksViewModelTests
 {
     private IGalleryDetectionService _detectionService = null!;
     private ISettingsProvider _settingsProvider = null!;
+    private IStartupService _startupService = null!;
     private SystemTweaksViewModel _vm = null!;
 
     [SetUp]
@@ -606,6 +607,7 @@ public sealed class SystemTweaksViewModelTests
     {
         _detectionService = Substitute.For<IGalleryDetectionService>();
         _settingsProvider = Substitute.For<ISettingsProvider>();
+        _startupService = Substitute.For<IStartupService>();
 
         _settingsProvider.LoadAsync(Arg.Any<CancellationToken>())
             .Returns(new PerchSettings { Profiles = ["Developer"] });
@@ -616,8 +618,10 @@ public sealed class SystemTweaksViewModelTests
             .Returns(new FontDetectionResult(
                 ImmutableArray<FontCardModel>.Empty,
                 ImmutableArray<FontCardModel>.Empty));
+        _startupService.GetAllAsync(Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<StartupEntry>());
 
-        _vm = new SystemTweaksViewModel(_detectionService, _settingsProvider);
+        _vm = new SystemTweaksViewModel(_detectionService, _settingsProvider, _startupService);
     }
 
     [Test]

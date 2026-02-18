@@ -34,6 +34,7 @@ public partial class TweakCategoryCardModel : ObservableObject
 
     private static SymbolRegular GetIcon(string category) => category switch
     {
+        "Startup" => SymbolRegular.Play24,
         "Explorer" => SymbolRegular.FolderOpen24,
         "Privacy" => SymbolRegular.Shield24,
         "Fonts" => SymbolRegular.TextFont24,

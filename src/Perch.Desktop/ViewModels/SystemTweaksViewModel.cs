@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Perch.Core.Config;
+using Perch.Core.Startup;
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
 
@@ -13,6 +14,7 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
 {
     private readonly IGalleryDetectionService _detectionService;
     private readonly ISettingsProvider _settingsProvider;
+    private readonly IStartupService _startupService;
 
     [ObservableProperty]
     private bool _isLoading;
@@ -27,6 +29,9 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     private string _fontSearchText = string.Empty;
 
     [ObservableProperty]
+    private string _startupSearchText = string.Empty;
+
+    [ObservableProperty]
     private string? _selectedCategory;
 
     public ObservableCollection<TweakCardModel> Tweaks { get; } = [];
@@ -36,20 +41,27 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     public ObservableCollection<FontFamilyGroupModel> FilteredInstalledFontGroups { get; } = [];
     public ObservableCollection<FontCardModel> FilteredNerdFonts { get; } = [];
     public ObservableCollection<TweakCategoryCardModel> Categories { get; } = [];
+    public ObservableCollection<StartupCardModel> StartupItems { get; } = [];
+    public ObservableCollection<StartupCardModel> FilteredStartupItems { get; } = [];
 
     private List<FontFamilyGroupModel> _allInstalledFontGroups = [];
 
     public bool ShowCategories => SelectedCategory is null;
     public bool ShowDetail => SelectedCategory is not null;
 
-    public SystemTweaksViewModel(IGalleryDetectionService detectionService, ISettingsProvider settingsProvider)
+    public SystemTweaksViewModel(
+        IGalleryDetectionService detectionService,
+        ISettingsProvider settingsProvider,
+        IStartupService startupService)
     {
         _detectionService = detectionService;
         _settingsProvider = settingsProvider;
+        _startupService = startupService;
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
     partial void OnFontSearchTextChanged(string value) => ApplyFontFilter();
+    partial void OnStartupSearchTextChanged(string value) => ApplyStartupFilter();
 
     partial void OnSelectedCategoryChanged(string? value)
     {
@@ -68,8 +80,9 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
             var profiles = await LoadProfilesAsync(cancellationToken);
             var tweaksTask = _detectionService.DetectTweaksAsync(profiles, cancellationToken);
             var fontsTask = _detectionService.DetectFontsAsync(cancellationToken);
+            var startupTask = _startupService.GetAllAsync(cancellationToken);
 
-            await Task.WhenAll(tweaksTask, fontsTask);
+            await Task.WhenAll(tweaksTask, fontsTask, startupTask);
 
             Tweaks.Clear();
             foreach (var tweak in tweaksTask.Result)
@@ -81,9 +94,14 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
             foreach (var f in fontResult.InstalledFonts) InstalledFonts.Add(f);
             foreach (var f in fontResult.NerdFonts) NerdFonts.Add(f);
 
+            StartupItems.Clear();
+            foreach (var entry in startupTask.Result)
+                StartupItems.Add(new StartupCardModel(entry));
+
             BuildFontGroups();
             RebuildCategories();
             ApplyFilter();
+            ApplyStartupFilter();
         }
         catch (OperationCanceledException)
         {
@@ -103,6 +121,16 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     private void RebuildCategories()
     {
         Categories.Clear();
+
+        if (StartupItems.Count > 0)
+        {
+            Categories.Add(new TweakCategoryCardModel(
+                "Startup",
+                "Startup",
+                "Programs that run at login",
+                StartupItems.Count,
+                0));
+        }
 
         var groups = Tweaks.GroupBy(t => t.Category, StringComparer.OrdinalIgnoreCase);
         foreach (var group in groups.OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase))
@@ -132,11 +160,15 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     private void SelectCategory(string category)
     {
         FilteredTweaks.Clear();
-        if (!string.Equals(category, "Fonts", StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(category, "Fonts", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(category, "Startup", StringComparison.OrdinalIgnoreCase))
         {
             foreach (var tweak in Tweaks.Where(t => string.Equals(t.Category, category, StringComparison.OrdinalIgnoreCase)))
                 FilteredTweaks.Add(tweak);
         }
+
+        if (string.Equals(category, "Startup", StringComparison.OrdinalIgnoreCase))
+            ApplyStartupFilter();
 
         SelectedCategory = category;
     }
@@ -146,6 +178,22 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     {
         SelectedCategory = null;
         RebuildCategories();
+    }
+
+    [RelayCommand]
+    private async Task ToggleStartupEnabledAsync(StartupCardModel card)
+    {
+        var newState = !card.IsEnabled;
+        await _startupService.SetEnabledAsync(card.Entry, newState);
+        card.IsEnabled = newState;
+    }
+
+    [RelayCommand]
+    private async Task RemoveStartupItemAsync(StartupCardModel card)
+    {
+        await _startupService.RemoveAsync(card.Entry);
+        StartupItems.Remove(card);
+        FilteredStartupItems.Remove(card);
     }
 
     private void BuildFontGroups()
@@ -175,6 +223,16 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
         {
             if (font.MatchesSearch(query))
                 FilteredNerdFonts.Add(font);
+        }
+    }
+
+    private void ApplyStartupFilter()
+    {
+        FilteredStartupItems.Clear();
+        foreach (var item in StartupItems)
+        {
+            if (item.MatchesSearch(StartupSearchText))
+                FilteredStartupItems.Add(item);
         }
     }
 
