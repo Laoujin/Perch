@@ -17,6 +17,30 @@ public sealed partial class AppsViewModel : ViewModelBase
     private readonly IPendingChangesService _pendingChanges;
 
     private ImmutableArray<AppCardModel> _allApps = [];
+    private HashSet<UserProfile> _activeProfiles = [UserProfile.Developer, UserProfile.PowerUser];
+
+    private static readonly Dictionary<string, UserProfile[]> _broadCategoryProfiles = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Development"] = [UserProfile.Developer],
+        ["System"] = [UserProfile.PowerUser],
+        ["Utilities"] = [UserProfile.PowerUser],
+        ["Media"] = [UserProfile.Gamer, UserProfile.Casual],
+        ["Gaming"] = [UserProfile.Gamer],
+        ["Communication"] = [UserProfile.Casual],
+        ["Browsers"] = [UserProfile.Casual],
+        ["Appearance"] = [],
+    };
+
+    private static readonly Dictionary<string, string[]> _subcategoryOrder = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Development"] = ["IDEs", "Editors", "Languages", "Version Control", "Terminals", "CLI Tools", "Containers", "Shells", "Tools", "API Tools", "Databases", "Build Tools", "Diff Tools", ".NET", "Node"],
+        ["Gaming"] = ["Stores", "Launchers", "Streaming", "Controllers", "Performance", "Saves", "Modding", "Emulators"],
+        ["Utilities"] = ["Productivity", "System", "Compression", "Screenshots", "Clipboard", "PDF", "Storage", "Downloads", "Uninstallers", "System Monitors"],
+        ["Media"] = ["Players", "Video", "Audio", "Graphics", "3D"],
+        ["Communication"] = ["Chat", "Video", "Email"],
+        ["Security"] = ["Passwords", "Encryption", "Downloads", "Sandboxing"],
+        ["Networking"] = ["Remote Access", "FTP", "Protocol", "Security"],
+    };
 
     [ObservableProperty]
     private bool _isLoading;
@@ -61,6 +85,7 @@ public sealed partial class AppsViewModel : ViewModelBase
         try
         {
             var profiles = await LoadProfilesAsync(cancellationToken);
+            _activeProfiles = profiles;
             var result = await _detectionService.DetectAppsAsync(profiles, cancellationToken);
 
             BuildDependencyGraph(result.YourApps, result.Suggested, result.OtherApps);
@@ -89,7 +114,8 @@ public sealed partial class AppsViewModel : ViewModelBase
         var filtered = _allApps.Where(a => a.MatchesSearch(query));
         var groups = filtered
             .GroupBy(a => a.BroadCategory, StringComparer.OrdinalIgnoreCase)
-            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
+            .OrderBy(g => GetBroadCategoryPriority(g.Key))
+            .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
 
         foreach (var group in groups)
         {
@@ -160,7 +186,8 @@ public sealed partial class AppsViewModel : ViewModelBase
             .Where(a => string.Equals(a.BroadCategory, broadCategory, StringComparison.OrdinalIgnoreCase))
             .Where(a => a.MatchesSearch(SearchText))
             .GroupBy(a => a.SubCategory, StringComparer.OrdinalIgnoreCase)
-            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => GetSubCategoryPriority(broadCategory, g.Key))
+            .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
             .Select(g => new AppCategoryGroup(
                 g.Key,
                 new ObservableCollection<AppCardModel>(
@@ -212,6 +239,24 @@ public sealed partial class AppsViewModel : ViewModelBase
         }
 
         _allApps = allApps.Where(a => !childIds.Contains(a.Id)).ToImmutableArray();
+    }
+
+    private int GetBroadCategoryPriority(string broadCategory)
+    {
+        if (_broadCategoryProfiles.TryGetValue(broadCategory, out var profiles) &&
+            profiles.Any(p => _activeProfiles.Contains(p)))
+            return 0;
+
+        return 1;
+    }
+
+    private static int GetSubCategoryPriority(string broadCategory, string subCategory)
+    {
+        if (!_subcategoryOrder.TryGetValue(broadCategory, out var order))
+            return int.MaxValue;
+
+        var index = Array.FindIndex(order, s => string.Equals(s, subCategory, StringComparison.OrdinalIgnoreCase));
+        return index >= 0 ? index : int.MaxValue;
     }
 
     private async Task<HashSet<UserProfile>> LoadProfilesAsync(CancellationToken cancellationToken)
