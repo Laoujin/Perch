@@ -49,6 +49,11 @@ app.Configure(config =>
         registry.AddCommand<RegistryCaptureCommand>("capture")
             .WithDescription("Capture current registry values for a module");
     });
+    config.AddBranch("tweak", tweak =>
+    {
+        tweak.AddCommand<TweakListCommand>("list")
+            .WithDescription("List gallery tweaks with their current status");
+    });
     config.AddCommand<CompletionCommand>("completion")
         .WithDescription("Generate shell completion script");
 });
