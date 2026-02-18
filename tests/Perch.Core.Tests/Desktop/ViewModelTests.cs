@@ -288,6 +288,142 @@ public sealed class AppsViewModelTests
             Requires: [.. requires]);
         return new AppCardModel(entry, tier, status);
     }
+
+    private static AppCardModel MakeCardWithSuggests(string name, string category, string[] suggests, CardStatus status = CardStatus.Detected, CardTier tier = CardTier.YourApps)
+    {
+        var entry = new CatalogEntry(name, name, name, category, [], null, null, null, null, null, null,
+            Suggests: [.. suggests]);
+        return new AppCardModel(entry, tier, status);
+    }
+
+    [Test]
+    public void InitialState_ShowsCardGrid_HidesDetailView()
+    {
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.ShowCardGrid, Is.True);
+            Assert.That(_vm.ShowDetailView, Is.False);
+            Assert.That(_vm.SelectedApp, Is.Null);
+            Assert.That(_vm.Detail, Is.Null);
+            Assert.That(_vm.HasEcosystem, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task ConfigureAppAsync_SetsSelectedAppAndLoadsDetail()
+    {
+        var card = MakeCard("vscode", "Development/IDEs", CardStatus.Linked);
+        var detail = new AppDetail(card, null, null, null, null, []);
+        _detailService.LoadDetailAsync(card, Arg.Any<CancellationToken>())
+            .Returns(detail);
+
+        _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(new GalleryDetectionResult(ImmutableArray.Create(card), [], []));
+        await _vm.RefreshCommand.ExecuteAsync(null);
+
+        await _vm.ConfigureAppCommand.ExecuteAsync(card);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.SelectedApp, Is.EqualTo(card));
+            Assert.That(_vm.Detail, Is.EqualTo(detail));
+            Assert.That(_vm.ShowDetailView, Is.True);
+            Assert.That(_vm.ShowCardGrid, Is.False);
+            Assert.That(_vm.IsLoadingDetail, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task BackToGrid_ResetsSelection()
+    {
+        var card = MakeCard("vscode", "Development/IDEs", CardStatus.Linked);
+        var detail = new AppDetail(card, null, null, null, null, []);
+        _detailService.LoadDetailAsync(card, Arg.Any<CancellationToken>())
+            .Returns(detail);
+
+        _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(new GalleryDetectionResult(ImmutableArray.Create(card), [], []));
+        await _vm.RefreshCommand.ExecuteAsync(null);
+
+        await _vm.ConfigureAppCommand.ExecuteAsync(card);
+        Assert.That(_vm.ShowDetailView, Is.True);
+
+        _vm.BackToGridCommand.Execute(null);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.ShowCardGrid, Is.True);
+            Assert.That(_vm.SelectedApp, Is.Null);
+            Assert.That(_vm.Detail, Is.Null);
+            Assert.That(_vm.HasEcosystem, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task ConfigureAppAsync_BuildsEcosystemFromDependentsAndSuggests()
+    {
+        var child = MakeCardWithRequires("eslint", "Development/CLI Tools", ["nodejs"]);
+        var suggestedTool = MakeCard("yarn", "Development/CLI Tools");
+        var parent = MakeCardWithSuggests("nodejs", "Development/Languages", ["yarn"]);
+
+        var detail = new AppDetail(parent, null, null, null, null, []);
+        _detailService.LoadDetailAsync(parent, Arg.Any<CancellationToken>())
+            .Returns(detail);
+
+        _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(new GalleryDetectionResult(ImmutableArray.Create(parent, child, suggestedTool), [], []));
+        await _vm.RefreshCommand.ExecuteAsync(null);
+
+        await _vm.ConfigureAppCommand.ExecuteAsync(parent);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.HasEcosystem, Is.True);
+            var allEcoApps = _vm.EcosystemGroups.SelectMany(g => g.Apps).ToList();
+            Assert.That(allEcoApps, Has.Count.EqualTo(2));
+            Assert.That(allEcoApps.Any(a => a.Id == "eslint"), Is.True);
+            Assert.That(allEcoApps.Any(a => a.Id == "yarn"), Is.True);
+        });
+    }
+
+    [Test]
+    public async Task ConfigureAppAsync_EcosystemExcludesSelfAndDeduplicates()
+    {
+        var child = MakeCardWithRequires("eslint", "Development/CLI Tools", ["nodejs"]);
+        var parent = MakeCardWithSuggests("nodejs", "Development/Languages", ["eslint", "nodejs"]);
+
+        var detail = new AppDetail(parent, null, null, null, null, []);
+        _detailService.LoadDetailAsync(parent, Arg.Any<CancellationToken>())
+            .Returns(detail);
+
+        _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(new GalleryDetectionResult(ImmutableArray.Create(parent, child), [], []));
+        await _vm.RefreshCommand.ExecuteAsync(null);
+
+        await _vm.ConfigureAppCommand.ExecuteAsync(parent);
+
+        var allEcoApps = _vm.EcosystemGroups.SelectMany(g => g.Apps).ToList();
+        Assert.That(allEcoApps, Has.Count.EqualTo(1));
+        Assert.That(allEcoApps[0].Id, Is.EqualTo("eslint"));
+    }
+
+    [Test]
+    public async Task ConfigureAppAsync_NoSuggests_NoDependents_NoEcosystem()
+    {
+        var card = MakeCard("vscode", "Development/IDEs", CardStatus.Linked);
+        var detail = new AppDetail(card, null, null, null, null, []);
+        _detailService.LoadDetailAsync(card, Arg.Any<CancellationToken>())
+            .Returns(detail);
+
+        _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
+            .Returns(new GalleryDetectionResult(ImmutableArray.Create(card), [], []));
+        await _vm.RefreshCommand.ExecuteAsync(null);
+
+        await _vm.ConfigureAppCommand.ExecuteAsync(card);
+
+        Assert.That(_vm.HasEcosystem, Is.False);
+        Assert.That(_vm.EcosystemGroups, Is.Empty);
+    }
 }
 
 [TestFixture]
