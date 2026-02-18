@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Runtime.Versioning;
 
 namespace Perch.Core.Scanner;
 
@@ -47,7 +48,7 @@ public sealed class FontScanner : IFontScanner
 
     internal static string ExtractFamilyName(string displayName)
     {
-        var words = displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var words = displayName.Split([' ', '-'], StringSplitOptions.RemoveEmptyEntries);
 
         int lastNonStyle = -1;
         for (int i = 0; i < words.Length; i++)
@@ -69,12 +70,21 @@ public sealed class FontScanner : IFontScanner
         if (!OperatingSystem.IsWindows())
             return map;
 
+        ReadFontRegistryKey(map, Microsoft.Win32.Registry.LocalMachine);
+        ReadFontRegistryKey(map, Microsoft.Win32.Registry.CurrentUser);
+
+        return map;
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static void ReadFontRegistryKey(Dictionary<string, string> map, Microsoft.Win32.RegistryKey hive)
+    {
         try
         {
-            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+            using var key = hive.OpenSubKey(
                 @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts");
             if (key is null)
-                return map;
+                return;
 
             foreach (var valueName in key.GetValueNames())
             {
@@ -96,8 +106,6 @@ public sealed class FontScanner : IFontScanner
         {
             // Registry access failure is non-fatal
         }
-
-        return map;
     }
 
     private static IEnumerable<string> GetFontDirectories()

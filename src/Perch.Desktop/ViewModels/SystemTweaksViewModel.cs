@@ -402,11 +402,9 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     [RelayCommand]
     private void TrackAllInstalledFonts()
     {
+        bool allSelected = FilteredInstalledFontGroups.All(g => g.IsSelected);
         foreach (var group in FilteredInstalledFontGroups)
-        {
-            if (!group.IsSelected)
-                group.IsSelected = true;
-        }
+            group.IsSelected = !allSelected;
     }
 
     private void BuildFontGroups()

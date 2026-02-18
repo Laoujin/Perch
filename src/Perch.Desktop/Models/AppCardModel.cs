@@ -36,6 +36,10 @@ public partial class AppCardModel : ObservableObject
     [ObservableProperty]
     private AppDetail? _detail;
 
+    public ImmutableArray<AppCardModel> DependentApps { get; set; } = [];
+    public bool HasDependents => !DependentApps.IsDefaultOrEmpty;
+    public int DependentAppCount => DependentApps.IsDefaultOrEmpty ? 0 : DependentApps.Length;
+
     public string DisplayLabel => DisplayName ?? Name;
     public string BroadCategory => Category.Split('/')[0];
     public string SubCategory => Category.Contains('/') ? Category[(Category.IndexOf('/') + 1)..] : Category;
@@ -80,10 +84,13 @@ public partial class AppCardModel : ObservableObject
         if (string.IsNullOrWhiteSpace(query))
             return true;
 
-        return Name.Contains(query, StringComparison.OrdinalIgnoreCase)
-            || (DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
-            || (Description?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
-            || Category.Contains(query, StringComparison.OrdinalIgnoreCase)
-            || Tags.Any(t => t.Contains(query, StringComparison.OrdinalIgnoreCase));
+        return MatchesSelf(query) || DependentApps.Any(d => d.MatchesSelf(query));
     }
+
+    private bool MatchesSelf(string query) =>
+        Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+        || (DisplayName?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+        || (Description?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false)
+        || Category.Contains(query, StringComparison.OrdinalIgnoreCase)
+        || Tags.Any(t => t.Contains(query, StringComparison.OrdinalIgnoreCase));
 }

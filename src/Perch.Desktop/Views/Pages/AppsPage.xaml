@@ -128,6 +128,7 @@
                                     KindBadge="{Binding KindBadge}"
                                     Tags="{Binding Tags}"
                                     ToggleChanged="OnToggleChanged"
+                                    TagClicked="OnTagClicked"
                                     ExpandRequested="OnExpandRequested"
                                     Margin="0,0,12,12" />
                             </DataTemplate>
@@ -160,6 +161,7 @@
                                     KindBadge="{Binding KindBadge}"
                                     Tags="{Binding Tags}"
                                     ToggleChanged="OnToggleChanged"
+                                    TagClicked="OnTagClicked"
                                     ExpandRequested="OnExpandRequested"
                                     Margin="0,0,12,12" />
                             </DataTemplate>
@@ -270,6 +272,7 @@
                                                     KindBadge="{Binding KindBadge}"
                                                     Tags="{Binding Tags}"
                                                     ToggleChanged="OnToggleChanged"
+                                                    TagClicked="OnTagClicked"
                                                     ExpandRequested="OnExpandRequested"
                                                     Margin="0,0,12,12" />
                                             </DataTemplate>

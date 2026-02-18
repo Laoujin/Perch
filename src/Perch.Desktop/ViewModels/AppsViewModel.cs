@@ -76,9 +76,7 @@ public sealed partial class AppsViewModel : ViewModelBase
             var profiles = await LoadProfilesAsync(cancellationToken);
             var result = await _detectionService.DetectAppsAsync(profiles, cancellationToken);
 
-            _allYourApps = result.YourApps;
-            _allSuggested = result.Suggested;
-            _allOther = result.OtherApps;
+            BuildDependencyGraph(result.YourApps, result.Suggested, result.OtherApps);
 
             RebuildTiers();
         }
@@ -237,6 +235,9 @@ public sealed partial class AppsViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    private void TagClick(string tag) => SearchText = tag;
+
     public IEnumerable<AppCardModel> GetCategoryApps(string broadCategory)
     {
         return _allOther
@@ -244,6 +245,57 @@ public sealed partial class AppsViewModel : ViewModelBase
             .Where(a => a.MatchesSearch(SearchText))
             .OrderBy(a => StatusSortOrder(a.Status))
             .ThenBy(a => a.DisplayLabel, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private void BuildDependencyGraph(
+        ImmutableArray<AppCardModel> yourApps,
+        ImmutableArray<AppCardModel> suggested,
+        ImmutableArray<AppCardModel> other)
+    {
+        var allApps = yourApps.AsEnumerable().Concat(suggested).Concat(other).ToList();
+        var byId = allApps.ToDictionary(a => a.Id, StringComparer.OrdinalIgnoreCase);
+
+        // Build reverse map: parent -> children that require it
+        var reverseMap = new Dictionary<string, List<AppCardModel>>(StringComparer.OrdinalIgnoreCase);
+        var childIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var app in allApps)
+        {
+            if (app.CatalogEntry.Requires.IsDefaultOrEmpty)
+                continue;
+
+            foreach (var reqId in app.CatalogEntry.Requires)
+            {
+                if (!byId.ContainsKey(reqId))
+                    continue;
+
+                // Circular check: if parent also requires this app, skip
+                var parent = byId[reqId];
+                if (!parent.CatalogEntry.Requires.IsDefaultOrEmpty &&
+                    parent.CatalogEntry.Requires.Contains(app.Id, StringComparer.OrdinalIgnoreCase))
+                    continue;
+
+                if (!reverseMap.TryGetValue(reqId, out var list))
+                {
+                    list = [];
+                    reverseMap[reqId] = list;
+                }
+                list.Add(app);
+                childIds.Add(app.Id);
+            }
+        }
+
+        // Assign dependents to parents
+        foreach (var (parentId, dependents) in reverseMap)
+        {
+            if (byId.TryGetValue(parentId, out var parent))
+                parent.DependentApps = [.. dependents];
+        }
+
+        // Filter children from top-level collections
+        _allYourApps = yourApps.Where(a => !childIds.Contains(a.Id)).ToImmutableArray();
+        _allSuggested = suggested.Where(a => !childIds.Contains(a.Id)).ToImmutableArray();
+        _allOther = other.Where(a => !childIds.Contains(a.Id)).ToImmutableArray();
     }
 
     private async Task<HashSet<UserProfile>> LoadProfilesAsync(CancellationToken cancellationToken)

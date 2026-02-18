@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -27,9 +28,14 @@ public partial class FontCardModel : ObservableObject
     private bool _isExpanded;
 
     [ObservableProperty]
+    private bool _isBackedUp;
+
+    [ObservableProperty]
     private string _sampleText = "The quick brown fox jumps over the lazy dog";
 
-    public string? FileName => FullPath is not null ? System.IO.Path.GetFileName(FullPath) : null;
+    public string? FileName => FullPath is not null ? Path.GetFileName(FullPath) : null;
+
+    private string? BackupPath => FullPath is not null ? FullPath + ".backup" : null;
 
     public FontCardModel(
         string id,
@@ -51,6 +57,7 @@ public partial class FontCardModel : ObservableObject
         Source = source;
         Tags = tags;
         Status = status;
+        IsBackedUp = BackupPath is not null && File.Exists(BackupPath);
     }
 
     public bool MatchesSearch(string query)
@@ -80,6 +87,35 @@ public partial class FontCardModel : ObservableObject
         if (FullPath is null)
             return;
 
-        Process.Start("explorer", $"/select,\"{FullPath}\"");
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "explorer.exe",
+            Arguments = $"/select,\"{FullPath}\"",
+            UseShellExecute = false,
+        });
+    }
+
+    [RelayCommand]
+    private void ToggleBackup()
+    {
+        if (FullPath is null || BackupPath is null)
+            return;
+
+        if (IsBackedUp)
+        {
+            if (File.Exists(BackupPath) && !File.Exists(FullPath))
+            {
+                File.Move(BackupPath, FullPath);
+                IsBackedUp = false;
+            }
+        }
+        else
+        {
+            if (File.Exists(FullPath))
+            {
+                File.Move(FullPath, BackupPath);
+                IsBackedUp = true;
+            }
+        }
     }
 }

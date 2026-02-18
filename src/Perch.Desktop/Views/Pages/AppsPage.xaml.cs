@@ -53,6 +53,17 @@ public partial class AppsPage : Page
             ViewModel.ExpandAppCommand.Execute(app);
     }
 
+    private void OnTagClicked(object sender, RoutedEventArgs e)
+    {
+        if (sender is AppCard card && card.DataContext is AppCardModel)
+        {
+            // The tag text is the DataContext of the clicked element inside the tag ItemsControl.
+            // The AppCard raises the event; we find the tag from the original source.
+            if (e.OriginalSource is FrameworkElement { DataContext: string tag })
+                ViewModel.TagClickCommand.Execute(tag);
+        }
+    }
+
     private static AppCardModel? GetAppModel(object sender) =>
         (sender as AppCard)?.DataContext as AppCardModel;
 }

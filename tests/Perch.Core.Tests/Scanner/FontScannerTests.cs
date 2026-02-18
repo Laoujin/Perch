@@ -16,6 +16,11 @@ public sealed class FontScannerTests
     [TestCase("Segoe UI Light", "Segoe UI")]
     [TestCase("Bold", "Bold")]
     [TestCase("Consolas", "Consolas")]
+    [TestCase("FiraCode-Regular", "FiraCode")]
+    [TestCase("FiraCode-Bold", "FiraCode")]
+    [TestCase("FiraCode-SemiBold", "FiraCode")]
+    [TestCase("JetBrainsMono-ExtraBold", "JetBrainsMono")]
+    [TestCase("CascadiaCode-SemiLight", "CascadiaCode")]
     public void ExtractFamilyName_StripsStyleSuffixes(string displayName, string expectedFamily)
     {
         var result = FontScanner.ExtractFamilyName(displayName);

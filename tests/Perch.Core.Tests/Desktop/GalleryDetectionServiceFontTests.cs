@@ -200,6 +200,23 @@ public sealed class GalleryDetectionServiceFontTests
     }
 
     [Test]
+    public async Task DetectFontsAsync_HyphenatedFileName_MatchesGalleryByFamily()
+    {
+        _catalog.GetAllFontsAsync(Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(
+                MakeGalleryFont("fira-code", "Fira Code", choco: "firacode")));
+
+        _fontScanner.ScanAsync(Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(
+                new DetectedFont("FiraCode-Regular", "FiraCode",
+                    @"C:\Users\test\AppData\Local\Microsoft\Windows\Fonts\FiraCode-Regular.ttf")));
+
+        var result = await _service.DetectFontsAsync();
+
+        Assert.That(result.NerdFonts[0].Status, Is.EqualTo(CardStatus.Detected));
+    }
+
+    [Test]
     public async Task DetectFontsAsync_EmptyEverything_ReturnsEmptyResults()
     {
         var result = await _service.DetectFontsAsync();

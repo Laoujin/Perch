@@ -40,6 +40,7 @@ public partial class StatusRibbon : UserControl
             CardStatus.Drift => ("Drifted", "#F59E0B"),
             CardStatus.Broken => ("Broken", "#DC2626"),
             CardStatus.Error => ("Error", "#DC2626"),
+            CardStatus.NotInstalled => ("Not Installed", "#6B7280"),
             _ => ("System Default", "#3B82F6"),
         };
 

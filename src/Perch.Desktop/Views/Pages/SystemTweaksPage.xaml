@@ -585,20 +585,13 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <!-- Font search + bulk action -->
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
-                    <ui:TextBox
-                        PlaceholderText="Filter fonts..."
-                        Text="{Binding FontSearchText, UpdateSourceTrigger=PropertyChanged}"
-                        Width="250" />
-                    <ui:Button
-                        Content="Track all installed"
-                        Padding="8,4"
-                        FontSize="11"
-                        Margin="8,0,0,0"
-                        VerticalAlignment="Center"
-                        Command="{Binding TrackAllInstalledFontsCommand}" />
-                </StackPanel>
+                <!-- Font search -->
+                <ui:TextBox
+                    Grid.Row="0"
+                    PlaceholderText="Filter fonts..."
+                    Text="{Binding FontSearchText, UpdateSourceTrigger=PropertyChanged}"
+                    Width="250"
+                    Margin="0,0,0,12" />
 
                 <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
@@ -673,8 +666,22 @@
                         <!-- Installed Fonts (grouped by family) -->
                         <StackPanel Visibility="{Binding FilteredInstalledFontGroups.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}"
                                     Margin="0,16,0,0">
-                            <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="#888888" Margin="0,0,0,8"
-                                       Text="Installed Fonts" />
+                            <Grid Margin="0,0,0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" FontSize="13" FontWeight="SemiBold" Foreground="#888888"
+                                           Text="Installed Fonts" VerticalAlignment="Center" />
+                                <ui:Button
+                                    Grid.Column="2"
+                                    Content="Track all installed"
+                                    Padding="8,4"
+                                    FontSize="11"
+                                    VerticalAlignment="Center"
+                                    Command="{Binding TrackAllInstalledFontsCommand}" />
+                            </Grid>
                             <ItemsControl ItemsSource="{Binding FilteredInstalledFontGroups}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="{x:Type models:FontFamilyGroupModel}">
@@ -779,6 +786,7 @@
                                                                             <ColumnDefinition Width="Auto" />
                                                                             <ColumnDefinition Width="Auto" />
                                                                             <ColumnDefinition Width="Auto" />
+                                                                            <ColumnDefinition Width="Auto" />
                                                                         </Grid.ColumnDefinitions>
 
                                                                         <StackPanel Grid.Column="0" VerticalAlignment="Center">
@@ -804,7 +812,7 @@
                                                                             ToolTip="Try font"
                                                                             Padding="2"
                                                                             Height="22"
-                                                                            Margin="4,0"
+                                                                            Margin="6,0,0,0"
                                                                             VerticalAlignment="Center" />
                                                                         <ui:Button
                                                                             Grid.Column="2"
@@ -813,6 +821,7 @@
                                                                             ToolTip="View font"
                                                                             Padding="2"
                                                                             Height="22"
+                                                                            Margin="4,0,0,0"
                                                                             VerticalAlignment="Center"
                                                                             Visibility="{Binding FullPath, Converter={StaticResource CountToVisibilityConverter}}" />
                                                                         <ui:Button
@@ -822,11 +831,33 @@
                                                                             ToolTip="Open font location"
                                                                             Padding="2"
                                                                             Height="22"
+                                                                            Margin="4,0,0,0"
                                                                             VerticalAlignment="Center"
                                                                             Visibility="{Binding FullPath, Converter={StaticResource CountToVisibilityConverter}}" />
+                                                                        <ui:Button
+                                                                            Grid.Column="4"
+                                                                            Command="{Binding ToggleBackupCommand}"
+                                                                            Padding="2"
+                                                                            Height="22"
+                                                                            Margin="4,0,0,0"
+                                                                            VerticalAlignment="Center"
+                                                                            Visibility="{Binding FullPath, Converter={StaticResource CountToVisibilityConverter}}">
+                                                                            <ui:Button.Style>
+                                                                                <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                                                                    <Setter Property="Icon" Value="{ui:SymbolIcon Delete16}" />
+                                                                                    <Setter Property="ToolTip" Value="Backup font (disable)" />
+                                                                                    <Style.Triggers>
+                                                                                        <DataTrigger Binding="{Binding IsBackedUp}" Value="True">
+                                                                                            <Setter Property="Icon" Value="{ui:SymbolIcon ArrowUndo16}" />
+                                                                                            <Setter Property="ToolTip" Value="Restore font" />
+                                                                                        </DataTrigger>
+                                                                                    </Style.Triggers>
+                                                                                </Style>
+                                                                            </ui:Button.Style>
+                                                                        </ui:Button>
 
                                                                         <ui:ToggleSwitch
-                                                                            Grid.Column="4"
+                                                                            Grid.Column="5"
                                                                             IsChecked="{Binding IsSelected, Mode=TwoWay}"
                                                                             VerticalAlignment="Center"
                                                                             Margin="4,0,0,0" />
