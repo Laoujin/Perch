@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -60,6 +61,12 @@ public partial class AppsPage : Page
             if (e.OriginalSource is FrameworkElement { DataContext: string tag })
                 ViewModel.TagClickCommand.Execute(tag);
         }
+    }
+
+    private void OnLinkClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string url } && !string.IsNullOrEmpty(url))
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 
     private static AppCardModel? GetAppModel(object sender) =>

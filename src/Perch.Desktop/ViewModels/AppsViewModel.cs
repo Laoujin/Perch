@@ -74,12 +74,12 @@ public sealed partial class AppsViewModel : ViewModelBase
     public bool ShowCardGrid => SelectedApp is null;
     public bool ShowDetailView => SelectedApp is not null;
     public bool HasModule => Detail?.OwningModule is not null;
-    public bool HasNoModule => Detail is not null && Detail.OwningModule is null;
     public bool HasEcosystem => EcosystemGroups.Count > 0;
-    public bool HasAlternatives => Detail is not null && !Detail.Alternatives.IsDefaultOrEmpty;
+    public bool HasAlternatives => AlternativeApps.Count > 0;
 
     public ObservableCollection<AppCategoryCardModel> Categories { get; } = [];
     public ObservableCollection<EcosystemGroup> EcosystemGroups { get; } = [];
+    public ObservableCollection<AppCardModel> AlternativeApps { get; } = [];
 
     public AppsViewModel(
         IGalleryDetectionService detectionService,
@@ -102,8 +102,6 @@ public sealed partial class AppsViewModel : ViewModelBase
     partial void OnDetailChanged(AppDetail? value)
     {
         OnPropertyChanged(nameof(HasModule));
-        OnPropertyChanged(nameof(HasNoModule));
-        OnPropertyChanged(nameof(HasAlternatives));
     }
 
     partial void OnSearchTextChanged(string value) => RebuildCategories();
@@ -217,13 +215,16 @@ public sealed partial class AppsViewModel : ViewModelBase
         SelectedApp = card;
         Detail = null;
         EcosystemGroups.Clear();
+        AlternativeApps.Clear();
         OnPropertyChanged(nameof(HasEcosystem));
+        OnPropertyChanged(nameof(HasAlternatives));
         IsLoadingDetail = true;
 
         try
         {
             Detail = await _detailService.LoadDetailAsync(card, cancellationToken);
             BuildEcosystemGroups(card);
+            BuildAlternativeApps();
         }
         catch (OperationCanceledException)
         {
@@ -241,7 +242,9 @@ public sealed partial class AppsViewModel : ViewModelBase
         SelectedApp = null;
         Detail = null;
         EcosystemGroups.Clear();
+        AlternativeApps.Clear();
         OnPropertyChanged(nameof(HasEcosystem));
+        OnPropertyChanged(nameof(HasAlternatives));
     }
 
     private void BuildEcosystemGroups(AppCardModel card)
@@ -291,6 +294,25 @@ public sealed partial class AppsViewModel : ViewModelBase
         }
 
         OnPropertyChanged(nameof(HasEcosystem));
+    }
+
+    private void BuildAlternativeApps()
+    {
+        AlternativeApps.Clear();
+
+        if (Detail is null || Detail.Alternatives.IsDefaultOrEmpty)
+        {
+            OnPropertyChanged(nameof(HasAlternatives));
+            return;
+        }
+
+        foreach (var alt in Detail.Alternatives)
+        {
+            if (_allAppsByIdIncludingChildren.TryGetValue(alt.Id, out var altCard))
+                AlternativeApps.Add(altCard);
+        }
+
+        OnPropertyChanged(nameof(HasAlternatives));
     }
 
     public IEnumerable<AppCategoryGroup> GetCategorySubGroups(string broadCategory)

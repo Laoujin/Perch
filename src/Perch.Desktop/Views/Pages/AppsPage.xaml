@@ -6,7 +6,6 @@
     xmlns:vm="clr-namespace:Perch.Desktop.ViewModels"
     xmlns:models="clr-namespace:Perch.Desktop.Models"
     xmlns:controls="clr-namespace:Perch.Desktop.Views.Controls"
-    xmlns:catalog="clr-namespace:Perch.Core.Catalog;assembly=Perch.Core"
     d:DataContext="{d:DesignInstance vm:AppsViewModel}"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -337,19 +336,55 @@
 
                             <!-- Links -->
                             <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,6">
-                                <TextBlock Margin="0,0,12,0" Visibility="{Binding SelectedApp.Website, Converter={StaticResource CountToVisibilityConverter}}">
-                                    <Hyperlink Foreground="#60A5FA" NavigateUri="{Binding SelectedApp.Website}">Website</Hyperlink>
-                                </TextBlock>
-                                <TextBlock Margin="0,0,12,0" Visibility="{Binding SelectedApp.Docs, Converter={StaticResource CountToVisibilityConverter}}">
-                                    <Hyperlink Foreground="#60A5FA" NavigateUri="{Binding SelectedApp.Docs}">Docs</Hyperlink>
-                                </TextBlock>
-                                <TextBlock Visibility="{Binding SelectedApp.GitHub, Converter={StaticResource CountToVisibilityConverter}}">
-                                    <Hyperlink Foreground="#60A5FA" NavigateUri="{Binding SelectedApp.GitHub}">GitHub</Hyperlink>
-                                </TextBlock>
+                                <Button
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="4,2"
+                                    Margin="0,0,4,0"
+                                    Click="OnLinkClick"
+                                    Tag="{Binding SelectedApp.Website}"
+                                    ToolTip="{Binding SelectedApp.Website}"
+                                    Visibility="{Binding SelectedApp.Website, Converter={StaticResource CountToVisibilityConverter}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:SymbolIcon Symbol="Globe24" FontSize="12" Foreground="#6B7280" />
+                                        <TextBlock Text="Website" FontSize="10" Foreground="#6B7280" Margin="4,0,0,0" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="4,2"
+                                    Margin="0,0,4,0"
+                                    Click="OnLinkClick"
+                                    Tag="{Binding SelectedApp.Docs}"
+                                    ToolTip="{Binding SelectedApp.Docs}"
+                                    Visibility="{Binding SelectedApp.Docs, Converter={StaticResource CountToVisibilityConverter}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:SymbolIcon Symbol="Document24" FontSize="12" Foreground="#6B7280" />
+                                        <TextBlock Text="Docs" FontSize="10" Foreground="#6B7280" Margin="4,0,0,0" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <Button
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="4,2"
+                                    Click="OnLinkClick"
+                                    Tag="{Binding SelectedApp.GitHub}"
+                                    ToolTip="{Binding SelectedApp.GitHub}"
+                                    Visibility="{Binding SelectedApp.GitHub, Converter={StaticResource CountToVisibilityConverter}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <ui:SymbolIcon Symbol="Code24" FontSize="12" Foreground="#6B7280" />
+                                        <TextBlock Text="GitHub" FontSize="10" Foreground="#6B7280" Margin="4,0,0,0" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
                             </StackPanel>
 
-                            <!-- Module info -->
-                            <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,4,0,0">
+                            <!-- Module info (only shown when module exists) -->
+                            <StackPanel
+                                Grid.Row="4"
+                                Orientation="Horizontal"
+                                Margin="0,4,0,0"
+                                Visibility="{Binding HasModule, Converter={StaticResource BooleanToVisibilityConverter}}">
                                 <ui:SymbolIcon
                                     Symbol="Box24"
                                     FontSize="14"
@@ -358,13 +393,7 @@
                                 <TextBlock
                                     FontSize="11"
                                     Foreground="#10B981"
-                                    Text="{Binding Detail.OwningModule.DisplayName}"
-                                    Visibility="{Binding HasModule, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                <TextBlock
-                                    FontSize="11"
-                                    Foreground="#666666"
-                                    Text="No module found"
-                                    Visibility="{Binding HasNoModule, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                    Text="{Binding Detail.OwningModule.DisplayName}" />
                             </StackPanel>
                         </Grid>
                     </Border>
@@ -437,15 +466,36 @@
                         Margin="0,0,0,12"
                         Visibility="{Binding HasAlternatives, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <StackPanel>
-                            <TextBlock Text="Alternatives" FontSize="14" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8" />
-                            <ItemsControl ItemsSource="{Binding Detail.Alternatives}">
+                            <TextBlock Text="Alternatives" FontSize="14" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,12" />
+                            <ItemsControl ItemsSource="{Binding AlternativeApps}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="{x:Type catalog:CatalogEntry}">
-                                        <TextBlock
-                                            Text="{Binding Name, Mode=OneWay}"
-                                            FontSize="11"
-                                            Foreground="#9CA3AF"
-                                            Margin="0,0,0,4" />
+                                    <DataTemplate DataType="{x:Type models:AppCardModel}">
+                                        <controls:AppCard
+                                            DisplayLabel="{Binding DisplayLabel}"
+                                            Description="{Binding Description}"
+                                            Category="{Binding Category}"
+                                            Status="{Binding Status}"
+                                            LogoUrl="{Binding LogoUrl}"
+                                            Website="{Binding Website}"
+                                            Docs="{Binding Docs}"
+                                            GitHub="{Binding GitHub}"
+                                            License="{Binding License}"
+                                            IsManaged="{Binding IsManaged}"
+                                            CanToggle="{Binding CanToggle}"
+                                            IsSuggested="{Binding IsSuggested}"
+                                            KindBadge="{Binding KindBadge}"
+                                            GitHubStarsFormatted="{Binding GitHubStarsFormatted}"
+                                            IsTopPick="{Binding IsTopPick}"
+                                            Tags="{Binding Tags}"
+                                            ConfigureClicked="OnConfigureClicked"
+                                            ToggleChanged="OnToggleChanged"
+                                            TagClicked="OnTagClicked"
+                                            Margin="0,0,12,12" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

@@ -89,7 +89,7 @@
 
                 <ui:Button
                     Grid.Column="4"
-                    Icon="{ui:SymbolIcon ChevronRight24}"
+                    Icon="{ui:SymbolIcon Settings24}"
                     Appearance="Secondary"
                     Padding="2"
                     Margin="4,0"
