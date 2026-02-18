@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Windows;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -49,10 +51,17 @@ public partial class StartupCardModel : ObservableObject
                 Process.Start(new ProcessStartInfo { FileName = "explorer.exe", Arguments = $"\"{allStartup}\"", UseShellExecute = true });
                 break;
             case StartupSource.RegistryCurrentUser:
-                Process.Start("regedit", @"/m ""HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run""");
-                break;
             case StartupSource.RegistryLocalMachine:
-                Process.Start("regedit", @"/m ""HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run""");
+                try
+                {
+                    var key = Entry.Source == StartupSource.RegistryCurrentUser
+                        ? @"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+                        : @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
+                    Process.Start(new ProcessStartInfo("regedit", $"/m \"{key}\"") { UseShellExecute = true, Verb = "runas" });
+                }
+                catch (Win32Exception ex) when (ex.NativeErrorCode == 1223) // ERROR_CANCELLED (user declined UAC)
+                {
+                }
                 break;
         }
     }

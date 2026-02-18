@@ -21,6 +21,13 @@ public partial class CrashWindow : FluentWindow
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
-        Application.Current.Shutdown();
+        bool hasOtherWindow = Application.Current.Windows
+            .OfType<Window>()
+            .Any(w => w != this && w.IsVisible);
+
+        Close();
+
+        if (!hasOtherWindow)
+            Application.Current.Shutdown();
     }
 }
