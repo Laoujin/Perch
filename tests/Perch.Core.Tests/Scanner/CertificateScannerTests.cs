@@ -3,6 +3,7 @@ using Perch.Core.Scanner;
 namespace Perch.Core.Tests.Scanner;
 
 [TestFixture]
+[Platform("Win")]
 public sealed class CertificateScannerTests
 {
     [Test]
