@@ -503,11 +503,22 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
 
     private void ApplyCertificateFilter()
     {
+        var query = CertificateSearchText;
         FilteredCertificateGroups.Clear();
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            foreach (var group in _allCertificateGroups)
+                FilteredCertificateGroups.Add(group);
+            return;
+        }
+
         foreach (var group in _allCertificateGroups)
         {
-            if (group.MatchesSearch(CertificateSearchText))
-                FilteredCertificateGroups.Add(group);
+            var matching = group.Certificates.Where(c => c.MatchesSearch(query));
+            var filtered = new CertificateStoreGroupModel(group.Store, matching);
+            if (filtered.Certificates.Count > 0)
+                FilteredCertificateGroups.Add(filtered);
         }
     }
 
