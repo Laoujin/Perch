@@ -221,6 +221,7 @@
                                                             IsSuggested="{Binding IsSuggested}"
                                                             KindBadge="{Binding KindBadge}"
                                                             GitHubStarsFormatted="{Binding GitHubStarsFormatted}"
+                                                            IsTopPick="{Binding IsTopPick}"
                                                             Tags="{Binding Tags}"
                                                             ToggleChanged="OnToggleChanged"
                                                             TagClicked="OnTagClicked"

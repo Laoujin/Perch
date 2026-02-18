@@ -193,6 +193,7 @@ public sealed partial class AppsViewModel : ViewModelBase
                 new ObservableCollection<AppCardModel>(
                     g.OrderBy(a => TierSortOrder(a.Tier))
                      .ThenBy(a => StatusSortOrder(a.Status))
+                     .ThenByDescending(a => a.GitHubStars ?? 0)
                      .ThenBy(a => a.DisplayLabel, StringComparer.OrdinalIgnoreCase))));
     }
 
@@ -239,6 +240,46 @@ public sealed partial class AppsViewModel : ViewModelBase
         }
 
         _allApps = allApps.Where(a => !childIds.Contains(a.Id)).ToImmutableArray();
+        ComputeTopPicks(_allApps);
+    }
+
+    private static void ComputeTopPicks(ImmutableArray<AppCardModel> allApps)
+    {
+        var alternativeGroups = new Dictionary<string, List<AppCardModel>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var app in allApps)
+        {
+            if (app.CatalogEntry.Alternatives.IsDefaultOrEmpty)
+                continue;
+
+            var groupKey = string.Join(",", app.CatalogEntry.Alternatives
+                .Append(app.Id)
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase));
+
+            if (!alternativeGroups.TryGetValue(groupKey, out var list))
+            {
+                list = [];
+                alternativeGroups[groupKey] = list;
+            }
+            list.Add(app);
+        }
+
+        foreach (var group in alternativeGroups.Values)
+        {
+            var candidates = group.Where(a => a.Status == CardStatus.NotInstalled).ToList();
+            if (candidates.Count < 2)
+                continue;
+
+            var sorted = candidates
+                .Where(a => a.GitHubStars is > 0)
+                .OrderByDescending(a => a.GitHubStars!.Value)
+                .ToList();
+
+            if (sorted.Count < 2)
+                continue;
+
+            if (sorted[0].GitHubStars!.Value >= sorted[1].GitHubStars!.Value * 2)
+                sorted[0].IsTopPick = true;
+        }
     }
 
     private int GetBroadCategoryPriority(string broadCategory)
