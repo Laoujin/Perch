@@ -55,6 +55,8 @@ app.Configure(config =>
             .WithDescription("List gallery tweaks with their current status");
         tweak.AddCommand<TweakApplyCommand>("apply")
             .WithDescription("Apply a gallery tweak by ID");
+        tweak.AddCommand<TweakRevertCommand>("revert")
+            .WithDescription("Revert a previously applied tweak");
     });
     config.AddCommand<CompletionCommand>("completion")
         .WithDescription("Generate shell completion script");
