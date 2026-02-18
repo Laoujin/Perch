@@ -52,7 +52,14 @@ public sealed class CatalogParser
             ParseConfig(model.Config),
             ParseExtensions(model.Extensions),
             ParseKind(model.Kind),
-            ParseAppOwnedTweaks(model.Tweaks));
+            ParseAppOwnedTweaks(model.Tweaks),
+            ToImmutableTags(model.Profiles),
+            ToImmutableTags(model.Os),
+            model.Hidden,
+            model.License,
+            ToImmutableTags(model.Alternatives),
+            ToImmutableTags(model.Suggests),
+            ToImmutableTags(model.Requires));
 
         return CatalogParseResult<CatalogEntry>.Ok(entry);
     }
@@ -87,7 +94,10 @@ public sealed class CatalogParser
             model.Description,
             model.Logo,
             model.PreviewText,
-            ParseInstall(model.Install));
+            ParseInstall(model.Install),
+            ToImmutableTags(model.Profiles),
+            model.Hidden,
+            model.License);
 
         return CatalogParseResult<FontCatalogEntry>.Ok(entry);
     }
@@ -128,7 +138,11 @@ public sealed class CatalogParser
             model.Script,
             model.UndoScript,
             ToImmutableTags(model.Suggests),
-            ToImmutableTags(model.Requires));
+            ToImmutableTags(model.Requires),
+            ToImmutableTags(model.Alternatives),
+            model.WindowsVersions?.ToImmutableArray() ?? ImmutableArray<int>.Empty,
+            model.Hidden,
+            model.License);
 
         return CatalogParseResult<TweakCatalogEntry>.Ok(entry);
     }
@@ -172,7 +186,9 @@ public sealed class CatalogParser
                 e.Name!,
                 e.Category ?? "Uncategorized",
                 ToImmutableTags(e.Tags),
-                ParseKind(e.Kind)))
+                ParseKind(e.Kind),
+                ToImmutableTags(e.Profiles),
+                e.Hidden))
             .ToImmutableArray();
     }
 
@@ -185,7 +201,7 @@ public sealed class CatalogParser
         model == null ? null : new CatalogLinks(model.Website, model.Docs, model.GitHub);
 
     private static InstallDefinition? ParseInstall(InstallYamlModel? model) =>
-        model == null ? null : new InstallDefinition(model.Winget, model.Choco);
+        model == null ? null : new InstallDefinition(model.Winget, model.Choco, model.DotnetTool, model.NodePackage);
 
     private static CatalogConfigDefinition? ParseConfig(CatalogConfigYamlModel? model)
     {
@@ -287,6 +303,8 @@ public sealed class CatalogParser
     private static CatalogKind ParseKind(string? kind) =>
         kind?.ToLowerInvariant() switch
         {
+            "cli-tool" => CatalogKind.CliTool,
+            "runtime" => CatalogKind.Runtime,
             "dotfile" => CatalogKind.Dotfile,
             _ => CatalogKind.App,
         };

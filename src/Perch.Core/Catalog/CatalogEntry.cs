@@ -8,6 +8,8 @@ namespace Perch.Core.Catalog;
 public enum CatalogKind
 {
     App,
+    CliTool,
+    Runtime,
     Dotfile,
 }
 
@@ -24,11 +26,22 @@ public sealed record CatalogEntry(
     CatalogConfigDefinition? Config,
     CatalogExtensions? Extensions,
     CatalogKind Kind = CatalogKind.App,
-    ImmutableArray<AppOwnedTweak> Tweaks = default);
+    ImmutableArray<AppOwnedTweak> Tweaks = default,
+    ImmutableArray<string> Profiles = default,
+    ImmutableArray<string> Os = default,
+    bool Hidden = false,
+    string? License = null,
+    ImmutableArray<string> Alternatives = default,
+    ImmutableArray<string> Suggests = default,
+    ImmutableArray<string> Requires = default);
 
 public sealed record CatalogLinks(string? Website, string? Docs, string? GitHub);
 
-public sealed record InstallDefinition(string? Winget, string? Choco);
+public sealed record InstallDefinition(
+    string? Winget,
+    string? Choco,
+    string? DotnetTool = null,
+    string? NodePackage = null);
 
 public sealed record CatalogConfigDefinition(
     ImmutableArray<CatalogConfigLink> Links,

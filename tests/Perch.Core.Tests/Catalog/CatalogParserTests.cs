@@ -690,4 +690,233 @@ public sealed class CatalogParserTests
             Assert.That(tweak.UndoScript, Does.Contain("Remove-Item"));
         });
     }
+
+    [Test]
+    public void ParseApp_WithAllNewSchemaFields_ParsesCorrectly()
+    {
+        string yaml = """
+            name: Visual Studio Code
+            kind: app
+            category: Development/IDEs
+            tags: [editor, ide]
+            description: Source code editor
+            profiles: [developer, power-user]
+            os: [windows, linux, macos]
+            hidden: false
+            license: MIT
+            install:
+              winget: Microsoft.VisualStudio.Code
+              choco: vscode
+            alternatives: [sublimetext, notepadplusplus]
+            suggests: [git, windows-terminal]
+            requires: [dotnet-sdk]
+            """;
+
+        var result = _parser.ParseApp(yaml, "vscode");
+
+        Assert.That(result.IsSuccess, Is.True);
+        var entry = result.Value!;
+        Assert.Multiple(() =>
+        {
+            Assert.That(entry.Kind, Is.EqualTo(CatalogKind.App));
+            Assert.That(entry.Profiles, Is.EqualTo(new[] { "developer", "power-user" }));
+            Assert.That(entry.Os, Is.EqualTo(new[] { "windows", "linux", "macos" }));
+            Assert.That(entry.Hidden, Is.False);
+            Assert.That(entry.License, Is.EqualTo("MIT"));
+            Assert.That(entry.Alternatives, Is.EqualTo(new[] { "sublimetext", "notepadplusplus" }));
+            Assert.That(entry.Suggests, Is.EqualTo(new[] { "git", "windows-terminal" }));
+            Assert.That(entry.Requires, Is.EqualTo(new[] { "dotnet-sdk" }));
+        });
+    }
+
+    [Test]
+    public void ParseApp_WithoutNewFields_DefaultsAreCorrect()
+    {
+        string yaml = """
+            name: TestApp
+            category: Test
+            """;
+
+        var result = _parser.ParseApp(yaml, "testapp");
+
+        Assert.That(result.IsSuccess, Is.True);
+        var entry = result.Value!;
+        Assert.Multiple(() =>
+        {
+            Assert.That(entry.Profiles, Is.Empty);
+            Assert.That(entry.Os, Is.Empty);
+            Assert.That(entry.Hidden, Is.False);
+            Assert.That(entry.License, Is.Null);
+            Assert.That(entry.Alternatives, Is.Empty);
+            Assert.That(entry.Suggests, Is.Empty);
+            Assert.That(entry.Requires, Is.Empty);
+        });
+    }
+
+    [Test]
+    public void ParseApp_WithHiddenTrue_SetsHidden()
+    {
+        string yaml = """
+            name: PuTTY
+            category: Networking
+            hidden: true
+            """;
+
+        var result = _parser.ParseApp(yaml, "putty");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.Hidden, Is.True);
+    }
+
+    [TestCase("cli-tool", CatalogKind.CliTool)]
+    [TestCase("runtime", CatalogKind.Runtime)]
+    [TestCase("dotfile", CatalogKind.Dotfile)]
+    [TestCase("app", CatalogKind.App)]
+    [TestCase(null, CatalogKind.App)]
+    public void ParseApp_KindValues_ParseCorrectly(string? kind, CatalogKind expected)
+    {
+        string yaml = kind != null
+            ? $"""
+                name: TestApp
+                kind: {kind}
+                """
+            : """
+                name: TestApp
+                """;
+
+        var result = _parser.ParseApp(yaml, "testapp");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.Kind, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void ParseApp_InstallWithDotnetToolAndNodePackage_ParsesCorrectly()
+    {
+        string yaml = """
+            name: dotnet-ef
+            kind: cli-tool
+            category: Development/.NET
+            install:
+              dotnet-tool: dotnet-ef
+            """;
+
+        var result = _parser.ParseApp(yaml, "dotnet-ef");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Value!.Install!.DotnetTool, Is.EqualTo("dotnet-ef"));
+            Assert.That(result.Value!.Install.Winget, Is.Null);
+            Assert.That(result.Value!.Install.Choco, Is.Null);
+            Assert.That(result.Value!.Install.NodePackage, Is.Null);
+        });
+    }
+
+    [Test]
+    public void ParseApp_InstallWithNodePackage_ParsesCorrectly()
+    {
+        string yaml = """
+            name: TypeScript
+            kind: cli-tool
+            category: Development/Node
+            install:
+              node-package: typescript
+            """;
+
+        var result = _parser.ParseApp(yaml, "typescript");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.Install!.NodePackage, Is.EqualTo("typescript"));
+    }
+
+    [Test]
+    public void ParseFont_WithNewFields_ParsesCorrectly()
+    {
+        string yaml = """
+            name: Fira Code
+            category: Fonts/Programming
+            tags: [monospace, ligatures]
+            profiles: [developer]
+            hidden: false
+            license: OFL-1.1
+            install:
+              choco: firacode
+            """;
+
+        var result = _parser.ParseFont(yaml, "fira-code");
+
+        Assert.That(result.IsSuccess, Is.True);
+        var entry = result.Value!;
+        Assert.Multiple(() =>
+        {
+            Assert.That(entry.Profiles, Is.EqualTo(new[] { "developer" }));
+            Assert.That(entry.Hidden, Is.False);
+            Assert.That(entry.License, Is.EqualTo("OFL-1.1"));
+        });
+    }
+
+    [Test]
+    public void ParseTweak_WithAlternativesAndWindowsVersions_ParsesCorrectly()
+    {
+        string yaml = """
+            name: Dark Mode
+            category: Appearance/Theme
+            tags: [theme]
+            reversible: true
+            profiles: [developer, power-user]
+            hidden: false
+            license: null
+            alternatives: [light-mode]
+            windows-versions: [10, 11]
+            registry:
+              - key: HKCU\Software\Test
+                name: DarkMode
+                value: 1
+                type: dword
+            """;
+
+        var result = _parser.ParseTweak(yaml, "dark-mode");
+
+        Assert.That(result.IsSuccess, Is.True);
+        var entry = result.Value!;
+        Assert.Multiple(() =>
+        {
+            Assert.That(entry.Alternatives, Is.EqualTo(new[] { "light-mode" }));
+            Assert.That(entry.WindowsVersions, Is.EqualTo(new[] { 10, 11 }));
+            Assert.That(entry.Hidden, Is.False);
+        });
+    }
+
+    [Test]
+    public void ParseIndex_WithProfilesAndHidden_ParsesCorrectly()
+    {
+        string yaml = """
+            apps:
+              - id: vscode
+                name: VS Code
+                category: Development
+                tags: [editor]
+                profiles: [developer]
+                hidden: false
+              - id: putty
+                name: PuTTY
+                category: Networking
+                tags: [ssh]
+                hidden: true
+            fonts: []
+            tweaks: []
+            """;
+
+        var result = _parser.ParseIndex(yaml);
+
+        Assert.That(result.IsSuccess, Is.True);
+        var index = result.Value!;
+        Assert.Multiple(() =>
+        {
+            Assert.That(index.Apps[0].Profiles, Is.EqualTo(new[] { "developer" }));
+            Assert.That(index.Apps[0].Hidden, Is.False);
+            Assert.That(index.Apps[1].Hidden, Is.True);
+        });
+    }
 }

@@ -16,4 +16,8 @@ public sealed record TweakCatalogEntry(
     string? Script = null,
     string? UndoScript = null,
     ImmutableArray<string> Suggests = default,
-    ImmutableArray<string> Requires = default);
+    ImmutableArray<string> Requires = default,
+    ImmutableArray<string> Alternatives = default,
+    ImmutableArray<int> WindowsVersions = default,
+    bool Hidden = false,
+    string? License = null);

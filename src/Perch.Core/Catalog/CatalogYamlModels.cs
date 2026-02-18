@@ -14,11 +14,18 @@ internal sealed class AppCatalogYamlModel
     public string? Description { get; set; }
     public string? Logo { get; set; }
     public string? Kind { get; set; }
+    public List<string>? Profiles { get; set; }
+    public List<string>? Os { get; set; }
+    public bool Hidden { get; set; }
+    public string? License { get; set; }
     public CatalogLinksYamlModel? Links { get; set; }
     public InstallYamlModel? Install { get; set; }
     public CatalogConfigYamlModel? Config { get; set; }
     public CatalogExtensionsYamlModel? Extensions { get; set; }
     public List<AppOwnedTweakYamlModel>? Tweaks { get; set; }
+    public List<string>? Alternatives { get; set; }
+    public List<string>? Suggests { get; set; }
+    public List<string>? Requires { get; set; }
 }
 
 internal sealed class FontCatalogYamlModel
@@ -28,6 +35,9 @@ internal sealed class FontCatalogYamlModel
     public List<string>? Tags { get; set; }
     public string? Description { get; set; }
     public string? Logo { get; set; }
+    public List<string>? Profiles { get; set; }
+    public bool Hidden { get; set; }
+    public string? License { get; set; }
 
     [YamlMember(Alias = "preview-text")]
     public string? PreviewText { get; set; }
@@ -43,6 +53,8 @@ internal sealed class TweakCatalogYamlModel
     public string? Description { get; set; }
     public bool Reversible { get; set; }
     public List<string>? Profiles { get; set; }
+    public bool Hidden { get; set; }
+    public string? License { get; set; }
     public List<TweakRegistryYamlModel>? Registry { get; set; }
     public string? Script { get; set; }
 
@@ -51,6 +63,10 @@ internal sealed class TweakCatalogYamlModel
 
     public List<string>? Suggests { get; set; }
     public List<string>? Requires { get; set; }
+    public List<string>? Alternatives { get; set; }
+
+    [YamlMember(Alias = "windows-versions")]
+    public List<int>? WindowsVersions { get; set; }
 }
 
 internal sealed class AppOwnedTweakYamlModel
@@ -76,6 +92,12 @@ internal sealed class InstallYamlModel
 {
     public string? Winget { get; set; }
     public string? Choco { get; set; }
+
+    [YamlMember(Alias = "dotnet-tool")]
+    public string? DotnetTool { get; set; }
+
+    [YamlMember(Alias = "node-package")]
+    public string? NodePackage { get; set; }
 }
 
 internal sealed class CatalogConfigYamlModel
@@ -146,4 +168,6 @@ internal sealed class CatalogIndexEntryYamlModel
     public string? Category { get; set; }
     public List<string>? Tags { get; set; }
     public string? Kind { get; set; }
+    public List<string>? Profiles { get; set; }
+    public bool Hidden { get; set; }
 }

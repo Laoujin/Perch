@@ -10,4 +10,7 @@ public sealed record FontCatalogEntry(
     string? Description,
     string? Logo,
     string? PreviewText,
-    InstallDefinition? Install);
+    InstallDefinition? Install,
+    ImmutableArray<string> Profiles = default,
+    bool Hidden = false,
+    string? License = null);

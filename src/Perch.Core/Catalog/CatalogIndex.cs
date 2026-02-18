@@ -12,4 +12,6 @@ public sealed record CatalogIndexEntry(
     string Name,
     string Category,
     ImmutableArray<string> Tags,
-    CatalogKind Kind = CatalogKind.App);
+    CatalogKind Kind = CatalogKind.App,
+    ImmutableArray<string> Profiles = default,
+    bool Hidden = false);
