@@ -4,11 +4,13 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 using Perch.Core.Catalog;
 using Perch.Core.Modules;
+using Perch.Core.Tweaks;
 
 namespace Perch.Desktop.Models;
 
 public partial class TweakCardModel : ObservableObject
 {
+    public TweakCatalogEntry CatalogEntry { get; }
     public string Id { get; }
     public string Name { get; }
     public string Category { get; }
@@ -33,12 +35,17 @@ public partial class TweakCardModel : ObservableObject
     [ObservableProperty]
     private bool _isSuggested;
 
+    [ObservableProperty]
+    private ImmutableArray<RegistryEntryStatus> _detectedEntries;
+
     public int TotalCount => Registry.Length;
     public bool RestartRequired => Tags.Any(t => string.Equals(t, "restart", StringComparison.OrdinalIgnoreCase));
     public string RegistryKeyCountText => TotalCount == 1 ? "1 registry key" : $"{TotalCount} registry keys";
+    public bool IsAllApplied => AppliedCount == TotalCount && TotalCount > 0;
 
     public TweakCardModel(TweakCatalogEntry entry, CardStatus status)
     {
+        CatalogEntry = entry;
         Id = entry.Id;
         Name = entry.Name;
         Category = entry.Category;

@@ -18,6 +18,7 @@
             <converters:IndexToVisibilityConverter x:Key="IndexToVisibilityConverter" />
             <converters:BooleanToBorderBrushConverter x:Key="BooleanToBorderBrushConverter" />
             <converters:BooleanToChevronConverter x:Key="BooleanToChevronConverter" />
+            <converters:BooleanToForegroundConverter x:Key="BooleanToForegroundConverter" />
             <converters:PathEllipsisConverter x:Key="PathEllipsisConverter" />
             <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
         </ResourceDictionary>

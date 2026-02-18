@@ -55,6 +55,24 @@ public partial class SystemTweaksPage : Page
             tweak.IsExpanded = !tweak.IsExpanded;
     }
 
+    private void OnApplyTweakClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: TweakCardModel card })
+            ViewModel.ApplyTweakCommand.Execute(card);
+    }
+
+    private void OnRevertTweakClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: TweakCardModel card })
+            ViewModel.RevertTweakCommand.Execute(card);
+    }
+
+    private void OnOpenRegeditClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: TweakCardModel card })
+            ViewModel.OpenRegeditCommand.Execute(card);
+    }
+
     private void OnGroupExpandClick(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: FontFamilyGroupModel group })

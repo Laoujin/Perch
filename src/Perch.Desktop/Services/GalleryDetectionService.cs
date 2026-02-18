@@ -200,6 +200,7 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
 
             var model = new TweakCardModel(tweak, status);
             model.AppliedCount = detection.Entries.Count(e => e.IsApplied);
+            model.DetectedEntries = detection.Entries;
 
             if (model.MatchesProfile(selectedProfiles))
             {

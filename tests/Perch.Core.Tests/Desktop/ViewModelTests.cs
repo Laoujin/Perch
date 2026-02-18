@@ -9,8 +9,10 @@ using Perch.Core.Catalog;
 using Perch.Core.Config;
 using Perch.Core.Deploy;
 using Perch.Core.Modules;
+using Perch.Core.Registry;
 using Perch.Core.Startup;
 using Perch.Core.Symlinks;
+using Perch.Core.Tweaks;
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
 using Perch.Desktop.ViewModels;
@@ -600,6 +602,7 @@ public sealed class SystemTweaksViewModelTests
     private IGalleryDetectionService _detectionService = null!;
     private ISettingsProvider _settingsProvider = null!;
     private IStartupService _startupService = null!;
+    private ITweakService _tweakService = null!;
     private SystemTweaksViewModel _vm = null!;
 
     [SetUp]
@@ -608,6 +611,7 @@ public sealed class SystemTweaksViewModelTests
         _detectionService = Substitute.For<IGalleryDetectionService>();
         _settingsProvider = Substitute.For<ISettingsProvider>();
         _startupService = Substitute.For<IStartupService>();
+        _tweakService = Substitute.For<ITweakService>();
 
         _settingsProvider.LoadAsync(Arg.Any<CancellationToken>())
             .Returns(new PerchSettings { Profiles = ["Developer"] });
@@ -621,7 +625,7 @@ public sealed class SystemTweaksViewModelTests
         _startupService.GetAllAsync(Arg.Any<CancellationToken>())
             .Returns(Array.Empty<StartupEntry>());
 
-        _vm = new SystemTweaksViewModel(_detectionService, _settingsProvider, _startupService);
+        _vm = new SystemTweaksViewModel(_detectionService, _settingsProvider, _startupService, _tweakService);
     }
 
     [Test]
@@ -969,6 +973,68 @@ public sealed class SystemTweaksViewModelTests
     }
 
     [Test]
+    public void ApplyTweak_CallsServiceAndRefreshesCard()
+    {
+        var reg = ImmutableArray.Create(new RegistryEntryDefinition("HKCU\\Test", "Val", 0, RegistryValueType.DWord));
+        var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", [], null, true, [], reg);
+        var card = new TweakCardModel(entry, CardStatus.NotInstalled);
+
+        var appliedDetection = new TweakDetectionResult(
+            TweakStatus.Applied,
+            ImmutableArray.Create(new RegistryEntryStatus(reg[0], 0, true)));
+        _tweakService.Apply(entry).Returns(new TweakOperationResult(ResultLevel.Ok, []));
+        _tweakService.Detect(entry).Returns(appliedDetection);
+
+        _vm.ApplyTweakCommand.Execute(card);
+
+        _tweakService.Received(1).Apply(entry);
+        Assert.That(card.Status, Is.EqualTo(CardStatus.Detected));
+        Assert.That(card.AppliedCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void RevertTweak_CallsServiceAndRefreshesCard()
+    {
+        var reg = ImmutableArray.Create(new RegistryEntryDefinition("HKCU\\Test", "Val", 0, RegistryValueType.DWord, 1));
+        var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", [], null, true, [], reg);
+        var card = new TweakCardModel(entry, CardStatus.Detected);
+
+        var revertedDetection = new TweakDetectionResult(
+            TweakStatus.NotApplied,
+            ImmutableArray.Create(new RegistryEntryStatus(reg[0], 1, false)));
+        _tweakService.Revert(entry).Returns(new TweakOperationResult(ResultLevel.Ok, []));
+        _tweakService.Detect(entry).Returns(revertedDetection);
+
+        _vm.RevertTweakCommand.Execute(card);
+
+        _tweakService.Received(1).Revert(entry);
+        Assert.That(card.Status, Is.EqualTo(CardStatus.NotInstalled));
+        Assert.That(card.AppliedCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void TweakCardModel_IsAllApplied_WhenAllEntriesApplied()
+    {
+        var reg = ImmutableArray.Create(new RegistryEntryDefinition("HKCU\\Test", "Val", 0, RegistryValueType.DWord));
+        var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", [], null, true, [], reg);
+        var card = new TweakCardModel(entry, CardStatus.Detected) { AppliedCount = 1 };
+
+        Assert.That(card.IsAllApplied, Is.True);
+    }
+
+    [Test]
+    public void TweakCardModel_IsAllApplied_FalseWhenPartial()
+    {
+        var reg = ImmutableArray.Create(
+            new RegistryEntryDefinition("HKCU\\Test", "Val1", 0, RegistryValueType.DWord),
+            new RegistryEntryDefinition("HKCU\\Test", "Val2", 1, RegistryValueType.DWord));
+        var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", [], null, true, [], reg);
+        var card = new TweakCardModel(entry, CardStatus.Drift) { AppliedCount = 1 };
+
+        Assert.That(card.IsAllApplied, Is.False);
+    }
+
+    [Test]
     public void TweakCardModel_RestartRequired_TrueWhenTagged()
     {
         var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", ["restart"], null, true, [], []);
@@ -989,7 +1055,7 @@ public sealed class SystemTweaksViewModelTests
     [Test]
     public void TweakCardModel_RegistryKeyCountText_Singular()
     {
-        var reg = ImmutableArray.Create(new RegistryEntryDefinition("HKCU\\Test", "Val", 0, Perch.Core.Registry.RegistryValueType.DWord));
+        var reg = ImmutableArray.Create(new RegistryEntryDefinition("HKCU\\Test", "Val", 0, RegistryValueType.DWord));
         var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", [], null, true, [], reg);
         var card = new TweakCardModel(entry, CardStatus.Detected);
 
@@ -1000,8 +1066,8 @@ public sealed class SystemTweaksViewModelTests
     public void TweakCardModel_RegistryKeyCountText_Plural()
     {
         var reg = ImmutableArray.Create(
-            new RegistryEntryDefinition("HKCU\\Test", "Val1", 0, Perch.Core.Registry.RegistryValueType.DWord),
-            new RegistryEntryDefinition("HKCU\\Test", "Val2", 1, Perch.Core.Registry.RegistryValueType.DWord));
+            new RegistryEntryDefinition("HKCU\\Test", "Val1", 0, RegistryValueType.DWord),
+            new RegistryEntryDefinition("HKCU\\Test", "Val2", 1, RegistryValueType.DWord));
         var entry = new TweakCatalogEntry("t1", "Tweak", "Explorer", [], null, true, [], reg);
         var card = new TweakCardModel(entry, CardStatus.Detected);
 

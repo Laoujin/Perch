@@ -1,10 +1,12 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Perch.Core.Config;
 using Perch.Core.Startup;
+using Perch.Core.Tweaks;
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
 
@@ -15,6 +17,7 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     private readonly IGalleryDetectionService _detectionService;
     private readonly ISettingsProvider _settingsProvider;
     private readonly IStartupService _startupService;
+    private readonly ITweakService _tweakService;
 
     private const int MinSubCategorySize = 3;
 
@@ -66,11 +69,13 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     public SystemTweaksViewModel(
         IGalleryDetectionService detectionService,
         ISettingsProvider settingsProvider,
-        IStartupService startupService)
+        IStartupService startupService,
+        ITweakService tweakService)
     {
         _detectionService = detectionService;
         _settingsProvider = settingsProvider;
         _startupService = startupService;
+        _tweakService = tweakService;
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -326,6 +331,43 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
         await _startupService.RemoveAsync(card.Entry);
         StartupItems.Remove(card);
         FilteredStartupItems.Remove(card);
+    }
+
+    [RelayCommand]
+    private void ApplyTweak(TweakCardModel card)
+    {
+        var result = _tweakService.Apply(card.CatalogEntry);
+        RefreshTweakCard(card);
+    }
+
+    [RelayCommand]
+    private void RevertTweak(TweakCardModel card)
+    {
+        var result = _tweakService.Revert(card.CatalogEntry);
+        RefreshTweakCard(card);
+    }
+
+    [RelayCommand]
+    private static void OpenRegedit(TweakCardModel card)
+    {
+        if (card.Registry.IsDefaultOrEmpty)
+            return;
+
+        var key = card.Registry[0].Key;
+        Process.Start("regedit", $"/m \"{key}\"");
+    }
+
+    private void RefreshTweakCard(TweakCardModel card)
+    {
+        var detection = _tweakService.Detect(card.CatalogEntry);
+        card.DetectedEntries = detection.Entries;
+        card.AppliedCount = detection.Entries.Count(e => e.IsApplied);
+        card.Status = detection.Status switch
+        {
+            TweakStatus.Applied => CardStatus.Detected,
+            TweakStatus.Partial => CardStatus.Drift,
+            _ => CardStatus.NotInstalled,
+        };
     }
 
     private void BuildFontGroups()
