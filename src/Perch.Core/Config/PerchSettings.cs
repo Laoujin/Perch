@@ -8,4 +8,5 @@ public sealed record PerchSettings
     public string GalleryUrl { get; init; } = DefaultGalleryUrl;
     public string? GalleryLocalPath { get; init; }
     public List<string>? Profiles { get; init; }
+    public bool DisableGalleryCache { get; init; }
 }
