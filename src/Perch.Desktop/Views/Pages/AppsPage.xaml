@@ -59,9 +59,14 @@
             Margin="0,16,0,0"
             VerticalAlignment="Top"
             Visibility="{Binding ErrorMessage, Converter={StaticResource CountToVisibilityConverter}}">
-            <StackPanel Orientation="Horizontal">
-                <ui:SymbolIcon Symbol="ErrorCircle24" FontSize="16" Foreground="#DC2626" Margin="0,0,8,0" />
-                <TextBlock Text="{Binding ErrorMessage}" Foreground="#DC2626" FontSize="12" TextWrapping="Wrap" />
+            <StackPanel HorizontalAlignment="Center" MaxWidth="500">
+                <Image Source="/Assets/wizard-error.png" Width="480" Height="480" Margin="0,0,0,16"
+                       Stretch="Uniform" HorizontalAlignment="Center" />
+                <TextBlock Text="Failed to load apps" FontSize="16" FontWeight="SemiBold"
+                           Foreground="#EF4444" HorizontalAlignment="Center" Margin="0,0,0,8" />
+                <ui:TextBox Text="{Binding ErrorMessage, Mode=OneWay}" IsReadOnly="True"
+                            Foreground="#DC2626" FontSize="12"
+                            Margin="0" />
             </StackPanel>
         </Border>
 
