@@ -69,7 +69,7 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     public ObservableCollection<string> AvailableProfileFilters { get; } = [];
     public ObservableCollection<CertificateCardModel> CertificateItems { get; } = [];
     public ObservableCollection<CertificateStoreGroupModel> FilteredCertificateGroups { get; } = [];
-    public ObservableCollection<string> AvailableCertificateExpiryFilters { get; } = ["All", "Valid", "Expiring Soon", "Expired"];
+    public ObservableCollection<string> AvailableCertificateExpiryFilters { get; } = [];
 
     private List<FontFamilyGroupModel> _allInstalledFontGroups = [];
     private List<CertificateStoreGroupModel> _allCertificateGroups = [];
@@ -511,6 +511,16 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
             .Select(g => new CertificateStoreGroupModel(g.Key,
                 g.OrderBy(c => c.SubjectDisplayName, StringComparer.OrdinalIgnoreCase)))
             .ToList();
+
+        var statuses = CertificateItems.Select(c => c.ExpiryStatus).ToHashSet();
+        AvailableCertificateExpiryFilters.Clear();
+        AvailableCertificateExpiryFilters.Add("All");
+        if (statuses.Contains(CertificateExpiryStatus.Valid))
+            AvailableCertificateExpiryFilters.Add("Valid");
+        if (statuses.Contains(CertificateExpiryStatus.ExpiringSoon))
+            AvailableCertificateExpiryFilters.Add("Expiring Soon");
+        if (statuses.Contains(CertificateExpiryStatus.Expired))
+            AvailableCertificateExpiryFilters.Add("Expired");
 
         ApplyCertificateFilter();
     }
