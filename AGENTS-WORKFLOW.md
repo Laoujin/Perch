@@ -1,6 +1,7 @@
 # Perch Agent Workflow: Issue-to-PR Pipeline
 
 Step-by-step workflow for autonomous Claude sessions working on Perch issues.
+Use the `/fix-issue` skill to run this automatically.
 
 ---
 
@@ -19,8 +20,7 @@ Repeat this cycle for each issue:
 ### 1. Pick an Issue
 
 ```bash
-gh issue list --state open --label "bug" --json number,title
-gh issue list --state open --label "enhancement" --json number,title
+gh issue list --state open --json number,title,labels --limit 20
 ```
 
 Pick the lowest-numbered unblocked issue. Read it fully:
@@ -40,14 +40,6 @@ git worktree add ../perch-issue-<NUMBER> -b issue-<NUMBER>-<short-slug>
 cd ../perch-issue-<NUMBER>
 ```
 
-If a worktree slot (like `perch-2`) is available and empty, reuse it:
-
-```bash
-git worktree remove ../perch-2 --force  # only if stale
-git worktree add ../perch-2 -b issue-<NUMBER>-<short-slug>
-cd ../perch-2
-```
-
 ### 3. Implement the Fix
 
 - Read the relevant code before changing it
@@ -58,78 +50,54 @@ cd ../perch-2
 
 ### 4. Smoke Test with Screenshots
 
-After the implementation is complete, take screenshots to verify the UI:
+If the change touches Perch.Desktop, run smoke tests:
 
 ```bash
-# Run the full page screenshot suite
-dotnet test tests/Perch.SmokeTests --filter PageScreenshotTests
-
-# Or run a targeted smoke test if you wrote one for this issue
-dotnet test tests/Perch.SmokeTests --filter <TestName>
+dotnet test tests/Perch.SmokeTests/Perch.SmokeTests.csproj --filter PageScreenshotTests -v q
 ```
 
 Screenshots are saved to `tests/Perch.SmokeTests/screenshots/`.
 
-**Review the screenshots yourself** using the Read tool (it can display images). Verify:
+**Review the screenshots yourself** using the Read tool (it displays images). Verify:
 - The page renders correctly
 - The fix is visually present
 - No obvious regressions on other pages
 
 If something looks wrong, fix it and re-screenshot.
 
-### 5. Embed Screenshots in the Branch
+**Do NOT commit screenshots.** They are for local review only.
 
-To make screenshots visible in the PR on GitHub:
+### 5. Show Screenshots to the User
 
-```bash
-# Force-add screenshots to the branch (they're .gitignored)
-git add -f tests/Perch.SmokeTests/screenshots/*.png
-git commit -m "Add smoke test screenshots for PR"
-```
-
-Build the image URLs using the branch name:
-```
-https://raw.githubusercontent.com/Laoujin/Perch/<branch>/tests/Perch.SmokeTests/screenshots/<name>.png
-```
+Display the relevant screenshot(s) using the Read tool. Summarize what you see.
 
 ### 6. Create the PR
 
 ```bash
-# Push the branch
 git push -u origin issue-<NUMBER>-<short-slug>
-```
-
-Create the PR with embedded screenshot images. Use `![alt](url)` markdown with raw.githubusercontent.com URLs so they render inline:
-
-```bash
-BRANCH="issue-<NUMBER>-<short-slug>"
-BASE="https://raw.githubusercontent.com/Laoujin/Perch/$BRANCH/tests/Perch.SmokeTests/screenshots"
 
 gh pr create \
   --title "<imperative summary, max 72 chars>" \
-  --body "$(cat <<EOF
+  --body "$(cat <<'EOF'
 ## Summary
-- <what changed and why>
+- <what changed and why -- 2-4 bullets>
 - Closes #<NUMBER>
 
-## Screenshots
-![relevant-page]($BASE/<screenshot-name>.png)
-
 ## Test Plan
+- [x] `dotnet build` -- zero warnings
+- [x] `dotnet test` -- all pass
 - [x] Smoke test screenshots reviewed
-- [x] \`dotnet build\` -- zero warnings
-- [x] \`dotnet test\` -- all pass
 EOF
 )"
 ```
 
-### 7. Show Results to the User
+### 7. Open in Browser
 
-After creating the PR:
-1. Show the PR URL
-2. Display the relevant screenshots using the Read tool
-3. Summarize what was changed
-4. Open the PR in the browser: `start <PR_URL>` (Windows)
+```bash
+start <PR_URL>
+```
+
+Report the PR URL and what was changed.
 
 ### 8. Clean Up and Repeat
 
@@ -174,7 +142,6 @@ public sealed class Issue42_DescriptiveNameTests
     {
         _perch.NavigateTo("Apps");
         Thread.Sleep(2000);
-        // Interact with elements via FlaUI
         var badge = _perch.MainWindow.FindFirstByXPath("...");
         Assert.That(badge, Is.Not.Null);
         _perch.ScreenshotWindow("issue-42-apps-badge");
