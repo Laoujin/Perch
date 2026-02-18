@@ -148,11 +148,8 @@ public sealed partial class AppsViewModel : ViewModelBase
 
     private static int StatusSortOrder(CardStatus status) => status switch
     {
-        CardStatus.Drift => 0,
-        CardStatus.Broken => 0,
-        CardStatus.Detected => 1,
-        CardStatus.Linked => 2,
-        _ => 3,
+        CardStatus.Drift or CardStatus.Broken => 0,
+        _ => 1,
     };
 
     [RelayCommand]
