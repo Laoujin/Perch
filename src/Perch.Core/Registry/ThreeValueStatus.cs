@@ -6,5 +6,6 @@ public enum ThreeValueStatus
     Drifted,
     NotApplied,
     Reverted,
+    AtCaptured,
     Error,
 }

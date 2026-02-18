@@ -24,6 +24,10 @@ public sealed class TweakRevertCommand : AsyncCommand<TweakRevertCommand.Setting
         [CommandOption("--dry-run")]
         [Description("Show what would be changed without writing")]
         public bool DryRun { get; init; }
+
+        [CommandOption("--to-captured")]
+        [Description("Revert to the captured (pre-Perch) state instead of Windows defaults")]
+        public bool ToCaptured { get; init; }
     }
 
     public TweakRevertCommand(ICatalogService catalog, ITweakService tweakService, IAnsiConsole console)
@@ -52,7 +56,9 @@ public sealed class TweakRevertCommand : AsyncCommand<TweakRevertCommand.Setting
             _console.MarkupLine($"[yellow]Dry run:[/] {tweak.Name.EscapeMarkup()}");
         }
 
-        var result = _tweakService.Revert(tweak, settings.DryRun);
+        TweakOperationResult result = settings.ToCaptured
+            ? await _tweakService.RevertToCapturedAsync(tweak, settings.DryRun, cancellationToken)
+            : _tweakService.Revert(tweak, settings.DryRun);
 
         foreach (var entry in result.Entries)
         {

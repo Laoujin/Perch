@@ -5,4 +5,5 @@ namespace Perch.Core.Registry;
 public sealed record RegistryThreeValueResult(
     RegistryEntryDefinition Entry,
     ThreeValueStatus Status,
-    object? CurrentValue);
+    object? CurrentValue,
+    string? CapturedValue = null);

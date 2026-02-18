@@ -134,4 +134,55 @@ public sealed class ThreeValueServiceTests
 
         Assert.That(results[0].Status, Is.EqualTo(ThreeValueStatus.NotApplied));
     }
+
+    [Test]
+    public void Evaluate_CurrentMatchesCaptured_ReturnsAtCaptured()
+    {
+        var entry = new RegistryEntryDefinition("HKCU\\Test", "Value", 0, RegistryValueType.DWord, 1);
+        _registry.GetValue("HKCU\\Test", "Value").Returns(42);
+
+        var captured = new Dictionary<string, string?> { [@"HKCU\Test\Value"] = "42" };
+        var results = _service.Evaluate([entry], captured);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(results[0].Status, Is.EqualTo(ThreeValueStatus.AtCaptured));
+            Assert.That(results[0].CapturedValue, Is.EqualTo("42"));
+        });
+    }
+
+    [Test]
+    public void Evaluate_DesiredTakesPrecedenceOverCaptured()
+    {
+        var entry = new RegistryEntryDefinition("HKCU\\Test", "Value", 0, RegistryValueType.DWord, 1);
+        _registry.GetValue("HKCU\\Test", "Value").Returns(0);
+
+        var captured = new Dictionary<string, string?> { [@"HKCU\Test\Value"] = "0" };
+        var results = _service.Evaluate([entry], captured);
+
+        Assert.That(results[0].Status, Is.EqualTo(ThreeValueStatus.Applied));
+    }
+
+    [Test]
+    public void Evaluate_DefaultTakesPrecedenceOverCaptured()
+    {
+        var entry = new RegistryEntryDefinition("HKCU\\Test", "Value", 0, RegistryValueType.DWord, 1);
+        _registry.GetValue("HKCU\\Test", "Value").Returns(1);
+
+        var captured = new Dictionary<string, string?> { [@"HKCU\Test\Value"] = "1" };
+        var results = _service.Evaluate([entry], captured);
+
+        Assert.That(results[0].Status, Is.EqualTo(ThreeValueStatus.NotApplied));
+    }
+
+    [Test]
+    public void Evaluate_NoCapturedValues_StillWorks()
+    {
+        var entry = new RegistryEntryDefinition("HKCU\\Test", "Value", 0, RegistryValueType.DWord, 1);
+        _registry.GetValue("HKCU\\Test", "Value").Returns(42);
+
+        var results = _service.Evaluate([entry], null);
+
+        Assert.That(results[0].Status, Is.EqualTo(ThreeValueStatus.Drifted));
+    }
 }

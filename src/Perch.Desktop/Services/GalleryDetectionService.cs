@@ -208,7 +208,7 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         {
             try
             {
-                var detection = _tweakService.Detect(tweak);
+                var detection = await _tweakService.DetectWithCaptureAsync(tweak, cancellationToken);
                 CardStatus status = detection.Status switch
                 {
                     TweakStatus.Applied => CardStatus.Detected,

@@ -374,7 +374,16 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     private void RevertTweak(TweakCardModel card)
     {
         _pendingChanges.Remove(card.Id, PendingChangeKind.ApplyTweak);
+        _pendingChanges.Remove(card.Id, PendingChangeKind.RevertTweakToCaptured);
         _pendingChanges.Add(new RevertTweakChange(card));
+    }
+
+    [RelayCommand]
+    private void RevertTweakToCaptured(TweakCardModel card)
+    {
+        _pendingChanges.Remove(card.Id, PendingChangeKind.ApplyTweak);
+        _pendingChanges.Remove(card.Id, PendingChangeKind.RevertTweak);
+        _pendingChanges.Add(new RevertTweakToCapturedChange(card));
     }
 
     [RelayCommand]

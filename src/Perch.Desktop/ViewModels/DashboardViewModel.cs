@@ -229,6 +229,17 @@ public sealed partial class DashboardViewModel : ViewModelBase
             catch (Exception ex) { errors.Add($"Revert tweak: {ex.Message}"); }
         }
 
+        foreach (var change in changes.Where(c => c.Kind == PendingChangeKind.RevertTweakToCaptured))
+        {
+            try
+            {
+                var tweak = ((RevertTweakToCapturedChange)change).Tweak;
+                await _tweakService.RevertToCapturedAsync(tweak.CatalogEntry, cancellationToken: cancellationToken);
+                applied++;
+            }
+            catch (Exception ex) { errors.Add($"Revert to captured: {ex.Message}"); }
+        }
+
         foreach (var change in changes.Where(c => c.Kind == PendingChangeKind.ToggleStartup))
         {
             try
@@ -279,6 +290,7 @@ public sealed partial class DashboardViewModel : ViewModelBase
             UnlinkAppChange c => new LinkAppChange(c.App),
             ApplyTweakChange c => new RevertTweakChange(c.Tweak),
             RevertTweakChange c => new ApplyTweakChange(c.Tweak),
+            RevertTweakToCapturedChange c => new ApplyTweakChange(c.Tweak),
             ToggleStartupChange c => new ToggleStartupChange(c.Startup, !c.Enable),
             _ => change,
         };

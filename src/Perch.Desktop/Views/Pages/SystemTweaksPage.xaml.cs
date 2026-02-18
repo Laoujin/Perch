@@ -67,6 +67,12 @@ public partial class SystemTweaksPage : Page
             ViewModel.RevertTweakCommand.Execute(card);
     }
 
+    private void OnRevertToCapturedClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: TweakCardModel card })
+            ViewModel.RevertTweakToCapturedCommand.Execute(card);
+    }
+
     private void OnOpenRegeditClick(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: TweakCardModel card })
