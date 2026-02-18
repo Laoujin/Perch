@@ -91,6 +91,44 @@ public sealed class TweakService : ITweakService
 
     public TweakOperationResult Revert(TweakCatalogEntry tweak, bool dryRun = false)
     {
-        throw new NotImplementedException();
+        if (!tweak.Reversible)
+        {
+            return new TweakOperationResult(ResultLevel.Error,
+                [new TweakEntryResult("", "", ResultLevel.Error, "Tweak is not reversible")]);
+        }
+
+        if (tweak.Registry.IsDefaultOrEmpty)
+        {
+            return new TweakOperationResult(ResultLevel.Ok, ImmutableArray<TweakEntryResult>.Empty);
+        }
+
+        var results = ImmutableArray.CreateBuilder<TweakEntryResult>(tweak.Registry.Length);
+
+        foreach (RegistryEntryDefinition entry in tweak.Registry)
+        {
+            if (dryRun)
+            {
+                string action = entry.DefaultValue != null
+                    ? $"Would restore {entry.Name} to {entry.DefaultValue}"
+                    : $"Would delete {entry.Name}";
+                results.Add(new TweakEntryResult(entry.Key, entry.Name, ResultLevel.Ok, action));
+                continue;
+            }
+
+            if (entry.DefaultValue != null)
+            {
+                _registryProvider.SetValue(entry.Key, entry.Name, entry.DefaultValue, entry.Kind);
+                results.Add(new TweakEntryResult(entry.Key, entry.Name, ResultLevel.Ok,
+                    $"Restored {entry.Name} to {entry.DefaultValue}"));
+            }
+            else
+            {
+                _registryProvider.DeleteValue(entry.Key, entry.Name);
+                results.Add(new TweakEntryResult(entry.Key, entry.Name, ResultLevel.Ok,
+                    $"Deleted {entry.Name}"));
+            }
+        }
+
+        return new TweakOperationResult(ResultLevel.Ok, results.MoveToImmutable());
     }
 }
