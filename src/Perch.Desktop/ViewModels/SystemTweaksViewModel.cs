@@ -16,6 +16,8 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     private readonly ISettingsProvider _settingsProvider;
     private readonly IStartupService _startupService;
 
+    private const int MinSubCategorySize = 3;
+
     [ObservableProperty]
     private bool _isLoading;
 
@@ -34,6 +36,14 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     [ObservableProperty]
     private string? _selectedCategory;
 
+    [ObservableProperty]
+    private string? _selectedSubCategory;
+
+    [ObservableProperty]
+    private string? _activeProfileFilter;
+
+    private HashSet<UserProfile> _userProfiles = [UserProfile.Developer, UserProfile.PowerUser];
+
     public ObservableCollection<TweakCardModel> Tweaks { get; } = [];
     public ObservableCollection<TweakCardModel> FilteredTweaks { get; } = [];
     public ObservableCollection<FontCardModel> InstalledFonts { get; } = [];
@@ -41,13 +51,17 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     public ObservableCollection<FontFamilyGroupModel> FilteredInstalledFontGroups { get; } = [];
     public ObservableCollection<FontCardModel> FilteredNerdFonts { get; } = [];
     public ObservableCollection<TweakCategoryCardModel> Categories { get; } = [];
+    public ObservableCollection<TweakCategoryCardModel> SubCategories { get; } = [];
     public ObservableCollection<StartupCardModel> StartupItems { get; } = [];
     public ObservableCollection<StartupCardModel> FilteredStartupItems { get; } = [];
+    public ObservableCollection<string> AvailableProfileFilters { get; } = [];
 
     private List<FontFamilyGroupModel> _allInstalledFontGroups = [];
 
     public bool ShowCategories => SelectedCategory is null;
     public bool ShowDetail => SelectedCategory is not null;
+    public bool ShowSubCategories => SelectedCategory == "System Tweaks" && SelectedSubCategory is null;
+    public bool ShowTweakCards => SelectedCategory == "System Tweaks" && SelectedSubCategory is not null;
 
     public SystemTweaksViewModel(
         IGalleryDetectionService detectionService,
@@ -67,6 +81,14 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(ShowCategories));
         OnPropertyChanged(nameof(ShowDetail));
+        OnPropertyChanged(nameof(ShowSubCategories));
+        OnPropertyChanged(nameof(ShowTweakCards));
+    }
+
+    partial void OnSelectedSubCategoryChanged(string? value)
+    {
+        OnPropertyChanged(nameof(ShowSubCategories));
+        OnPropertyChanged(nameof(ShowTweakCards));
     }
 
     [RelayCommand]
@@ -77,8 +99,8 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
 
         try
         {
-            var profiles = await LoadProfilesAsync(cancellationToken);
-            var tweaksTask = _detectionService.DetectTweaksAsync(profiles, cancellationToken);
+            _userProfiles = await LoadProfilesAsync(cancellationToken);
+            var tweaksTask = _detectionService.DetectTweaksAsync(_userProfiles, cancellationToken);
             var fontsTask = _detectionService.DetectFontsAsync(cancellationToken);
             var startupTask = _startupService.GetAllAsync(cancellationToken);
 
@@ -86,7 +108,10 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
 
             Tweaks.Clear();
             foreach (var tweak in tweaksTask.Result)
+            {
+                tweak.IsSuggested = tweak.MatchesProfile(_userProfiles);
                 Tweaks.Add(tweak);
+            }
 
             var fontResult = fontsTask.Result;
             InstalledFonts.Clear();
@@ -98,6 +123,7 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
             foreach (var entry in startupTask.Result)
                 StartupItems.Add(new StartupCardModel(entry));
 
+            BuildProfileFilters();
             BuildFontGroups();
             RebuildCategories();
             ApplyFilter();
@@ -118,6 +144,21 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
         }
     }
 
+    private void BuildProfileFilters()
+    {
+        AvailableProfileFilters.Clear();
+        AvailableProfileFilters.Add("All");
+        AvailableProfileFilters.Add("Suggested");
+
+        var profileNames = Tweaks
+            .SelectMany(t => t.Profiles)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var profile in profileNames)
+            AvailableProfileFilters.Add(profile);
+    }
+
     private void RebuildCategories()
     {
         Categories.Clear();
@@ -132,16 +173,14 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
                 0));
         }
 
-        var groups = Tweaks.GroupBy(t => t.Category, StringComparer.OrdinalIgnoreCase);
-        foreach (var group in groups.OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase))
+        if (Tweaks.Count > 0)
         {
-            var items = group.ToList();
             Categories.Add(new TweakCategoryCardModel(
-                group.Key,
-                group.Key,
-                description: null,
-                items.Count,
-                items.Count(t => t.IsSelected)));
+                "System Tweaks",
+                "System Tweaks",
+                "Registry tweaks grouped by area",
+                Tweaks.Count,
+                Tweaks.Count(t => t.IsSelected)));
         }
 
         var fontCount = InstalledFonts.Count + NerdFonts.Count;
@@ -156,28 +195,121 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
         }
     }
 
+    private void RebuildSubCategories()
+    {
+        SubCategories.Clear();
+
+        var tweaksForFilter = GetProfileFilteredTweaks();
+        var groups = tweaksForFilter
+            .GroupBy(t => t.Category, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var smallGroups = groups.Where(g => g.Count() < MinSubCategorySize).ToList();
+        var normalGroups = groups.Where(g => g.Count() >= MinSubCategorySize).ToList();
+
+        foreach (var group in normalGroups)
+        {
+            SubCategories.Add(new TweakCategoryCardModel(
+                group.Key,
+                group.Key,
+                description: null,
+                group.Count(),
+                group.Count(t => t.IsSelected)));
+        }
+
+        if (smallGroups.Count > 0)
+        {
+            var otherCount = smallGroups.Sum(g => g.Count());
+            var otherSelected = smallGroups.Sum(g => g.Count(t => t.IsSelected));
+            SubCategories.Add(new TweakCategoryCardModel(
+                "Other",
+                "Other",
+                description: null,
+                otherCount,
+                otherSelected));
+        }
+    }
+
+    private IEnumerable<TweakCardModel> GetProfileFilteredTweaks()
+    {
+        if (ActiveProfileFilter is null or "All")
+            return Tweaks;
+
+        if (ActiveProfileFilter == "Suggested")
+            return Tweaks.Where(t => t.IsSuggested);
+
+        return Tweaks.Where(t =>
+            t.Profiles.Contains(ActiveProfileFilter, StringComparer.OrdinalIgnoreCase));
+    }
+
     [RelayCommand]
     private void SelectCategory(string category)
     {
+        SelectedSubCategory = null;
         FilteredTweaks.Clear();
-        if (!string.Equals(category, "Fonts", StringComparison.OrdinalIgnoreCase)
-            && !string.Equals(category, "Startup", StringComparison.OrdinalIgnoreCase))
-        {
-            foreach (var tweak in Tweaks.Where(t => string.Equals(t.Category, category, StringComparison.OrdinalIgnoreCase)))
-                FilteredTweaks.Add(tweak);
-        }
 
         if (string.Equals(category, "Startup", StringComparison.OrdinalIgnoreCase))
             ApplyStartupFilter();
 
+        if (string.Equals(category, "System Tweaks", StringComparison.OrdinalIgnoreCase))
+        {
+            ActiveProfileFilter = _userProfiles.Count > 0 ? "Suggested" : "All";
+            RebuildSubCategories();
+        }
+
         SelectedCategory = category;
+    }
+
+    [RelayCommand]
+    private void SelectSubCategory(string subCategory)
+    {
+        FilteredTweaks.Clear();
+
+        var tweaksForFilter = GetProfileFilteredTweaks();
+
+        if (string.Equals(subCategory, "Other", StringComparison.OrdinalIgnoreCase))
+        {
+            var normalCategoryNames = SubCategories
+                .Where(c => !string.Equals(c.Category, "Other", StringComparison.OrdinalIgnoreCase))
+                .Select(c => c.Category)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var tweak in tweaksForFilter.Where(t => !normalCategoryNames.Contains(t.Category)))
+                FilteredTweaks.Add(tweak);
+        }
+        else
+        {
+            foreach (var tweak in tweaksForFilter.Where(t => string.Equals(t.Category, subCategory, StringComparison.OrdinalIgnoreCase)))
+                FilteredTweaks.Add(tweak);
+        }
+
+        SelectedSubCategory = subCategory;
+    }
+
+    [RelayCommand]
+    private void SetProfileFilter(string filter)
+    {
+        ActiveProfileFilter = filter;
+        RebuildSubCategories();
+
+        if (SelectedSubCategory is not null)
+            SelectSubCategory(SelectedSubCategory);
     }
 
     [RelayCommand]
     private void BackToCategories()
     {
         SelectedCategory = null;
+        SelectedSubCategory = null;
         RebuildCategories();
+    }
+
+    [RelayCommand]
+    private void BackToSubCategories()
+    {
+        SelectedSubCategory = null;
+        RebuildSubCategories();
     }
 
     [RelayCommand]

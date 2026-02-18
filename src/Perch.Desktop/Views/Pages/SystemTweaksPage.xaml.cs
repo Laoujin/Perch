@@ -19,7 +19,8 @@ public partial class SystemTweaksPage : Page
 
         viewModel.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(SystemTweaksViewModel.SelectedCategory))
+            if (e.PropertyName is nameof(SystemTweaksViewModel.SelectedCategory)
+                or nameof(SystemTweaksViewModel.SelectedSubCategory))
                 UpdateDetailPanelVisibility();
         };
     }
@@ -33,9 +34,19 @@ public partial class SystemTweaksPage : Page
     private void OnCategoryCardClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: TweakCategoryCardModel card })
-        {
             ViewModel.SelectCategoryCommand.Execute(card.Category);
-        }
+    }
+
+    private void OnSubCategoryCardClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: TweakCategoryCardModel card })
+            ViewModel.SelectSubCategoryCommand.Execute(card.Category);
+    }
+
+    private void OnProfileFilterClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: string filter })
+            ViewModel.SetProfileFilterCommand.Execute(filter);
     }
 
     private void OnGroupExpandClick(object sender, RoutedEventArgs e)
@@ -65,15 +76,45 @@ public partial class SystemTweaksPage : Page
     private void UpdateDetailPanelVisibility()
     {
         var category = ViewModel.SelectedCategory;
+        var subCategory = ViewModel.SelectedSubCategory;
         var isFonts = string.Equals(category, "Fonts", StringComparison.OrdinalIgnoreCase);
         var isStartup = string.Equals(category, "Startup", StringComparison.OrdinalIgnoreCase);
+        var isSystemTweaks = string.Equals(category, "System Tweaks", StringComparison.OrdinalIgnoreCase);
 
-        TweakDetailPanel.Visibility = category is not null && !isFonts && !isStartup
+        SubCategoryPanel.Visibility = isSystemTweaks && subCategory is null
+            ? Visibility.Visible : Visibility.Collapsed;
+        TweakDetailPanel.Visibility = isSystemTweaks && subCategory is not null
             ? Visibility.Visible : Visibility.Collapsed;
         FontDetailPanel.Visibility = isFonts
             ? Visibility.Visible : Visibility.Collapsed;
         StartupDetailPanel.Visibility = isStartup
             ? Visibility.Visible : Visibility.Collapsed;
+
+        UpdateBackButton();
+        UpdateHeaderText();
+    }
+
+    private void UpdateBackButton()
+    {
+        BackButton.Command = null;
+        BackButton.Click -= OnBackButtonClick;
+        BackButton.Click += OnBackButtonClick;
+    }
+
+    private void OnBackButtonClick(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedSubCategory is not null)
+            ViewModel.BackToSubCategoriesCommand.Execute(null);
+        else
+            ViewModel.BackToCategoriesCommand.Execute(null);
+    }
+
+    private void UpdateHeaderText()
+    {
+        if (ViewModel.SelectedSubCategory is not null)
+            DetailHeaderText.Text = $"System Tweaks > {ViewModel.SelectedSubCategory}";
+        else
+            DetailHeaderText.Text = ViewModel.SelectedCategory ?? string.Empty;
     }
 
     private static StartupCardModel? GetStartupCardModel(object sender) =>

@@ -30,6 +30,9 @@ public partial class TweakCardModel : ObservableObject
     [ObservableProperty]
     private int _appliedCount;
 
+    [ObservableProperty]
+    private bool _isSuggested;
+
     public int TotalCount => Registry.Length;
 
     public TweakCardModel(TweakCatalogEntry entry, CardStatus status)
