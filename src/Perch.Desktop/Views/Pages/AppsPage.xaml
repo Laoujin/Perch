@@ -172,6 +172,7 @@
                                                 Description="{Binding Description}"
                                                 Category="{Binding Category}"
                                                 Status="{Binding Status}"
+                                                LogoUrl="{Binding LogoUrl}"
                                                 Website="{Binding Website}"
                                                 GitHub="{Binding GitHub}"
                                                 CanLink="{Binding CanLink}"

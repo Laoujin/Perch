@@ -35,13 +35,20 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <ui:SymbolIcon
-                    Grid.Column="0"
-                    Symbol="Apps24"
-                    FontSize="24"
-                    Foreground="#888888"
-                    VerticalAlignment="Center"
-                    Margin="0,0,8,0" />
+                <Grid Grid.Column="0" Width="24" Height="24" VerticalAlignment="Center" Margin="0,0,8,0">
+                    <ui:SymbolIcon
+                        x:Name="FallbackIcon"
+                        Symbol="Apps24"
+                        FontSize="24"
+                        Foreground="#888888" />
+                    <Image
+                        x:Name="LogoImage"
+                        Width="24"
+                        Height="24"
+                        RenderOptions.BitmapScalingMode="HighQuality"
+                        Source="{Binding LogoUrl, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        ImageFailed="OnLogoImageFailed" />
+                </Grid>
 
                 <TextBlock
                     Grid.Column="1"

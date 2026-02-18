@@ -20,6 +20,7 @@ public partial class AppCardModel : ObservableObject
     public CatalogEntry CatalogEntry { get; }
     public string? Website { get; }
     public string? GitHub { get; }
+    public string? LogoUrl { get; }
 
     [ObservableProperty]
     private CardStatus _status;
@@ -38,7 +39,7 @@ public partial class AppCardModel : ObservableObject
     public bool CanUnlink => Status == CardStatus.Linked;
     public bool CanFix => Status is CardStatus.Broken or CardStatus.Drift;
 
-    public AppCardModel(CatalogEntry entry, CardTier tier, CardStatus status)
+    public AppCardModel(CatalogEntry entry, CardTier tier, CardStatus status, string? logoUrl = null)
     {
         Id = entry.Id;
         Name = entry.Name;
@@ -53,6 +54,7 @@ public partial class AppCardModel : ObservableObject
         CatalogEntry = entry;
         Website = entry.Links?.Website;
         GitHub = entry.Links?.GitHub;
+        LogoUrl = logoUrl;
     }
 
     partial void OnStatusChanged(CardStatus value)

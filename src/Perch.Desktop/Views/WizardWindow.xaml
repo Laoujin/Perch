@@ -464,6 +464,7 @@
                                                         Description="{Binding Description}"
                                                         Category="{Binding Category}"
                                                         Status="{Binding Status}"
+                                                        LogoUrl="{Binding LogoUrl}"
                                                         IsSelected="{Binding IsSelected, Mode=TwoWay}"
                                                         Margin="0,0,12,12" />
                                                 </DataTemplate>

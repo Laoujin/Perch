@@ -44,6 +44,10 @@ public partial class AppCard : UserControl
         DependencyProperty.Register(nameof(CanFix), typeof(bool), typeof(AppCard),
             new PropertyMetadata(false));
 
+    public static readonly DependencyProperty LogoUrlProperty =
+        DependencyProperty.Register(nameof(LogoUrl), typeof(string), typeof(AppCard),
+            new PropertyMetadata(null));
+
     public static readonly DependencyProperty IsSelectedProperty =
         DependencyProperty.Register(nameof(IsSelected), typeof(bool), typeof(AppCard),
             new PropertyMetadata(false));
@@ -118,6 +122,12 @@ public partial class AppCard : UserControl
         set => SetValue(CanFixProperty, value);
     }
 
+    public string? LogoUrl
+    {
+        get => (string?)GetValue(LogoUrlProperty);
+        set => SetValue(LogoUrlProperty, value);
+    }
+
     public bool IsSelected
     {
         get => (bool)GetValue(IsSelectedProperty);
@@ -164,6 +174,12 @@ public partial class AppCard : UserControl
 
     private void OnConfigureClick(object sender, RoutedEventArgs e) =>
         RaiseEvent(new RoutedEventArgs(ConfigureRequestedEvent, this));
+
+    private void OnLogoImageFailed(object sender, ExceptionRoutedEventArgs e)
+    {
+        LogoImage.Visibility = Visibility.Collapsed;
+        FallbackIcon.Visibility = Visibility.Visible;
+    }
 
     private void OnWebsiteClick(object sender, RoutedEventArgs e)
     {
