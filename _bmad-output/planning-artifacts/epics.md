@@ -1045,6 +1045,43 @@ So that on a new machine I can see what's already in place and only change what 
 **When** results are displayed
 **Then** the user sees a clear summary: N already applied, M need attention, K not present
 
+### Story 6.8: Administrator Privilege Elevation
+
+As a developer,
+I want Perch to handle operations requiring administrator privileges (app installs, HKLM registry tweaks, font installation) without forcing the entire process to run elevated,
+So that day-to-day operations run unprivileged and elevation only happens when needed.
+
+**Context:**
+
+Some Perch operations require admin: writing to HKLM registry keys, installing system-wide packages (chocolatey/winget), installing fonts for all users. Two approaches to investigate:
+
+1. **Start as admin:** Launch Perch elevated from the start. Simple but overly broad — most operations (symlinks to HKCU, status checks) don't need elevation.
+2. **UAC-elevate on demand:** Run unprivileged by default. When an operation needs admin, spawn an elevated child process for just that operation and return results to the parent. More complex but follows principle of least privilege.
+
+**Acceptance Criteria:**
+
+**Given** the user runs `perch deploy` without elevation and a module requires HKLM registry writes
+**When** the deploy engine encounters the privileged operation
+**Then** the system detects the elevation requirement and either prompts for UAC elevation or reports which operations were skipped due to insufficient privileges
+
+**Given** Perch is running without elevation
+**When** the user requests a system-wide package install (chocolatey/winget)
+**Then** the system elevates for the install operation and returns the result to the unprivileged parent process
+
+**Given** Perch is already running elevated
+**When** privileged operations are encountered
+**Then** they execute directly without additional elevation prompts
+
+**Given** the user denies a UAC elevation prompt
+**When** the privileged operation is skipped
+**Then** the remaining unprivileged operations continue and the skipped operations are reported in the summary
+
+**Open Questions:**
+
+1. Should we use a separate elevated helper process or re-launch the CLI with specific arguments?
+2. How does this interact with the Desktop app — should it request elevation at startup or per-action?
+3. Can we batch multiple privileged operations into a single elevation prompt?
+
 ## Epic 7: Secrets Management
 
 Developer can manage configs containing secrets via template placeholders resolved from 1Password at deploy time. Secret-containing files are generated (not symlinked) and git-ignored.
