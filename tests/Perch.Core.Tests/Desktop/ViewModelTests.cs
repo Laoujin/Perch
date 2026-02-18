@@ -213,6 +213,53 @@ public sealed class AppsViewModelTests
         });
     }
 
+    [Test]
+    public async Task ExpandApp_LoadsDetail()
+    {
+        var card = MakeCard("vscode", "Development/IDEs");
+        var detail = new AppDetail(card, null, null, null, null, []);
+        _detailService.LoadDetailAsync(card, Arg.Any<CancellationToken>()).Returns(detail);
+
+        await _vm.ExpandAppCommand.ExecuteAsync(card);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(card.IsExpanded, Is.True);
+            Assert.That(card.Detail, Is.EqualTo(detail));
+            Assert.That(card.IsLoadingDetail, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task ExpandApp_CachesDetail()
+    {
+        var card = MakeCard("vscode", "Development/IDEs");
+        var detail = new AppDetail(card, null, null, null, null, []);
+        _detailService.LoadDetailAsync(card, Arg.Any<CancellationToken>()).Returns(detail);
+
+        await _vm.ExpandAppCommand.ExecuteAsync(card);
+        card.IsExpanded = false;
+        card.Detail = null;
+        await _vm.ExpandAppCommand.ExecuteAsync(card);
+
+        Assert.That(card.Detail, Is.EqualTo(detail));
+        await _detailService.Received(1).LoadDetailAsync(card, Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task CollapseApp_TogglesExpanded()
+    {
+        var card = MakeCard("vscode", "Development/IDEs");
+        var detail = new AppDetail(card, null, null, null, null, []);
+        _detailService.LoadDetailAsync(card, Arg.Any<CancellationToken>()).Returns(detail);
+
+        await _vm.ExpandAppCommand.ExecuteAsync(card);
+        Assert.That(card.IsExpanded, Is.True);
+
+        await _vm.ExpandAppCommand.ExecuteAsync(card);
+        Assert.That(card.IsExpanded, Is.False);
+    }
+
     private static AppCardModel MakeCard(string name, string category, CardStatus status = CardStatus.Detected, CardTier tier = CardTier.YourApps)
     {
         var entry = new CatalogEntry(name, name, name, category, [], null, null, null, null, null, null);

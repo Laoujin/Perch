@@ -30,6 +30,12 @@ public partial class AppCardModel : ObservableObject
     [ObservableProperty]
     private bool _isExpanded;
 
+    [ObservableProperty]
+    private bool _isLoadingDetail;
+
+    [ObservableProperty]
+    private AppDetail? _detail;
+
     public string DisplayLabel => DisplayName ?? Name;
     public string BroadCategory => Category.Split('/')[0];
     public string SubCategory => Category.Contains('/') ? Category[(Category.IndexOf('/') + 1)..] : Category;

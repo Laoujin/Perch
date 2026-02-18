@@ -49,8 +49,8 @@ public partial class AppsPage : Page
 
     private void OnExpandRequested(object sender, RoutedEventArgs e)
     {
-        if (GetAppModel(sender) is { } app)
-            app.IsExpanded = !app.IsExpanded;
+        if (GetAppModel(sender) is { } app && ViewModel.ExpandAppCommand.CanExecute(app))
+            ViewModel.ExpandAppCommand.Execute(app);
     }
 
     private static AppCardModel? GetAppModel(object sender) =>

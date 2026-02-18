@@ -25,6 +25,7 @@ public sealed partial class AppsViewModel : ViewModelBase
     private ImmutableArray<AppCardModel> _allYourApps = [];
     private ImmutableArray<AppCardModel> _allSuggested = [];
     private ImmutableArray<AppCardModel> _allOther = [];
+    private readonly Dictionary<string, AppDetail> _detailCache = new(StringComparer.Ordinal);
 
     [ObservableProperty]
     private bool _isLoading;
@@ -203,6 +204,37 @@ public sealed partial class AppsViewModel : ViewModelBase
     private void ToggleCategoryExpand(AppCategoryCardModel category)
     {
         category.IsExpanded = !category.IsExpanded;
+    }
+
+    [RelayCommand]
+    private async Task ExpandAppAsync(AppCardModel app)
+    {
+        app.IsExpanded = !app.IsExpanded;
+
+        if (!app.IsExpanded || app.Detail is not null)
+            return;
+
+        if (_detailCache.TryGetValue(app.Id, out var cached))
+        {
+            app.Detail = cached;
+            return;
+        }
+
+        app.IsLoadingDetail = true;
+        try
+        {
+            var detail = await _detailService.LoadDetailAsync(app);
+            _detailCache[app.Id] = detail;
+            app.Detail = detail;
+        }
+        catch
+        {
+            // Detail load failure is non-critical — card stays expanded without detail sections
+        }
+        finally
+        {
+            app.IsLoadingDetail = false;
+        }
     }
 
     public IEnumerable<AppCardModel> GetCategoryApps(string broadCategory)
