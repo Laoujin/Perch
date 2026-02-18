@@ -67,6 +67,10 @@ public sealed class WindowsRegistryProvider : IRegistryProvider
 
     private static void ParseKeyPath(string keyPath, out RegistryKey hive, out string subKey)
     {
+        // Strip Sophia Script "Registry::" prefix if present
+        if (keyPath.StartsWith("Registry::", StringComparison.OrdinalIgnoreCase))
+            keyPath = keyPath["Registry::".Length..];
+
         int separatorIndex = keyPath.IndexOf('\\');
         if (separatorIndex < 0)
         {
