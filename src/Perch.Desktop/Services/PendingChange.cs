@@ -8,6 +8,7 @@ public enum PendingChangeKind
     UnlinkApp,
     ApplyTweak,
     RevertTweak,
+    RevertTweakToCaptured,
     LinkDotfile,
     OnboardFont,
     ToggleStartup,
@@ -31,6 +32,9 @@ public sealed record ApplyTweakChange(TweakCardModel Tweak)
 
 public sealed record RevertTweakChange(TweakCardModel Tweak)
     : PendingChange(Tweak.Id, Tweak.Name, Tweak.Description ?? "Revert registry tweak", PendingChangeKind.RevertTweak);
+
+public sealed record RevertTweakToCapturedChange(TweakCardModel Tweak)
+    : PendingChange(Tweak.Id, Tweak.Name, Tweak.Description ?? "Revert tweak to captured state", PendingChangeKind.RevertTweakToCaptured);
 
 public sealed record LinkDotfileChange(DotfileGroupCardModel Dotfile)
     : PendingChange(Dotfile.Id, Dotfile.DisplayLabel, "Link dotfile group", PendingChangeKind.LinkDotfile);

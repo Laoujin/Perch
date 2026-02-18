@@ -19,7 +19,7 @@ public sealed class TweakServiceDetectTests
     public void SetUp()
     {
         _registry = Substitute.For<IRegistryProvider>();
-        _service = new TweakService(_registry);
+        _service = new TweakService(_registry, Substitute.For<ICapturedRegistryStore>());
     }
 
     [Test]

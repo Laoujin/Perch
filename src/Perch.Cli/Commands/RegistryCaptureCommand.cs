@@ -11,6 +11,7 @@ public sealed class RegistryCaptureCommand : AsyncCommand<RegistryCaptureCommand
 {
     private readonly IModuleDiscoveryService _discoveryService;
     private readonly IRegistryCaptureService _captureService;
+    private readonly ICapturedRegistryStore _capturedStore;
     private readonly ISettingsProvider _settingsProvider;
     private readonly IAnsiConsole _console;
 
@@ -25,10 +26,11 @@ public sealed class RegistryCaptureCommand : AsyncCommand<RegistryCaptureCommand
         public string? ConfigPath { get; init; }
     }
 
-    public RegistryCaptureCommand(IModuleDiscoveryService discoveryService, IRegistryCaptureService captureService, ISettingsProvider settingsProvider, IAnsiConsole console)
+    public RegistryCaptureCommand(IModuleDiscoveryService discoveryService, IRegistryCaptureService captureService, ICapturedRegistryStore capturedStore, ISettingsProvider settingsProvider, IAnsiConsole console)
     {
         _discoveryService = discoveryService;
         _captureService = captureService;
+        _capturedStore = capturedStore;
         _settingsProvider = settingsProvider;
         _console = console;
     }
@@ -77,6 +79,19 @@ public sealed class RegistryCaptureCommand : AsyncCommand<RegistryCaptureCommand
             _console.MarkupLine("[yellow]No registry values could be captured.[/]");
             return 0;
         }
+
+        var capturedData = await _capturedStore.LoadAsync(cancellationToken);
+        foreach (var entry in result.Entries)
+        {
+            string storeKey = $@"{entry.Key}\{entry.Name}";
+            capturedData.Entries[storeKey] = new CapturedRegistryEntry
+            {
+                Value = entry.Value?.ToString(),
+                Kind = entry.Kind,
+                CapturedAt = DateTime.UtcNow,
+            };
+        }
+        await _capturedStore.SaveAsync(capturedData, cancellationToken);
 
         _console.MarkupLine($"[green]Captured {result.Entries.Length} registry value(s) for '{settings.ModuleName}':[/]");
         foreach (var entry in result.Entries)

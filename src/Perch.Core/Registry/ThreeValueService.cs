@@ -6,19 +6,22 @@ namespace Perch.Core.Registry;
 
 public sealed class ThreeValueService(IRegistryProvider registryProvider) : IThreeValueService
 {
-    public ImmutableArray<RegistryThreeValueResult> Evaluate(ImmutableArray<RegistryEntryDefinition> entries)
+    public ImmutableArray<RegistryThreeValueResult> Evaluate(ImmutableArray<RegistryEntryDefinition> entries, IReadOnlyDictionary<string, string?>? capturedValues = null)
     {
         var results = new List<RegistryThreeValueResult>(entries.Length);
 
         foreach (var entry in entries)
         {
-            results.Add(EvaluateEntry(entry));
+            string key = $@"{entry.Key}\{entry.Name}";
+            string? captured = null;
+            capturedValues?.TryGetValue(key, out captured);
+            results.Add(EvaluateEntry(entry, captured));
         }
 
         return results.ToImmutableArray();
     }
 
-    private RegistryThreeValueResult EvaluateEntry(RegistryEntryDefinition entry)
+    private RegistryThreeValueResult EvaluateEntry(RegistryEntryDefinition entry, string? capturedValue)
     {
         object? current;
         try
@@ -27,14 +30,14 @@ public sealed class ThreeValueService(IRegistryProvider registryProvider) : IThr
         }
         catch (Exception)
         {
-            return new RegistryThreeValueResult(entry, ThreeValueStatus.Error, null);
+            return new RegistryThreeValueResult(entry, ThreeValueStatus.Error, null, capturedValue);
         }
 
-        var status = DetermineStatus(current, entry.Value, entry.DefaultValue);
-        return new RegistryThreeValueResult(entry, status, current);
+        var status = DetermineStatus(current, entry.Value, entry.DefaultValue, capturedValue);
+        return new RegistryThreeValueResult(entry, status, current, capturedValue);
     }
 
-    private static ThreeValueStatus DetermineStatus(object? current, object? desired, object? defaultValue)
+    private static ThreeValueStatus DetermineStatus(object? current, object? desired, object? defaultValue, string? capturedValue)
     {
         if (ValuesEqual(current, desired))
         {
@@ -44,6 +47,11 @@ public sealed class ThreeValueService(IRegistryProvider registryProvider) : IThr
         if (defaultValue != null && ValuesEqual(current, defaultValue))
         {
             return ThreeValueStatus.NotApplied;
+        }
+
+        if (capturedValue != null && ValuesEqual(current, capturedValue))
+        {
+            return ThreeValueStatus.AtCaptured;
         }
 
         if (desired == null && current == null)

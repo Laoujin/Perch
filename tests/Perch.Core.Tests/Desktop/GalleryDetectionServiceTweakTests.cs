@@ -38,7 +38,7 @@ public sealed class GalleryDetectionServiceTweakTests
         var platformDetector = Substitute.For<IPlatformDetector>();
         platformDetector.CurrentPlatform.Returns(Platform.Windows);
 
-        _tweakService.Detect(Arg.Any<TweakCatalogEntry>())
+        _tweakService.DetectWithCaptureAsync(Arg.Any<TweakCatalogEntry>(), Arg.Any<CancellationToken>())
             .Returns(new TweakDetectionResult(TweakStatus.NotApplied, ImmutableArray<RegistryEntryStatus>.Empty));
 
         _service = new GalleryDetectionService(
@@ -137,7 +137,7 @@ public sealed class GalleryDetectionServiceTweakTests
         _catalog.GetAllTweaksAsync(Arg.Any<CancellationToken>())
             .Returns(ImmutableArray.Create(tweak));
 
-        _tweakService.Detect(tweak)
+        _tweakService.DetectWithCaptureAsync(tweak, Arg.Any<CancellationToken>())
             .Returns(new TweakDetectionResult(TweakStatus.NotApplied, ImmutableArray<RegistryEntryStatus>.Empty));
 
         var result = await _service.DetectTweaksAsync(
@@ -153,8 +153,8 @@ public sealed class GalleryDetectionServiceTweakTests
         _catalog.GetAllTweaksAsync(Arg.Any<CancellationToken>())
             .Returns(ImmutableArray.Create(tweak));
 
-        var entryStatus = new RegistryEntryStatus(tweak.Registry[0], 1, true);
-        _tweakService.Detect(tweak)
+        var entryStatus = new RegistryEntryStatus(tweak.Registry[0], 1, null, true);
+        _tweakService.DetectWithCaptureAsync(tweak, Arg.Any<CancellationToken>())
             .Returns(new TweakDetectionResult(TweakStatus.Applied, [entryStatus]));
 
         var result = await _service.DetectTweaksAsync(
@@ -175,9 +175,9 @@ public sealed class GalleryDetectionServiceTweakTests
             .Returns(ImmutableArray.Create(tweak));
 
         var entries = ImmutableArray.Create(
-            new RegistryEntryStatus(tweak.Registry[0], 1, true),
-            new RegistryEntryStatus(tweak.Registry[1], 99, false));
-        _tweakService.Detect(tweak)
+            new RegistryEntryStatus(tweak.Registry[0], 1, null, true),
+            new RegistryEntryStatus(tweak.Registry[1], 99, null, false));
+        _tweakService.DetectWithCaptureAsync(tweak, Arg.Any<CancellationToken>())
             .Returns(new TweakDetectionResult(TweakStatus.Partial, entries));
 
         var result = await _service.DetectTweaksAsync(

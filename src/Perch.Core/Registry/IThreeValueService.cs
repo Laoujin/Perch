@@ -6,5 +6,5 @@ namespace Perch.Core.Registry;
 
 public interface IThreeValueService
 {
-    ImmutableArray<RegistryThreeValueResult> Evaluate(ImmutableArray<RegistryEntryDefinition> entries);
+    ImmutableArray<RegistryThreeValueResult> Evaluate(ImmutableArray<RegistryEntryDefinition> entries, IReadOnlyDictionary<string, string?>? capturedValues = null);
 }

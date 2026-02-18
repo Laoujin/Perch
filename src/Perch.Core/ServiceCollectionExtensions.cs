@@ -80,6 +80,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IContentFilterProcessor, ContentFilterProcessor>();
         services.AddSingleton<IAppScanService, AppScanService>();
         services.AddSingleton<ITweakService, TweakService>();
+        services.AddSingleton<ICapturedRegistryStore, YamlCapturedRegistryStore>();
+        services.AddSingleton<IThreeValueService, ThreeValueService>();
 
         services.AddSingleton<CatalogParser>();
         services.AddSingleton(new System.Net.Http.HttpClient());
@@ -97,6 +99,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICertificateScanner, CertificateScanner>();
         services.AddSingleton<IFontScanner, FontScanner>();
         services.AddSingleton<IFontOnboardingService, FontOnboardingService>();
+        services.AddSingleton<FontManifestParser>();
         services.AddSingleton<IVsCodeService, VsCodeService>();
         services.AddSingleton<ISystemScanner, SystemScanner>();
         return services;
