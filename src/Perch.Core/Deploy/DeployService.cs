@@ -1,4 +1,6 @@
+using System.Collections.Immutable;
 using Perch.Core.Backup;
+using Perch.Core.Fonts;
 using Perch.Core.Git;
 using Perch.Core.Machines;
 using Perch.Core.Modules;
@@ -30,8 +32,9 @@ public sealed class DeployService : IDeployService
     private readonly IReferenceResolver _referenceResolver;
     private readonly IVariableResolver _variableResolver;
     private readonly ICleanFilterService _cleanFilterService;
+    private readonly FontManifestParser _fontManifestParser;
 
-    public DeployService(IModuleDiscoveryService discoveryService, SymlinkOrchestrator orchestrator, IPlatformDetector platformDetector, IGlobResolver globResolver, ISnapshotProvider snapshotProvider, IHookRunner hookRunner, IMachineProfileService machineProfileService, IRegistryProvider registryProvider, IGlobalPackageInstaller globalPackageInstaller, IVscodeExtensionInstaller vscodeExtensionInstaller, IPsModuleInstaller psModuleInstaller, PackageManifestParser packageManifestParser, InstallManifestParser installManifestParser, IInstallResolver installResolver, ISystemPackageInstaller systemPackageInstaller, ITemplateProcessor templateProcessor, IReferenceResolver referenceResolver, IVariableResolver variableResolver, ICleanFilterService cleanFilterService)
+    public DeployService(IModuleDiscoveryService discoveryService, SymlinkOrchestrator orchestrator, IPlatformDetector platformDetector, IGlobResolver globResolver, ISnapshotProvider snapshotProvider, IHookRunner hookRunner, IMachineProfileService machineProfileService, IRegistryProvider registryProvider, IGlobalPackageInstaller globalPackageInstaller, IVscodeExtensionInstaller vscodeExtensionInstaller, IPsModuleInstaller psModuleInstaller, PackageManifestParser packageManifestParser, InstallManifestParser installManifestParser, IInstallResolver installResolver, ISystemPackageInstaller systemPackageInstaller, ITemplateProcessor templateProcessor, IReferenceResolver referenceResolver, IVariableResolver variableResolver, ICleanFilterService cleanFilterService, FontManifestParser fontManifestParser)
     {
         _discoveryService = discoveryService;
         _orchestrator = orchestrator;
@@ -52,6 +55,7 @@ public sealed class DeployService : IDeployService
         _referenceResolver = referenceResolver;
         _variableResolver = variableResolver;
         _cleanFilterService = cleanFilterService;
+        _fontManifestParser = fontManifestParser;
     }
 
     public async Task<int> DeployAsync(string configRepoPath, DeployOptions? options = null, CancellationToken cancellationToken = default)
@@ -112,6 +116,11 @@ public sealed class DeployService : IDeployService
 
         string machineName = Environment.MachineName;
         if (await ProcessSystemPackagesAsync(configRepoPath, machineName, currentPlatform, dryRun, progress, cancellationToken).ConfigureAwait(false))
+        {
+            hasErrors = true;
+        }
+
+        if (await ProcessFontsAsync(configRepoPath, currentPlatform, dryRun, progress, cancellationToken).ConfigureAwait(false))
         {
             hasErrors = true;
         }
@@ -254,6 +263,51 @@ public sealed class DeployService : IDeployService
         }
 
         return false;
+    }
+
+    private async Task<bool> ProcessFontsAsync(string configRepoPath, Platform currentPlatform, bool dryRun, IProgress<DeployResult>? progress, CancellationToken cancellationToken)
+    {
+        string fontsPath = Path.Combine(configRepoPath, "fonts.yaml");
+        if (!File.Exists(fontsPath))
+        {
+            return false;
+        }
+
+        string yaml = await File.ReadAllTextAsync(fontsPath, cancellationToken).ConfigureAwait(false);
+        FontManifestParseResult parseResult = _fontManifestParser.Parse(yaml);
+
+        if (!parseResult.IsSuccess)
+        {
+            progress?.Report(new DeployResult("fonts", "", "", ResultLevel.Error, parseResult.Error!));
+            return true;
+        }
+
+        if (parseResult.FontIds.Length == 0)
+        {
+            return false;
+        }
+
+        InstallResolution resolution = await _installResolver.ResolveFontsAsync(parseResult.FontIds, currentPlatform, cancellationToken).ConfigureAwait(false);
+
+        bool hasErrors = false;
+        foreach (string error in resolution.Errors)
+        {
+            progress?.Report(new DeployResult("fonts", "", "", ResultLevel.Error, error));
+            hasErrors = true;
+        }
+
+        foreach (PackageDefinition package in resolution.Packages)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            DeployResult result = await _systemPackageInstaller.InstallAsync(package.Name, package.Manager, dryRun, cancellationToken).ConfigureAwait(false);
+            progress?.Report(result);
+            if (result.Level == ResultLevel.Error)
+            {
+                hasErrors = true;
+            }
+        }
+
+        return hasErrors;
     }
 
     private async Task<bool> ProcessInstallYamlAsync(string installPath, string machineName, Platform currentPlatform, bool dryRun, IProgress<DeployResult>? progress, CancellationToken cancellationToken)

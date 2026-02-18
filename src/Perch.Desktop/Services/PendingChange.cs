@@ -36,7 +36,7 @@ public sealed record RevertTweakChange(TweakCardModel Tweak)
 public sealed record RevertTweakToCapturedChange(TweakCardModel Tweak)
     : PendingChange(Tweak.Id, Tweak.Name, Tweak.Description ?? "Revert tweak to captured state", PendingChangeKind.RevertTweakToCaptured);
 
-public sealed record LinkDotfileChange(DotfileGroupCardModel Dotfile)
+public sealed record LinkDotfileChange(AppCardModel Dotfile)
     : PendingChange(Dotfile.Id, Dotfile.DisplayLabel, "Link dotfile group", PendingChangeKind.LinkDotfile);
 
 public sealed record OnboardFontChange(FontCardModel Font)

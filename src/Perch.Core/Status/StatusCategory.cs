@@ -8,4 +8,5 @@ public enum StatusCategory
     VscodeExtension,
     PsModule,
     SystemPackage,
+    Font,
 }

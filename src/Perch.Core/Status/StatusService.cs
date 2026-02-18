@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using Perch.Core.Fonts;
 using Perch.Core.Machines;
 using Perch.Core.Modules;
 using Perch.Core.Packages;
@@ -19,8 +21,10 @@ public sealed class StatusService : IStatusService
     private readonly PackageManifestParser _packageManifestParser;
     private readonly IProcessRunner _processRunner;
     private readonly ITemplateProcessor _templateProcessor;
+    private readonly FontManifestParser _fontManifestParser;
+    private readonly IInstallResolver _installResolver;
 
-    public StatusService(IModuleDiscoveryService discoveryService, ISymlinkProvider symlinkProvider, IPlatformDetector platformDetector, IGlobResolver globResolver, IMachineProfileService machineProfileService, IRegistryProvider registryProvider, IEnumerable<IPackageManagerProvider> packageManagerProviders, PackageManifestParser packageManifestParser, IProcessRunner processRunner, ITemplateProcessor templateProcessor)
+    public StatusService(IModuleDiscoveryService discoveryService, ISymlinkProvider symlinkProvider, IPlatformDetector platformDetector, IGlobResolver globResolver, IMachineProfileService machineProfileService, IRegistryProvider registryProvider, IEnumerable<IPackageManagerProvider> packageManagerProviders, PackageManifestParser packageManifestParser, IProcessRunner processRunner, ITemplateProcessor templateProcessor, FontManifestParser fontManifestParser, IInstallResolver installResolver)
     {
         _discoveryService = discoveryService;
         _symlinkProvider = symlinkProvider;
@@ -32,6 +36,8 @@ public sealed class StatusService : IStatusService
         _packageManifestParser = packageManifestParser;
         _processRunner = processRunner;
         _templateProcessor = templateProcessor;
+        _fontManifestParser = fontManifestParser;
+        _installResolver = installResolver;
     }
 
     public async Task<int> CheckAsync(string configRepoPath, IProgress<StatusResult>? progress = null, CancellationToken cancellationToken = default)
@@ -88,6 +94,11 @@ public sealed class StatusService : IStatusService
         }
 
         if (await CheckSystemPackagesAsync(configRepoPath, currentPlatform, packageCache, progress, cancellationToken).ConfigureAwait(false))
+        {
+            hasDrift = true;
+        }
+
+        if (await CheckFontsAsync(configRepoPath, currentPlatform, packageCache, progress, cancellationToken).ConfigureAwait(false))
         {
             hasDrift = true;
         }
@@ -358,6 +369,51 @@ public sealed class StatusService : IStatusService
             var level = found ? DriftLevel.Ok : DriftLevel.Missing;
             string message = found ? "OK" : $"System package {package.Name} is not installed";
             progress?.Report(new StatusResult("system-packages", "", package.Name, level, message, StatusCategory.SystemPackage));
+
+            if (!found)
+            {
+                hasDrift = true;
+            }
+        }
+
+        return hasDrift;
+    }
+
+    private async Task<bool> CheckFontsAsync(string configRepoPath, Platform currentPlatform, Dictionary<PackageManager, IReadOnlySet<string>> cache, IProgress<StatusResult>? progress, CancellationToken cancellationToken)
+    {
+        string fontsPath = Path.Combine(configRepoPath, "fonts.yaml");
+        if (!File.Exists(fontsPath))
+        {
+            return false;
+        }
+
+        string yaml = await File.ReadAllTextAsync(fontsPath, cancellationToken).ConfigureAwait(false);
+        FontManifestParseResult parseResult = _fontManifestParser.Parse(yaml);
+
+        if (!parseResult.IsSuccess)
+        {
+            progress?.Report(new StatusResult("fonts", "", "", DriftLevel.Error, parseResult.Error!, StatusCategory.Font));
+            return true;
+        }
+
+        if (parseResult.FontIds.Length == 0)
+        {
+            return false;
+        }
+
+        InstallResolution resolution = await _installResolver.ResolveFontsAsync(parseResult.FontIds, currentPlatform, cancellationToken).ConfigureAwait(false);
+
+        bool hasDrift = false;
+
+        foreach (PackageDefinition package in resolution.Packages)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            IReadOnlySet<string> installed = await GetInstalledPackageNamesAsync(package.Manager, cache, cancellationToken).ConfigureAwait(false);
+            bool found = installed.Contains(package.Name);
+            var level = found ? DriftLevel.Ok : DriftLevel.Missing;
+            string message = found ? "OK" : $"Font package {package.Name} is not installed";
+            progress?.Report(new StatusResult("fonts", "", package.Name, level, message, StatusCategory.Font));
 
             if (!found)
             {

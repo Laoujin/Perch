@@ -53,6 +53,45 @@ public sealed class InstallResolver : IInstallResolver
         return new InstallResolution(packages.ToImmutableArray(), errors.ToImmutableArray());
     }
 
+    public async Task<InstallResolution> ResolveFontsAsync(
+        ImmutableArray<string> fontIds,
+        Platform currentPlatform,
+        CancellationToken cancellationToken = default)
+    {
+        var packages = new List<PackageDefinition>();
+        var errors = new List<string>();
+
+        foreach (string fontId in fontIds)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            CatalogEntry? entry;
+            try
+            {
+                entry = await _catalogService.GetAppAsync(fontId, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"Failed to load gallery entry '{fontId}': {ex.Message}");
+                continue;
+            }
+
+            if (entry?.Install == null)
+            {
+                errors.Add($"Gallery entry '{fontId}' not found or has no install metadata.");
+                continue;
+            }
+
+            var package = ResolvePackage(entry.Install, currentPlatform);
+            if (package != null)
+            {
+                packages.Add(package);
+            }
+        }
+
+        return new InstallResolution(packages.ToImmutableArray(), errors.ToImmutableArray());
+    }
+
     private static ImmutableArray<string> ResolveAppIds(InstallManifest manifest, string machineName)
     {
         var apps = new HashSet<string>(manifest.Apps, StringComparer.OrdinalIgnoreCase);
