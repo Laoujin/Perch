@@ -17,6 +17,9 @@ public partial class TweakCategoryCardModel : ObservableObject
     [ObservableProperty]
     private int _selectedCount;
 
+    [ObservableProperty]
+    private bool _isExpanded;
+
     public TweakCategoryCardModel(
         string category,
         string displayName,

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 
@@ -22,8 +23,6 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     private readonly ICertificateScanner _certificateScanner;
     private readonly IPendingChangesService _pendingChanges;
 
-    private const int MinSubCategorySize = 3;
-
     [ObservableProperty]
     private bool _isLoading;
 
@@ -46,15 +45,11 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     private string? _selectedCategory;
 
     [ObservableProperty]
-    private string? _selectedSubCategory;
-
-    [ObservableProperty]
     private string? _activeProfileFilter;
 
     private HashSet<UserProfile> _userProfiles = [UserProfile.Developer, UserProfile.PowerUser];
 
     public ObservableCollection<TweakCardModel> Tweaks { get; } = [];
-    public ObservableCollection<TweakCardModel> FilteredTweaks { get; } = [];
     public ObservableCollection<FontCardModel> InstalledFonts { get; } = [];
     public ObservableCollection<FontCardModel> NerdFonts { get; } = [];
     public ObservableCollection<FontFamilyGroupModel> FilteredInstalledFontGroups { get; } = [];
@@ -72,8 +67,7 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
 
     public bool ShowCategories => SelectedCategory is null;
     public bool ShowDetail => SelectedCategory is not null;
-    public bool ShowSubCategories => SelectedCategory == "System Tweaks" && SelectedSubCategory is null;
-    public bool ShowTweakCards => SelectedCategory == "System Tweaks" && SelectedSubCategory is not null;
+    public bool ShowSubCategories => SelectedCategory == "System Tweaks";
 
     public SystemTweaksViewModel(
         IGalleryDetectionService detectionService,
@@ -91,7 +85,7 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
         _pendingChanges = pendingChanges;
     }
 
-    partial void OnSearchTextChanged(string value) => ApplyFilter();
+    partial void OnSearchTextChanged(string value) => RebuildSubCategories();
     partial void OnFontSearchTextChanged(string value) => ApplyFontFilter();
     partial void OnStartupSearchTextChanged(string value) => ApplyStartupFilter();
     partial void OnCertificateSearchTextChanged(string value) => ApplyCertificateFilter();
@@ -101,13 +95,6 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowCategories));
         OnPropertyChanged(nameof(ShowDetail));
         OnPropertyChanged(nameof(ShowSubCategories));
-        OnPropertyChanged(nameof(ShowTweakCards));
-    }
-
-    partial void OnSelectedSubCategoryChanged(string? value)
-    {
-        OnPropertyChanged(nameof(ShowSubCategories));
-        OnPropertyChanged(nameof(ShowTweakCards));
     }
 
     [RelayCommand]
@@ -179,7 +166,6 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
             BuildFontGroups();
             BuildCertificateGroups();
             RebuildCategories();
-            ApplyFilter();
             ApplyStartupFilter();
         }
         catch (OperationCanceledException)
@@ -262,36 +248,33 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     {
         SubCategories.Clear();
 
-        var tweaksForFilter = GetProfileFilteredTweaks();
-        var groups = tweaksForFilter
-            .GroupBy(t => t.Category, StringComparer.OrdinalIgnoreCase)
+        var filtered = GetProfileFilteredTweaks()
+            .Where(t => t.MatchesSearch(SearchText));
+
+        var groups = filtered
+            .GroupBy(t => t.BroadCategory, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in groups)
+        {
+            var items = group.ToList();
+            SubCategories.Add(new TweakCategoryCardModel(
+                group.Key,
+                group.Key,
+                description: null,
+                items.Count,
+                items.Count(t => t.IsSelected)));
+        }
+    }
+
+    public IEnumerable<TweakSubCategoryGroup> GetCategorySubGroups(string broadCategory)
+    {
+        return GetProfileFilteredTweaks()
+            .Where(t => t.MatchesSearch(SearchText))
+            .Where(t => string.Equals(t.BroadCategory, broadCategory, StringComparison.OrdinalIgnoreCase))
+            .GroupBy(t => t.SubCategory, StringComparer.OrdinalIgnoreCase)
             .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-
-        var smallGroups = groups.Where(g => g.Count() < MinSubCategorySize).ToList();
-        var normalGroups = groups.Where(g => g.Count() >= MinSubCategorySize).ToList();
-
-        foreach (var group in normalGroups)
-        {
-            SubCategories.Add(new TweakCategoryCardModel(
-                group.Key,
-                group.Key,
-                description: null,
-                group.Count(),
-                group.Count(t => t.IsSelected)));
-        }
-
-        if (smallGroups.Count > 0)
-        {
-            var otherCount = smallGroups.Sum(g => g.Count());
-            var otherSelected = smallGroups.Sum(g => g.Count(t => t.IsSelected));
-            SubCategories.Add(new TweakCategoryCardModel(
-                "Other",
-                "Other",
-                description: null,
-                otherCount,
-                otherSelected));
-        }
+            .Select(g => new TweakSubCategoryGroup(g.Key, g.ToImmutableArray()));
     }
 
     private IEnumerable<TweakCardModel> GetProfileFilteredTweaks()
@@ -309,9 +292,6 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     [RelayCommand]
     private void SelectCategory(string category)
     {
-        SelectedSubCategory = null;
-        FilteredTweaks.Clear();
-
         if (string.Equals(category, "Startup", StringComparison.OrdinalIgnoreCase))
             ApplyStartupFilter();
 
@@ -328,54 +308,17 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void SelectSubCategory(string subCategory)
-    {
-        FilteredTweaks.Clear();
-
-        var tweaksForFilter = GetProfileFilteredTweaks();
-
-        if (string.Equals(subCategory, "Other", StringComparison.OrdinalIgnoreCase))
-        {
-            var normalCategoryNames = SubCategories
-                .Where(c => !string.Equals(c.Category, "Other", StringComparison.OrdinalIgnoreCase))
-                .Select(c => c.Category)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var tweak in tweaksForFilter.Where(t => !normalCategoryNames.Contains(t.Category)))
-                FilteredTweaks.Add(tweak);
-        }
-        else
-        {
-            foreach (var tweak in tweaksForFilter.Where(t => string.Equals(t.Category, subCategory, StringComparison.OrdinalIgnoreCase)))
-                FilteredTweaks.Add(tweak);
-        }
-
-        SelectedSubCategory = subCategory;
-    }
-
-    [RelayCommand]
     private void SetProfileFilter(string filter)
     {
         ActiveProfileFilter = filter;
         RebuildSubCategories();
-
-        if (SelectedSubCategory is not null)
-            SelectSubCategory(SelectedSubCategory);
     }
 
     [RelayCommand]
     private void BackToCategories()
     {
         SelectedCategory = null;
-        SelectedSubCategory = null;
         RebuildCategories();
-    }
-
-    [RelayCommand]
-    private void BackToSubCategories()
-    {
-        SelectedSubCategory = null;
-        RebuildSubCategories();
     }
 
     [RelayCommand]
@@ -522,10 +465,6 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
         }
     }
 
-    private void ApplyFilter()
-    {
-    }
-
     private void OnFontPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         if (e.PropertyName != nameof(FontCardModel.IsSelected) || sender is not FontCardModel font)
@@ -564,3 +503,5 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
         return profiles;
     }
 }
+
+public sealed record TweakSubCategoryGroup(string SubCategory, ImmutableArray<TweakCardModel> Tweaks);
