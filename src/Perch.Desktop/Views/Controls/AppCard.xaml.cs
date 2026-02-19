@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 using Perch.Desktop.Models;
@@ -260,12 +261,27 @@ public partial class AppCard : UserControl
 
             if (bitmap.IsDownloading)
             {
-                bitmap.DownloadCompleted += (_, _) => card.FallbackIcon.Visibility = Visibility.Collapsed;
-                bitmap.DownloadFailed += (_, _) =>
+                void Detach()
                 {
+                    bitmap.DownloadCompleted -= OnCompleted;
+                    bitmap.DownloadFailed -= OnFailed;
+                }
+
+                void OnCompleted(object? s, EventArgs e)
+                {
+                    Detach();
+                    card.FallbackIcon.Visibility = Visibility.Collapsed;
+                }
+
+                void OnFailed(object? s, EventArgs e)
+                {
+                    Detach();
                     card.LogoImage.Source = null;
                     card.FallbackIcon.Visibility = Visibility.Visible;
-                };
+                }
+
+                bitmap.DownloadCompleted += OnCompleted;
+                bitmap.DownloadFailed += OnFailed;
             }
             else
             {
