@@ -123,12 +123,12 @@ public sealed partial class LanguagesViewModel : GalleryViewModelBase
 
         var runtimes = allApps
             .Where(a => a.CatalogEntry.Kind == CatalogKind.Runtime
-                && a.Category.Contains("Languages", StringComparison.OrdinalIgnoreCase))
+                && !a.CatalogEntry.Hidden)
             .ToList();
 
         var ecosystems = runtimes.Select(runtime =>
         {
-            var ecosystemName = runtime.DisplayLabel
+            var ecosystemName = runtime.Name
                 .Replace(" SDK", "", StringComparison.OrdinalIgnoreCase)
                 .Replace(" Runtime", "", StringComparison.OrdinalIgnoreCase);
 
@@ -288,8 +288,9 @@ public sealed partial class LanguagesViewModel : GalleryViewModelBase
 
     private static int SubCategorySortOrder(string subCategory) => subCategory switch
     {
-        _ when subCategory.Equals("Languages", StringComparison.OrdinalIgnoreCase) => 0,
-        _ when subCategory.Equals("IDEs", StringComparison.OrdinalIgnoreCase) => 1,
+        _ when subCategory.Equals("IDEs", StringComparison.OrdinalIgnoreCase) => 0,
+        _ when subCategory.Equals("Runtimes", StringComparison.OrdinalIgnoreCase) => 1,
+        _ when subCategory.Equals("Languages", StringComparison.OrdinalIgnoreCase) => 1,
         _ when subCategory.Equals("Decompilers", StringComparison.OrdinalIgnoreCase) => 2,
         _ when subCategory.Equals("Profilers", StringComparison.OrdinalIgnoreCase) => 3,
         _ when subCategory.Equals("IDE Extensions", StringComparison.OrdinalIgnoreCase) => 4,
