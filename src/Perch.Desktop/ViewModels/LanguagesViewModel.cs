@@ -102,6 +102,25 @@ public sealed partial class LanguagesViewModel : GalleryViewModelBase
 
     private void BuildEcosystems(ImmutableArray<AppCardModel> allApps)
     {
+        var byId = allApps.ToDictionary(a => a.Id, StringComparer.OrdinalIgnoreCase);
+
+        var reverseRequires = new Dictionary<string, List<AppCardModel>>(StringComparer.OrdinalIgnoreCase);
+        foreach (var app in allApps)
+        {
+            if (app.CatalogEntry.Requires.IsDefaultOrEmpty)
+                continue;
+
+            foreach (var reqId in app.CatalogEntry.Requires)
+            {
+                if (!reverseRequires.TryGetValue(reqId, out var list))
+                {
+                    list = [];
+                    reverseRequires[reqId] = list;
+                }
+                list.Add(app);
+            }
+        }
+
         var runtimes = allApps
             .Where(a => a.CatalogEntry.Kind == CatalogKind.Runtime
                 && a.Category.Contains("Languages", StringComparison.OrdinalIgnoreCase))
@@ -113,13 +132,34 @@ public sealed partial class LanguagesViewModel : GalleryViewModelBase
                 .Replace(" SDK", "", StringComparison.OrdinalIgnoreCase)
                 .Replace(" Runtime", "", StringComparison.OrdinalIgnoreCase);
 
+            var items = new List<AppCardModel> { runtime };
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { runtime.Id };
+
+            if (!runtime.CatalogEntry.Suggests.IsDefaultOrEmpty)
+            {
+                foreach (var suggestId in runtime.CatalogEntry.Suggests)
+                {
+                    if (seen.Add(suggestId) && byId.TryGetValue(suggestId, out var suggested))
+                        items.Add(suggested);
+                }
+            }
+
+            if (reverseRequires.TryGetValue(runtime.Id, out var dependents))
+            {
+                foreach (var dep in dependents)
+                {
+                    if (seen.Add(dep.Id))
+                        items.Add(dep);
+                }
+            }
+
             var eco = new EcosystemCardModel(
                 runtime.Id,
                 ecosystemName,
                 runtime.Description,
                 runtime.LogoUrl);
 
-            eco.Items = [runtime];
+            eco.Items = [.. items];
             eco.UpdateCounts();
             return eco;
         }).ToImmutableArray();
