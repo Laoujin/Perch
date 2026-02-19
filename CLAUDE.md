@@ -18,14 +18,6 @@ dotnet run --project src/Perch.Cli        # Run the CLI
 dotnet run --project src/Perch.Cli -- deploy   # Run with arguments
 ```
 
-Smoke tests (optional, for Desktop UI verification):
-
-```bash
-dotnet test tests/Perch.SmokeTests --filter PageScreenshotTests  # Screenshot all pages
-dotnet test tests/Perch.SmokeTests --filter <TestName>            # Targeted test
-```
-
-Screenshots saved to `tests/Perch.SmokeTests/screenshots/`. Never committed.
 
 ## Coding Conventions
 
