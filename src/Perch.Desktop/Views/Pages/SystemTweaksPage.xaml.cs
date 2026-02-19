@@ -16,12 +16,6 @@ public partial class SystemTweaksPage : Page
         ViewModel = viewModel;
         DataContext = viewModel;
         InitializeComponent();
-
-        viewModel.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(SystemTweaksViewModel.SelectedCategory))
-                UpdateDetailPanelVisibility();
-        };
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -138,44 +132,6 @@ public partial class SystemTweaksPage : Page
     {
         if (GetStartupCardModel(sender) is { } card)
             ViewModel.RemoveStartupItemCommand.Execute(card);
-    }
-
-    private void UpdateDetailPanelVisibility()
-    {
-        var category = ViewModel.SelectedCategory;
-        var isFonts = string.Equals(category, "Fonts", StringComparison.OrdinalIgnoreCase);
-        var isStartup = string.Equals(category, "Startup", StringComparison.OrdinalIgnoreCase);
-        var isCertificates = string.Equals(category, "Certificates", StringComparison.OrdinalIgnoreCase);
-        var isSystemTweaks = string.Equals(category, "System Tweaks", StringComparison.OrdinalIgnoreCase);
-
-        SubCategoryPanel.Visibility = isSystemTweaks
-            ? Visibility.Visible : Visibility.Collapsed;
-        FontDetailPanel.Visibility = isFonts
-            ? Visibility.Visible : Visibility.Collapsed;
-        StartupDetailPanel.Visibility = isStartup
-            ? Visibility.Visible : Visibility.Collapsed;
-        CertificateDetailPanel.Visibility = isCertificates
-            ? Visibility.Visible : Visibility.Collapsed;
-
-        UpdateBackButton();
-        UpdateHeaderText();
-    }
-
-    private void UpdateBackButton()
-    {
-        BackButton.Command = null;
-        BackButton.Click -= OnBackButtonClick;
-        BackButton.Click += OnBackButtonClick;
-    }
-
-    private void OnBackButtonClick(object sender, RoutedEventArgs e)
-    {
-        ViewModel.BackToCategoriesCommand.Execute(null);
-    }
-
-    private void UpdateHeaderText()
-    {
-        DetailHeaderText.Text = ViewModel.SelectedCategory ?? string.Empty;
     }
 
     private static StartupCardModel? GetStartupCardModel(object sender) =>

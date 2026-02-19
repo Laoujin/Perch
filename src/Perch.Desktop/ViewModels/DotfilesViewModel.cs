@@ -9,22 +9,13 @@ using Perch.Desktop.Services;
 
 namespace Perch.Desktop.ViewModels;
 
-public sealed partial class DotfilesViewModel : ViewModelBase
+public sealed partial class DotfilesViewModel : GalleryViewModelBase
 {
     private readonly IGalleryDetectionService _detectionService;
     private readonly IAppDetailService _detailService;
     private readonly IPendingChangesService _pendingChanges;
 
     private ImmutableArray<AppCardModel> _allDotfiles = [];
-
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private string? _errorMessage;
-
-    [ObservableProperty]
-    private string _searchText = string.Empty;
 
     [ObservableProperty]
     private int _linkedCount;
@@ -41,8 +32,8 @@ public sealed partial class DotfilesViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isLoadingDetail;
 
-    public bool ShowCardGrid => SelectedApp is null;
-    public bool ShowDetailView => SelectedApp is not null;
+    public override bool ShowGrid => SelectedApp is null;
+    public override bool ShowDetail => SelectedApp is not null;
     public bool HasModule => Detail?.OwningModule is not null;
     public bool HasNoModule => Detail is not null && Detail.OwningModule is null;
     public bool HasFileStatuses => Detail is not null && !Detail.FileStatuses.IsDefaultOrEmpty;
@@ -59,12 +50,12 @@ public sealed partial class DotfilesViewModel : ViewModelBase
         _pendingChanges = pendingChanges;
     }
 
-    partial void OnSearchTextChanged(string value) => ApplyFilter();
+    protected override void OnSearchTextUpdated() => ApplyFilter();
 
     partial void OnSelectedAppChanged(AppCardModel? value)
     {
-        OnPropertyChanged(nameof(ShowCardGrid));
-        OnPropertyChanged(nameof(ShowDetailView));
+        OnPropertyChanged(nameof(ShowGrid));
+        OnPropertyChanged(nameof(ShowDetail));
     }
 
     partial void OnDetailChanged(AppDetail? value)

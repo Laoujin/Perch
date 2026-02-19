@@ -14,7 +14,7 @@ using Perch.Desktop.Services;
 
 namespace Perch.Desktop.ViewModels;
 
-public sealed partial class SystemTweaksViewModel : ViewModelBase
+public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
 {
     private readonly IGalleryDetectionService _detectionService;
     private readonly ISettingsProvider _settingsProvider;
@@ -22,15 +22,6 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     private readonly ITweakService _tweakService;
     private readonly ICertificateScanner _certificateScanner;
     private readonly IPendingChangesService _pendingChanges;
-
-    [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private string? _errorMessage;
-
-    [ObservableProperty]
-    private string _searchText = string.Empty;
 
     [ObservableProperty]
     private string _fontSearchText = string.Empty;
@@ -69,9 +60,12 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
     private List<FontFamilyGroupModel> _allInstalledFontGroups = [];
     private List<CertificateStoreGroupModel> _allCertificateGroups = [];
 
-    public bool ShowCategories => SelectedCategory is null;
-    public bool ShowDetail => SelectedCategory is not null;
+    public override bool ShowGrid => SelectedCategory is null;
+    public override bool ShowDetail => SelectedCategory is not null;
     public bool ShowSubCategories => SelectedCategory == "System Tweaks";
+    public bool ShowStartupDetail => string.Equals(SelectedCategory, "Startup", StringComparison.OrdinalIgnoreCase);
+    public bool ShowFontDetail => string.Equals(SelectedCategory, "Fonts", StringComparison.OrdinalIgnoreCase);
+    public bool ShowCertificateDetail => string.Equals(SelectedCategory, "Certificates", StringComparison.OrdinalIgnoreCase);
 
     public SystemTweaksViewModel(
         IGalleryDetectionService detectionService,
@@ -89,16 +83,19 @@ public sealed partial class SystemTweaksViewModel : ViewModelBase
         _pendingChanges = pendingChanges;
     }
 
-    partial void OnSearchTextChanged(string value) => RebuildSubCategories();
+    protected override void OnSearchTextUpdated() => RebuildSubCategories();
     partial void OnFontSearchTextChanged(string value) => ApplyFontFilter();
     partial void OnStartupSearchTextChanged(string value) => ApplyStartupFilter();
     partial void OnCertificateSearchTextChanged(string value) => ApplyCertificateFilter();
 
     partial void OnSelectedCategoryChanged(string? value)
     {
-        OnPropertyChanged(nameof(ShowCategories));
+        OnPropertyChanged(nameof(ShowGrid));
         OnPropertyChanged(nameof(ShowDetail));
         OnPropertyChanged(nameof(ShowSubCategories));
+        OnPropertyChanged(nameof(ShowStartupDetail));
+        OnPropertyChanged(nameof(ShowFontDetail));
+        OnPropertyChanged(nameof(ShowCertificateDetail));
     }
 
     [RelayCommand]

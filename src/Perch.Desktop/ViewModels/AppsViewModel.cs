@@ -10,7 +10,7 @@ using Perch.Desktop.Services;
 
 namespace Perch.Desktop.ViewModels;
 
-public sealed partial class AppsViewModel : ViewModelBase
+public sealed partial class AppsViewModel : GalleryViewModelBase
 {
     private readonly IGalleryDetectionService _detectionService;
     private readonly IAppDetailService _detailService;
@@ -45,15 +45,6 @@ public sealed partial class AppsViewModel : ViewModelBase
     };
 
     [ObservableProperty]
-    private bool _isLoading;
-
-    [ObservableProperty]
-    private string? _errorMessage;
-
-    [ObservableProperty]
-    private string _searchText = string.Empty;
-
-    [ObservableProperty]
     private int _linkedCount;
 
     [ObservableProperty]
@@ -71,8 +62,8 @@ public sealed partial class AppsViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isLoadingDetail;
 
-    public bool ShowCardGrid => SelectedApp is null;
-    public bool ShowDetailView => SelectedApp is not null;
+    public override bool ShowGrid => SelectedApp is null;
+    public override bool ShowDetail => SelectedApp is not null;
     public bool HasModule => Detail?.OwningModule is not null;
     public bool HasEcosystem => EcosystemGroups.Count > 0;
     public bool HasAlternatives => AlternativeApps.Count > 0;
@@ -95,8 +86,8 @@ public sealed partial class AppsViewModel : ViewModelBase
 
     partial void OnSelectedAppChanged(AppCardModel? value)
     {
-        OnPropertyChanged(nameof(ShowCardGrid));
-        OnPropertyChanged(nameof(ShowDetailView));
+        OnPropertyChanged(nameof(ShowGrid));
+        OnPropertyChanged(nameof(ShowDetail));
     }
 
     partial void OnDetailChanged(AppDetail? value)
@@ -104,7 +95,7 @@ public sealed partial class AppsViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasModule));
     }
 
-    partial void OnSearchTextChanged(string value) => RebuildCategories();
+    protected override void OnSearchTextUpdated() => RebuildCategories();
 
     [RelayCommand]
     private async Task RefreshAsync(CancellationToken cancellationToken)

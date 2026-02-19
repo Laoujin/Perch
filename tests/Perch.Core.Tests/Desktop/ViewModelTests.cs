@@ -316,8 +316,8 @@ public sealed class AppsViewModelTests
     {
         Assert.Multiple(() =>
         {
-            Assert.That(_vm.ShowCardGrid, Is.True);
-            Assert.That(_vm.ShowDetailView, Is.False);
+            Assert.That(_vm.ShowGrid, Is.True);
+            Assert.That(_vm.ShowDetail, Is.False);
             Assert.That(_vm.SelectedApp, Is.Null);
             Assert.That(_vm.Detail, Is.Null);
             Assert.That(_vm.HasEcosystem, Is.False);
@@ -342,8 +342,8 @@ public sealed class AppsViewModelTests
         {
             Assert.That(_vm.SelectedApp, Is.EqualTo(card));
             Assert.That(_vm.Detail, Is.EqualTo(detail));
-            Assert.That(_vm.ShowDetailView, Is.True);
-            Assert.That(_vm.ShowCardGrid, Is.False);
+            Assert.That(_vm.ShowDetail, Is.True);
+            Assert.That(_vm.ShowGrid, Is.False);
             Assert.That(_vm.IsLoadingDetail, Is.False);
         });
     }
@@ -361,13 +361,13 @@ public sealed class AppsViewModelTests
         await _vm.RefreshCommand.ExecuteAsync(null);
 
         await _vm.ConfigureAppCommand.ExecuteAsync(card);
-        Assert.That(_vm.ShowDetailView, Is.True);
+        Assert.That(_vm.ShowDetail, Is.True);
 
         _vm.BackToGridCommand.Execute(null);
 
         Assert.Multiple(() =>
         {
-            Assert.That(_vm.ShowCardGrid, Is.True);
+            Assert.That(_vm.ShowGrid, Is.True);
             Assert.That(_vm.SelectedApp, Is.Null);
             Assert.That(_vm.Detail, Is.Null);
             Assert.That(_vm.HasEcosystem, Is.False);
@@ -469,8 +469,8 @@ public sealed class DotfilesViewModelTests
     {
         Assert.Multiple(() =>
         {
-            Assert.That(_vm.ShowCardGrid, Is.True);
-            Assert.That(_vm.ShowDetailView, Is.False);
+            Assert.That(_vm.ShowGrid, Is.True);
+            Assert.That(_vm.ShowDetail, Is.False);
             Assert.That(_vm.ErrorMessage, Is.Null);
         });
     }
@@ -520,13 +520,13 @@ public sealed class DotfilesViewModelTests
             .Returns(detail);
 
         await _vm.ConfigureAppCommand.ExecuteAsync(card);
-        Assert.That(_vm.ShowDetailView, Is.True);
+        Assert.That(_vm.ShowDetail, Is.True);
 
         _vm.BackToGridCommand.Execute(null);
 
         Assert.Multiple(() =>
         {
-            Assert.That(_vm.ShowCardGrid, Is.True);
+            Assert.That(_vm.ShowGrid, Is.True);
             Assert.That(_vm.SelectedApp, Is.Null);
             Assert.That(_vm.Detail, Is.Null);
         });
@@ -563,7 +563,7 @@ public sealed class DotfilesViewModelTests
         {
             Assert.That(_vm.SelectedApp, Is.EqualTo(card));
             Assert.That(_vm.Detail, Is.EqualTo(detail));
-            Assert.That(_vm.ShowDetailView, Is.True);
+            Assert.That(_vm.ShowDetail, Is.True);
         });
     }
 
@@ -687,7 +687,7 @@ public sealed class SystemTweaksViewModelTests
     {
         Assert.Multiple(() =>
         {
-            Assert.That(_vm.ShowCategories, Is.True);
+            Assert.That(_vm.ShowGrid, Is.True);
             Assert.That(_vm.ShowDetail, Is.False);
             Assert.That(_vm.ErrorMessage, Is.Null);
         });
@@ -744,7 +744,7 @@ public sealed class SystemTweaksViewModelTests
         Assert.Multiple(() =>
         {
             Assert.That(_vm.ShowDetail, Is.True);
-            Assert.That(_vm.ShowCategories, Is.False);
+            Assert.That(_vm.ShowGrid, Is.False);
             Assert.That(_vm.SelectedCategory, Is.EqualTo("System Tweaks"));
         });
 
@@ -759,7 +759,7 @@ public sealed class SystemTweaksViewModelTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(_vm.ShowCategories, Is.True);
+            Assert.That(_vm.ShowGrid, Is.True);
             Assert.That(_vm.SelectedCategory, Is.Null);
         });
     }
