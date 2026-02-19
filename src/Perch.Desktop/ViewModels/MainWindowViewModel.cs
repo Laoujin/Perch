@@ -65,6 +65,13 @@ public sealed partial class MainWindowViewModel : ViewModelBase
         _pendingChanges.Clear();
     }
 
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            _pendingChanges.PropertyChanged -= OnPendingChangesPropertyChanged;
+        base.Dispose(disposing);
+    }
+
     private void OnPendingChangesPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(IPendingChangesService.Count))

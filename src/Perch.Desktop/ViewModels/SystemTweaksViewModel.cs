@@ -512,4 +512,10 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
             f.PropertyChanged -= OnFontPropertyChanged;
     }
 
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            UnsubscribeFontChanges();
+        base.Dispose(disposing);
+    }
 }

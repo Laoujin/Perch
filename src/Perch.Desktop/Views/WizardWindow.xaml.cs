@@ -22,7 +22,13 @@ public partial class WizardWindow : FluentWindow
         InitializeComponent();
 
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        Closed += OnWindowClosed;
         UpdateStepVisibility();
+    }
+
+    private void OnWindowClosed(object? sender, EventArgs e)
+    {
+        ViewModel.PropertyChanged -= OnViewModelPropertyChanged;
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

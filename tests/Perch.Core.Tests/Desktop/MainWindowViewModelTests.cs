@@ -135,6 +135,16 @@ public sealed class MainWindowViewModelTests
         });
     }
 
+    [Test]
+    public void Dispose_UnsubscribesFromPendingChanges()
+    {
+        _vm.Dispose();
+
+        _pendingChanges.Add(new LinkAppChange(CreateAppCard("after-dispose")));
+
+        Assert.That(_vm.PendingChangeCount, Is.Zero);
+    }
+
     private static AppCardModel CreateAppCard(string id)
     {
         var entry = new CatalogEntry(id, id, null, "test", [], null, null, null, null, null, null);

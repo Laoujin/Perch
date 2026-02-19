@@ -74,6 +74,13 @@ public sealed partial class DashboardViewModel : ViewModelBase
         _pendingChanges.PropertyChanged += OnPendingChangesPropertyChanged;
     }
 
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            _pendingChanges.PropertyChanged -= OnPendingChangesPropertyChanged;
+        base.Dispose(disposing);
+    }
+
     private void OnPendingChangesPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         OnPropertyChanged(nameof(HasPendingChanges));

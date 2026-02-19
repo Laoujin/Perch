@@ -312,6 +312,19 @@ public sealed class DashboardViewModelTests
         return new AppCardModel(entry, CardTier.YourApps, CardStatus.Detected);
     }
 
+    [Test]
+    public void Dispose_UnsubscribesFromPendingChanges()
+    {
+        _vm.Dispose();
+
+        var changed = false;
+        _vm.PropertyChanged += (_, _) => changed = true;
+
+        _pendingChanges.Add(new LinkAppChange(CreateAppCard("after-dispose")));
+
+        Assert.That(changed, Is.False);
+    }
+
     private static TweakCardModel CreateTweakCard(string id)
     {
         var entry = new TweakCatalogEntry(id, id, "test", [], null, true, [], []);
