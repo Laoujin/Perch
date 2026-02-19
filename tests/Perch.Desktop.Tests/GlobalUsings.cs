@@ -4,5 +4,6 @@ global using System.IO;
 global using System.Linq;
 global using System.Threading;
 global using System.Threading.Tasks;
+global using Microsoft.Extensions.Logging;
 global using NUnit.Framework;
 global using NSubstitute;

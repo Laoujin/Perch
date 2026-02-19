@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 
+using Microsoft.Extensions.Logging;
+
 using Perch.Core;
 using Perch.Core.Catalog;
 using Perch.Core.Config;
@@ -16,19 +18,22 @@ public sealed class AppDetailService : IAppDetailService
     private readonly ISettingsProvider _settings;
     private readonly IPlatformDetector _platformDetector;
     private readonly ISymlinkProvider _symlinkProvider;
+    private readonly ILogger<AppDetailService> _logger;
 
     public AppDetailService(
         IModuleDiscoveryService moduleDiscovery,
         ICatalogService catalog,
         ISettingsProvider settings,
         IPlatformDetector platformDetector,
-        ISymlinkProvider symlinkProvider)
+        ISymlinkProvider symlinkProvider,
+        ILogger<AppDetailService> logger)
     {
         _moduleDiscovery = moduleDiscovery;
         _catalog = catalog;
         _settings = settings;
         _platformDetector = platformDetector;
         _symlinkProvider = symlinkProvider;
+        _logger = logger;
     }
 
     public async Task<AppDetail> LoadDetailAsync(AppCardModel card, CancellationToken cancellationToken = default)
@@ -76,10 +81,13 @@ public sealed class AppDetailService : IAppDetailService
                 : exists ? CardStatus.Detected
                 : CardStatus.NotInstalled;
 
+            string? driftError = null;
             if (isSymlink && !string.IsNullOrEmpty(configRepoPath))
             {
-                if (IsDrift(resolved, configRepoPath))
+                var driftCheck = DriftDetector.Check(resolved, configRepoPath, _logger);
+                if (driftCheck.IsDrift || driftCheck.Error is not null)
                     fileStatus = CardStatus.Drift;
+                driftError = driftCheck.Error;
             }
 
             builder.Add(new DotfileFileStatus(
@@ -87,27 +95,11 @@ public sealed class AppDetailService : IAppDetailService
                 resolved,
                 exists,
                 isSymlink,
-                fileStatus));
+                fileStatus,
+                driftError));
         }
 
         return builder.ToImmutable();
-    }
-
-    private static bool IsDrift(string resolvedPath, string configRepoPath)
-    {
-        try
-        {
-            var linkTarget = new FileInfo(resolvedPath).LinkTarget;
-            if (linkTarget is null) return false;
-
-            var resolvedTarget = Path.GetFullPath(linkTarget, Path.GetDirectoryName(resolvedPath)!);
-            var resolvedConfig = Path.GetFullPath(configRepoPath);
-            return !resolvedTarget.StartsWith(resolvedConfig, StringComparison.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     internal static async Task<(AppModule? Module, AppManifest? Manifest, string? Yaml, string? Path)>

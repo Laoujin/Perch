@@ -52,7 +52,8 @@ public sealed class GalleryDetectionServiceFontTests
             Substitute.For<ISymlinkProvider>(),
             settingsProvider,
             [_packageProvider],
-            Substitute.For<ITweakService>());
+            Substitute.For<ITweakService>(),
+            Substitute.For<ILogger<GalleryDetectionService>>());
     }
 
     [Test]

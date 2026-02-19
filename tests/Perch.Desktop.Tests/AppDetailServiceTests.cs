@@ -37,7 +37,8 @@ public sealed class AppDetailServiceTests
             .Returns(ImmutableArray<CatalogEntry>.Empty);
         _platformDetector.CurrentPlatform.Returns(Platform.Windows);
 
-        _service = new AppDetailService(_moduleDiscovery, _catalog, _settings, _platformDetector, _symlinkProvider);
+        _service = new AppDetailService(_moduleDiscovery, _catalog, _settings, _platformDetector, _symlinkProvider,
+            Substitute.For<ILogger<AppDetailService>>());
     }
 
     [Test]

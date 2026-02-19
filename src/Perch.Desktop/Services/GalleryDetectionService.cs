@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 
+using Microsoft.Extensions.Logging;
+
 using Perch.Core;
 using Perch.Core.Catalog;
 using Perch.Core.Config;
@@ -20,6 +22,7 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
     private readonly ISettingsProvider _settingsProvider;
     private readonly IEnumerable<IPackageManagerProvider> _packageProviders;
     private readonly ITweakService _tweakService;
+    private readonly ILogger<GalleryDetectionService> _logger;
 
     private readonly SemaphoreSlim _packageScanLock = new(1, 1);
     private HashSet<string>? _cachedInstalledIds;
@@ -46,7 +49,8 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         ISymlinkProvider symlinkProvider,
         ISettingsProvider settingsProvider,
         IEnumerable<IPackageManagerProvider> packageProviders,
-        ITweakService tweakService)
+        ITweakService tweakService,
+        ILogger<GalleryDetectionService> logger)
     {
         _catalog = catalog;
         _fontScanner = fontScanner;
@@ -55,6 +59,7 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         _settingsProvider = settingsProvider;
         _packageProviders = packageProviders;
         _tweakService = tweakService;
+        _logger = logger;
     }
 
     public async Task WarmUpAsync(CancellationToken cancellationToken = default)
@@ -284,8 +289,12 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
 
             if (isSymlink)
             {
-                if (!string.IsNullOrEmpty(configRepoPath) && IsDrift(resolved, configRepoPath))
-                    anyDrift = true;
+                if (!string.IsNullOrEmpty(configRepoPath))
+                {
+                    var driftCheck = DriftDetector.Check(resolved, configRepoPath, _logger);
+                    if (driftCheck.IsDrift || driftCheck.Error is not null)
+                        anyDrift = true;
+                }
             }
             else
             {
@@ -299,23 +308,6 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         if (allLinked) return CardStatus.Linked;
         if (anyDetected) return CardStatus.Detected;
         return CardStatus.NotInstalled;
-    }
-
-    private static bool IsDrift(string resolvedPath, string configRepoPath)
-    {
-        try
-        {
-            var linkTarget = new FileInfo(resolvedPath).LinkTarget;
-            if (linkTarget is null) return false;
-
-            var resolvedTarget = Path.GetFullPath(linkTarget, Path.GetDirectoryName(resolvedPath)!);
-            var resolvedConfig = Path.GetFullPath(configRepoPath);
-            return !resolvedTarget.StartsWith(resolvedConfig, StringComparison.OrdinalIgnoreCase);
-        }
-        catch
-        {
-            return false;
-        }
     }
 
     public async Task<FontDetectionResult> DetectFontsAsync(CancellationToken cancellationToken = default)

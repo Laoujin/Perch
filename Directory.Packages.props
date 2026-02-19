@@ -18,6 +18,8 @@
     <PackageVersion Include="Spectre.Console.Cli" Version="0.53.1" />
 
     <!-- Desktop -->
+    <PackageVersion Include="Serilog.Extensions.Hosting" Version="10.0.0" />
+    <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="WPF-UI" Version="4.2.0" />
     <PackageVersion Include="WPF-UI.Abstractions" Version="4.2.0" />
     <PackageVersion Include="WPF-UI.DependencyInjection" Version="4.2.0" />

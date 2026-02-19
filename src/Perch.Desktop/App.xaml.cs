@@ -6,6 +6,8 @@ using System.Windows.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
+using Serilog;
+
 using Wpf.Ui;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.DependencyInjection;
@@ -26,6 +28,18 @@ public partial class App : Application
 
     private static readonly IHost _host = Host
         .CreateDefaultBuilder()
+        .UseSerilog((_, configuration) =>
+        {
+            var logDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Perch", "logs");
+            configuration
+                .MinimumLevel.Information()
+                .WriteTo.File(
+                    Path.Combine(logDir, "perch-.log"),
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: 14);
+        })
         .ConfigureServices((_, services) =>
         {
             services.AddNavigationViewPageProvider();

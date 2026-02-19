@@ -47,7 +47,8 @@ public sealed class GalleryDetectionServiceDotfileTests
             _symlinkProvider,
             _settingsProvider,
             [],
-            Substitute.For<ITweakService>());
+            Substitute.For<ITweakService>(),
+            Substitute.For<ILogger<GalleryDetectionService>>());
     }
 
     [TearDown]

@@ -45,7 +45,8 @@ public sealed class GalleryDetectionServiceTweakTests
             Substitute.For<ISymlinkProvider>(),
             settingsProvider,
             [],
-            _tweakService);
+            _tweakService,
+            Substitute.For<ILogger<GalleryDetectionService>>());
     }
 
     [Test]

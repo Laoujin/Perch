@@ -19,4 +19,5 @@ public sealed record DotfileFileStatus(
     string FullPath,
     bool Exists,
     bool IsSymlink,
-    CardStatus Status);
+    CardStatus Status,
+    string? Error = null);
