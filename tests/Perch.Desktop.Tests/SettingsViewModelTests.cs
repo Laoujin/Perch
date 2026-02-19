@@ -1,4 +1,3 @@
-#if DESKTOP_TESTS
 using System.Runtime.Versioning;
 
 using NSubstitute;
@@ -9,7 +8,7 @@ using Perch.Desktop.ViewModels;
 
 using Wpf.Ui;
 
-namespace Perch.Core.Tests.Desktop;
+namespace Perch.Desktop.Tests;
 
 [TestFixture]
 [Platform("Win")]
@@ -136,4 +135,3 @@ public sealed class SettingsViewModelTests
         });
     }
 }
-#endif

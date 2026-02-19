@@ -6,6 +6,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Perch.Core.Tests/Perch.Core.Tests.csproj" />
+    <Project Path="tests/Perch.Desktop.Tests/Perch.Desktop.Tests.csproj" />
     <Project Path="tests/Perch.SmokeTests/Perch.SmokeTests.csproj" />
   </Folder>
 </Solution>

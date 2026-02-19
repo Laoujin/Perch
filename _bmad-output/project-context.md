@@ -43,7 +43,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 ### Build & CI Constraints
 - **Two solution files:** `Perch.CrossPlatform.slnx` (Linux CI) excludes Desktop; `Perch.slnx` (Windows) is full
 - **Perch.Core has zero UI dependencies** — adding Spectre or WPF references breaks Linux CI
-- **Perch.Core.Tests** conditionally targets `net10.0-windows` and defines `DESKTOP_TESTS` — Desktop ViewModel tests must use `#if DESKTOP_TESTS`
+- **Perch.Desktop.Tests** targets `net10.0-windows` — Desktop ViewModel/service tests live here (Windows-only, not in CrossPlatform solution)
 - **Smoke tests excluded from CI** — FlaUI tests run locally only
 - **CA1707 suppressed in test projects** — underscore test names OK in tests, not in production code
 
@@ -119,7 +119,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Test project mirrors source folder structure: `tests/Perch.Core.Tests/Deploy/` matches `src/Perch.Core/Deploy/`
 - Test classes: `[TestFixture] public sealed class <ClassName>Tests`
 - Test naming: `Method_Scenario_ExpectedResult` with underscores (CA1707 suppressed in tests)
-- Desktop ViewModel tests live in `Perch.Core.Tests/Desktop/`
+- Desktop ViewModel tests live in `Perch.Desktop.Tests/`
 - `NUnit.Framework` and `NSubstitute` are in test `GlobalUsings.cs` — no per-file imports needed
 
 **Test Boundaries (sociable with boundary mocks):**
@@ -128,7 +128,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - **Use real instances** for parsers, orchestrators, and services that coordinate other services
 - Don't rewrite existing solitary tests — this applies to new tests going forward
 - Real filesystem tests: only for platform-specific providers (`WindowsSymlinkProviderTests`)
-- Desktop ViewModel tests: guarded by `#if DESKTOP_TESTS` — only compile on Windows
+- Desktop ViewModel tests: in dedicated `Perch.Desktop.Tests` project (Windows-only, not in CrossPlatform solution)
 - Smoke tests (FlaUI): separate `Perch.SmokeTests` project, run locally, screenshots to `tests/Perch.SmokeTests/screenshots/`
 
 **SetUp Pattern:**
@@ -206,7 +206,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 **Desktop-Specific Traps:**
 - `[ObservableProperty]` requires the class to be `partial` — forgetting produces cryptic source generator errors
 - `[ObservableProperty]` fields must be `_camelCase` — the generated property is `PascalCase`
-- Desktop tests without `#if DESKTOP_TESTS` guard will fail Linux CI
+- Desktop tests belong in `Perch.Desktop.Tests` (not `Perch.Core.Tests`) — only `Perch.slnx` includes it
 
 **YAML Manifest Gotchas:**
 - Properties are `kebab-case` in YAML but `PascalCase` in C# — `HyphenatedNamingConvention` handles mapping

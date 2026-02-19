@@ -1,8 +1,7 @@
-#if DESKTOP_TESTS
 using Perch.Core.Scanner;
 using Perch.Desktop.Models;
 
-namespace Perch.Core.Tests.Desktop;
+namespace Perch.Desktop.Tests;
 
 [TestFixture]
 public sealed class CertificateCardModelTests
@@ -119,4 +118,3 @@ public sealed class CertificateCardModelTests
             store);
     }
 }
-#endif

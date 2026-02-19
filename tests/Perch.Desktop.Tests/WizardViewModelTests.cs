@@ -1,4 +1,3 @@
-#if DESKTOP_TESTS
 using System.Collections.Immutable;
 using System.Runtime.Versioning;
 
@@ -13,7 +12,7 @@ using Perch.Desktop.Models;
 using Perch.Desktop.Services;
 using Perch.Desktop.ViewModels.Wizard;
 
-namespace Perch.Core.Tests.Desktop;
+namespace Perch.Desktop.Tests;
 
 [TestFixture]
 [Platform("Win")]
@@ -920,4 +919,3 @@ public sealed class WizardShellViewModelTests
         return new FontCardModel(name, name, name, null, null, null, FontCardSource.Detected, [], CardStatus.Detected);
     }
 }
-#endif

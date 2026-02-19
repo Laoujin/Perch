@@ -1,4 +1,3 @@
-#if DESKTOP_TESTS
 using System.Collections.Immutable;
 using System.Runtime.Versioning;
 
@@ -6,7 +5,7 @@ using Perch.Core.Catalog;
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
 
-namespace Perch.Core.Tests.Desktop;
+namespace Perch.Desktop.Tests;
 
 [TestFixture]
 [Platform("Win")]
@@ -217,4 +216,3 @@ public sealed class PendingChangesServiceTests
         return new AppCardModel(entry, CardTier.Other, CardStatus.Detected);
     }
 }
-#endif

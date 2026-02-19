@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Perch.Core.Tests" />
+    <InternalsVisibleTo Include="Perch.Desktop.Tests" />
   </ItemGroup>
 
   <ItemGroup>

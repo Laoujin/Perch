@@ -1,4 +1,3 @@
-#if DESKTOP_TESTS
 using System.Collections.Immutable;
 using System.Runtime.Versioning;
 
@@ -15,7 +14,7 @@ using Perch.Core.Tweaks;
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
 
-namespace Perch.Core.Tests.Desktop;
+namespace Perch.Desktop.Tests;
 
 [TestFixture]
 [Platform("Win")]
@@ -205,4 +204,3 @@ public sealed class GalleryDetectionServiceTweakTests
                 new RegistryEntryDefinition(@"HKCU\Software\Test", "B", 2, RegistryValueType.DWord),
             ]);
 }
-#endif

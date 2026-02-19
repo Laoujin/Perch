@@ -1,4 +1,3 @@
-#if DESKTOP_TESTS
 using System.Runtime.Versioning;
 
 using NSubstitute;
@@ -12,7 +11,7 @@ using Perch.Core.Tweaks;
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
 
-namespace Perch.Core.Tests.Desktop;
+namespace Perch.Desktop.Tests;
 
 [TestFixture]
 [Platform("Win")]
@@ -255,4 +254,3 @@ public sealed class ApplyChangesServiceTests
         return new StartupCardModel(entry);
     }
 }
-#endif

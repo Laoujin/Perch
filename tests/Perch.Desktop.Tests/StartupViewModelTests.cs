@@ -1,4 +1,3 @@
-#if DESKTOP_TESTS
 using System.Runtime.Versioning;
 
 using NSubstitute;
@@ -8,7 +7,7 @@ using Perch.Core.Startup;
 using Perch.Desktop.Models;
 using Perch.Desktop.ViewModels;
 
-namespace Perch.Core.Tests.Desktop;
+namespace Perch.Desktop.Tests;
 
 [TestFixture]
 [Platform("Win")]
@@ -156,4 +155,3 @@ public sealed class StartupViewModelTests
     private static StartupEntry MakeEntry(string name, string command, bool isEnabled = true)
         => new(name, name, command, null, StartupSource.RegistryCurrentUser, isEnabled);
 }
-#endif

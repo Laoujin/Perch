@@ -1,4 +1,3 @@
-#if DESKTOP_TESTS
 using System.Collections.Immutable;
 using System.Runtime.Versioning;
 
@@ -10,7 +9,7 @@ using Perch.Core.Symlinks;
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
 
-namespace Perch.Core.Tests.Desktop;
+namespace Perch.Desktop.Tests;
 
 [TestFixture]
 [Platform("Win")]
@@ -141,4 +140,3 @@ public sealed class AppDetailServiceTests
     private static CatalogEntry MakeCatalogEntry(string id, string category) =>
         new(id, id, null, category, [], null, null, null, null, null, null);
 }
-#endif

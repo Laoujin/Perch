@@ -1,4 +1,3 @@
-#if DESKTOP_TESTS
 using System.Collections.Immutable;
 using System.Runtime.Versioning;
 using System.Windows;
@@ -18,7 +17,7 @@ using Perch.Desktop.Models;
 using Perch.Desktop.Services;
 using Perch.Desktop.ViewModels;
 
-namespace Perch.Core.Tests.Desktop;
+namespace Perch.Desktop.Tests;
 
 [TestFixture]
 [Platform("Win")]
@@ -1379,4 +1378,3 @@ public sealed class NullToVisibilityConverterTests
     public void Convert_EmptyString_ReturnsCollapsed() =>
         Assert.That(_converter.Convert("", typeof(object), null!, null!), Is.EqualTo(Visibility.Collapsed));
 }
-#endif
