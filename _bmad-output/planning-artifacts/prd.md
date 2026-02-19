@@ -377,6 +377,9 @@ The Desktop app is fully functional with real data from Perch.Core. No stubs, no
 - `LinkDotfileChange` and `OnboardFontChange` are staged in the pending queue but silently skipped by `ApplyChangesService` — they have no apply handler
 - Startup page exists both as standalone page AND as System Tweaks sub-section — redundant
 - AppsPage, DotfilesPage, and SystemTweaksPage share the same UI pattern (search header + loading spinner + error banner + card grid + detail view) but each page implements it independently (~1,200 lines of duplicated scaffolding)
+- Fonts "open location" button does not work (#29)
+- Fonts vertical alignment of font group toggler is off (#30)
+- UI changes are not persisted to perch-config manifests — "Apply All" acts in-memory only, config repo is not updated (#33)
 
 #### Phase D1: Structural Fixes
 
@@ -397,7 +400,12 @@ Fix the foundation before adding features. These issues affect reliability and d
 - AppsPage, DotfilesPage, and SystemTweaksPage consume this control instead of duplicating the pattern
 - Acceptance: fixing a loading spinner bug is a one-file change, not three
 
-**D1.4 Add FlaUI assertion tests** (relates to #87)
+**D1.4 Fix font UI bugs**
+- #29: Fonts "open location" button does not open Explorer to font file. Verify path, file existence, Process.Start arguments
+- #30: Font group toggler vertical alignment is off
+- Acceptance: open location reveals font file in Explorer; toggle aligns with surrounding elements
+
+**D1.5 Add FlaUI assertion tests** (relates to #87)
 - Extend existing smoke tests beyond screenshots to include targeted assertions:
   - Dashboard loads and shows health banner
   - Apps page loads and displays at least 1 app card
@@ -434,6 +442,38 @@ High-priority features that close functional gaps in the current experience. The
 - Detect existing git config files and pre-select appropriate path
 - Acceptance: wizard handles git config setup without manual steps
 
+**D2.5 Persist UI changes to perch-config manifests** (#33, epic)
+- UI selections must write to perch-config manifest YAMLs so the config repo becomes the source of truth
+- "Apply All" should persist to manifests then deploy from them
+- `perch deploy` CLI and Desktop app use the same manifest-driven path
+- Handle edge cases: rollback on failure, conflict with manual edits
+- Acceptance: toggling an app in the UI and deploying results in a manifest change visible in `git diff`
+
+**D2.6 Detected page: onboard unmanaged apps** (#22, epic)
+- New page surfacing installed apps that have no config/symlinks in perch-config
+- Badge with unmanaged app count in sidebar navigation
+- Support single-app and batch onboarding: module creation, symlink setup, backup, verification
+- Empty state: "Everything is onboarded"
+- Acceptance: user sees unmanaged apps, can onboard them, badge updates after onboarding
+
+**D2.7 Toggle non-installed apps for onboarding** (#16)
+- Currently can only toggle apps that are already installed
+- Enable marking non-installed apps for install + symlink onboarding
+- Toggling queues pending changes visible on Dashboard
+- Acceptance: non-installed gallery apps can be toggled and deployed
+
+**D2.8 Validate wizard end-to-end** (#34)
+- Smoke test wizard across all 7 steps (Profile, Config, Dotfiles, Apps, Tweaks, Review, Deploy)
+- Verify step rendering, data flow into deploy pipeline, catalog compatibility
+- Ensure wizard is re-launchable from Dashboard
+- Acceptance: wizard completes a full run from profile selection through deploy without errors
+
+**D2.9 Startup page UX clarification** (#24)
+- Clarify the distinction between disable (writes to StartupApproved registry) and remove (deletes from Run + StartupApproved)
+- Add tooltips and confirmation dialog for destructive remove action
+- Visual weight differentiation between the two actions
+- Acceptance: user understands the difference between disable and remove before acting
+
 #### Phase D3: Tweak Expansion
 
 New tweak management cards. Each card follows the existing tweak card pattern (detect current state, show desired vs actual, toggle to stage changes). These can be worked in parallel.
@@ -448,6 +488,17 @@ New tweak management cards. Each card follows the existing tweak card pattern (d
 | #52 | Mouse and keyboard (pointer speed, scroll, key repeat, caps lock remap) | low |
 | #53 | Windows Update settings (active hours, pause, defer) | low |
 | #54 | Shell extensions manager (list, toggle, highlight problematic) | low |
+| #35 | Default apps / file extension associations (.pdf, .txt, .html) | medium |
+| #39 | Environment variables manager (user/system, PATH editing) | medium |
+| #36 | Context menu manager (file/folder/background/desktop types) | low |
+| #37 | Scheduled tasks manager (name, status, trigger, next run) | low |
+| #38 | Windows services manager (startup type, running state) | low |
+| #41 | Hosts file manager (parse, toggle, add/remove entries) | low |
+| #42 | Power plan manager (list, switch active, toggle hidden plans) | low |
+| #43 | Firewall rules manager (inbound/outbound, toggle on/off) | low |
+| #44 | Windows optional features (WSL, Hyper-V, Sandbox, IIS) | low |
+| #45 | DNS and network settings (custom DNS per adapter, proxy) | low |
+| #46 | Privacy and telemetry settings | low |
 
 **Pattern for each card:**
 - Detect current state from registry/WMI/PowerShell
@@ -460,7 +511,9 @@ Acceptance per card: card appears in System Tweaks, detects current values, can 
 
 #### Phase D4: Gallery Completion
 
-Complete the gallery catalog so the Desktop app's card views are comprehensive.
+Complete the gallery catalog and card data so the Desktop app's views are comprehensive.
+
+**Gallery catalog:**
 
 | Issue | Task | Priority |
 |-------|------|----------|
@@ -473,6 +526,16 @@ Complete the gallery catalog so the Desktop app's card views are comprehensive.
 | #72 | Clean-filter rules for Notepad++ | medium |
 | #85 | WinUtil JSON -> gallery YAML converter | low |
 | #96 | Certificate backup/restore via perch-config | — |
+| #40 | Evaluate Winslop for tweak gallery inspiration | low |
+
+**Card data enhancements:**
+
+| Issue | Task | Priority |
+|-------|------|----------|
+| #20 | Add license filter to apps page | medium |
+| #21 | Add pricing badges for non-open-source apps (freemium, paid, free tier) | medium |
+| #18 | Display GitHub stars and repo link on app cards (may be partially done) | medium |
+| #19 | Evaluate and assign top-tier badges to apps (may be partially done) | medium |
 
 #### Phase D5: Ecosystem Onboarding
 
@@ -491,16 +554,29 @@ Dedicated onboarding screens for language ecosystems. Each screen guides the use
 
 These are in the PRD but explicitly deferred until D1-D5 are substantially complete.
 
+**UX polish (nice-to-have):**
+- **Global search across tweaks, apps, and dotfiles** (#25) — results grouped by type, keyboard shortcut accessible
+- **Show "other" badge count on collapsed app categories** (#14) — count updates when apps are toggled
+- **Extract and display app icons for startup entries** (#27) — Icon.ExtractAssociatedIcon from executables, cached
+- **Group tools/IDEs under parent language/shell detail pages** (#28, epic) — uses `suggests` relationship + `hidden` flag
+- **Logo watermark in bottom-right of menu** (#32)
+- **Home screen drift banner refinements** (#17, epic) — may be partially implemented already
+- **Verify font restore/backup end-to-end** (#31) — hands-on evaluation, edge cases
+
+**Architecture (deferred):**
 - **Gallery tree browser** (FR75) — unified drillable category navigation. Current flat card grid works for now
 - **Tweak detail panel with inline values** (FR74) — current card + detail view is adequate
 - **Grid/list density toggle** (FR53) — nice-to-have, not blocking
+- **Shared wizard/dashboard card views** (FR51) — the architecture doc calls for shared UserControls between wizard and dashboard pages. Current duplication is tolerable until D1.3 reduces it
+
+**Future:**
 - **AI config path lookup** (Journey 4b) — future
 - **Windows Sandbox integration** (Journey 4b) — future
 - **Desktop interactive filesystem explorer** (FR36) — future
 - **Visual manifest editor** (FR37) — future
 - **Manifest.yaml raw editor toggle** (#65) — low priority, deferred
-- **Shared wizard/dashboard card views** (FR51) — the architecture doc calls for shared UserControls between wizard and dashboard pages. Current duplication is tolerable until D1.3 reduces it
 - **Competitor migration tools** (FR46-47) — chezmoi/Dotbot import
+- **Replace git/ folder with Git-Config submodule** (#80) — config repo restructuring
 
 #### Desktop Testing Strategy
 
