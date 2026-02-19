@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Collections.ObjectModel;
 using System.Diagnostics;
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -43,19 +42,19 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
 
     private HashSet<UserProfile> _userProfiles = [UserProfile.Developer, UserProfile.PowerUser];
 
-    public ObservableCollection<TweakCardModel> Tweaks { get; } = [];
-    public ObservableCollection<FontCardModel> InstalledFonts { get; } = [];
-    public ObservableCollection<FontCardModel> NerdFonts { get; } = [];
-    public ObservableCollection<FontFamilyGroupModel> FilteredInstalledFontGroups { get; } = [];
-    public ObservableCollection<FontCardModel> FilteredNerdFonts { get; } = [];
-    public ObservableCollection<TweakCategoryCardModel> Categories { get; } = [];
-    public ObservableCollection<TweakCategoryCardModel> SubCategories { get; } = [];
-    public ObservableCollection<StartupCardModel> StartupItems { get; } = [];
-    public ObservableCollection<StartupCardModel> FilteredStartupItems { get; } = [];
-    public ObservableCollection<string> AvailableProfileFilters { get; } = [];
-    public ObservableCollection<CertificateCardModel> CertificateItems { get; } = [];
-    public ObservableCollection<CertificateStoreGroupModel> FilteredCertificateGroups { get; } = [];
-    public ObservableCollection<string> AvailableCertificateExpiryFilters { get; } = [];
+    public BulkObservableCollection<TweakCardModel> Tweaks { get; } = [];
+    public BulkObservableCollection<FontCardModel> InstalledFonts { get; } = [];
+    public BulkObservableCollection<FontCardModel> NerdFonts { get; } = [];
+    public BulkObservableCollection<FontFamilyGroupModel> FilteredInstalledFontGroups { get; } = [];
+    public BulkObservableCollection<FontCardModel> FilteredNerdFonts { get; } = [];
+    public BulkObservableCollection<TweakCategoryCardModel> Categories { get; } = [];
+    public BulkObservableCollection<TweakCategoryCardModel> SubCategories { get; } = [];
+    public BulkObservableCollection<StartupCardModel> StartupItems { get; } = [];
+    public BulkObservableCollection<StartupCardModel> FilteredStartupItems { get; } = [];
+    public BulkObservableCollection<string> AvailableProfileFilters { get; } = [];
+    public BulkObservableCollection<CertificateCardModel> CertificateItems { get; } = [];
+    public BulkObservableCollection<CertificateStoreGroupModel> FilteredCertificateGroups { get; } = [];
+    public BulkObservableCollection<string> AvailableCertificateExpiryFilters { get; } = [];
 
     private List<FontFamilyGroupModel> _allInstalledFontGroups = [];
     private List<CertificateStoreGroupModel> _allCertificateGroups = [];
@@ -115,12 +114,9 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
             await Task.WhenAll(tweaksTask, fontsTask, startupTask, certsTask);
 
             var tweakResult = tweaksTask.Result;
-            Tweaks.Clear();
             foreach (var tweak in tweakResult.Tweaks)
-            {
                 tweak.IsSuggested = tweak.MatchesProfile(_userProfiles);
-                Tweaks.Add(tweak);
-            }
+            Tweaks.ReplaceAll(tweakResult.Tweaks);
 
             if (!tweakResult.Errors.IsEmpty)
             {
@@ -142,26 +138,15 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
 
             var fontResult = fontsTask.Result;
             UnsubscribeFontChanges();
-            InstalledFonts.Clear();
-            NerdFonts.Clear();
             foreach (var f in fontResult.InstalledFonts)
-            {
                 f.PropertyChanged += OnFontPropertyChanged;
-                InstalledFonts.Add(f);
-            }
             foreach (var f in fontResult.NerdFonts)
-            {
                 f.PropertyChanged += OnFontPropertyChanged;
-                NerdFonts.Add(f);
-            }
+            InstalledFonts.ReplaceAll(fontResult.InstalledFonts);
+            NerdFonts.ReplaceAll(fontResult.NerdFonts);
 
-            StartupItems.Clear();
-            foreach (var entry in startupTask.Result)
-                StartupItems.Add(new StartupCardModel(entry));
-
-            CertificateItems.Clear();
-            foreach (var cert in certsTask.Result)
-                CertificateItems.Add(new CertificateCardModel(cert));
+            StartupItems.ReplaceAll(startupTask.Result.Select(e => new StartupCardModel(e)));
+            CertificateItems.ReplaceAll(certsTask.Result.Select(c => new CertificateCardModel(c)));
 
             BuildProfileFilters();
             BuildFontGroups();
@@ -186,26 +171,22 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
 
     private void BuildProfileFilters()
     {
-        AvailableProfileFilters.Clear();
-        AvailableProfileFilters.Add("All");
-        AvailableProfileFilters.Add("Suggested");
-
         var profileNames = Tweaks
             .SelectMany(t => t.Profiles)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(p => p, StringComparer.OrdinalIgnoreCase);
 
-        foreach (var profile in profileNames)
-            AvailableProfileFilters.Add(profile);
+        AvailableProfileFilters.ReplaceAll(
+            new[] { "All", "Suggested" }.Concat(profileNames));
     }
 
     private void RebuildCategories()
     {
-        Categories.Clear();
+        var categories = new List<TweakCategoryCardModel>();
 
         if (StartupItems.Count > 0)
         {
-            Categories.Add(new TweakCategoryCardModel(
+            categories.Add(new TweakCategoryCardModel(
                 "Startup",
                 "Startup",
                 "Programs that run at login",
@@ -215,7 +196,7 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
 
         if (Tweaks.Count > 0)
         {
-            Categories.Add(new TweakCategoryCardModel(
+            categories.Add(new TweakCategoryCardModel(
                 "System Tweaks",
                 "System Tweaks",
                 "Registry tweaks grouped by area",
@@ -226,7 +207,7 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
         var fontCount = InstalledFonts.Count + NerdFonts.Count;
         if (fontCount > 0)
         {
-            Categories.Add(new TweakCategoryCardModel(
+            categories.Add(new TweakCategoryCardModel(
                 "Fonts",
                 "Fonts",
                 "Detected & gallery nerd fonts",
@@ -236,36 +217,35 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
 
         if (CertificateItems.Count > 0)
         {
-            Categories.Add(new TweakCategoryCardModel(
+            categories.Add(new TweakCategoryCardModel(
                 "Certificates",
                 "Certificates",
                 "CurrentUser certificate stores",
                 CertificateItems.Count,
                 0));
         }
+
+        Categories.ReplaceAll(categories);
     }
 
     private void RebuildSubCategories()
     {
-        SubCategories.Clear();
-
-        var filtered = GetProfileFilteredTweaks()
-            .Where(t => t.MatchesSearch(SearchText));
-
-        var groups = filtered
+        var subCategories = GetProfileFilteredTweaks()
+            .Where(t => t.MatchesSearch(SearchText))
             .GroupBy(t => t.BroadCategory, StringComparer.OrdinalIgnoreCase)
-            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
+            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var items = g.ToList();
+                return new TweakCategoryCardModel(
+                    g.Key,
+                    g.Key,
+                    description: null,
+                    items.Count,
+                    items.Count(t => t.IsSelected));
+            });
 
-        foreach (var group in groups)
-        {
-            var items = group.ToList();
-            SubCategories.Add(new TweakCategoryCardModel(
-                group.Key,
-                group.Key,
-                description: null,
-                items.Count,
-                items.Count(t => t.IsSelected)));
-        }
+        SubCategories.ReplaceAll(subCategories);
     }
 
     public IEnumerable<TweakSubCategoryGroup> GetCategorySubGroups(string broadCategory)
@@ -444,30 +424,20 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
     {
         var query = FontSearchText;
 
-        FilteredInstalledFontGroups.Clear();
-        foreach (var group in _allInstalledFontGroups)
-        {
-            if (group.MatchesSearch(query))
-                FilteredInstalledFontGroups.Add(group);
-        }
+        FilteredInstalledFontGroups.ReplaceAll(
+            _allInstalledFontGroups.Where(g => g.MatchesSearch(query)));
 
-        FilteredNerdFonts.Clear();
-        var sortedNerdFonts = NerdFonts
-            .Where(f => f.MatchesSearch(query))
-            .OrderBy(f => f.Status == CardStatus.Detected ? 0 : 1)
-            .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase);
-        foreach (var font in sortedNerdFonts)
-            FilteredNerdFonts.Add(font);
+        FilteredNerdFonts.ReplaceAll(
+            NerdFonts
+                .Where(f => f.MatchesSearch(query))
+                .OrderBy(f => f.Status == CardStatus.Detected ? 0 : 1)
+                .ThenBy(f => f.Name, StringComparer.OrdinalIgnoreCase));
     }
 
     private void ApplyStartupFilter()
     {
-        FilteredStartupItems.Clear();
-        foreach (var item in StartupItems)
-        {
-            if (item.MatchesSearch(StartupSearchText))
-                FilteredStartupItems.Add(item);
-        }
+        FilteredStartupItems.ReplaceAll(
+            StartupItems.Where(item => item.MatchesSearch(StartupSearchText)));
     }
 
     private void BuildCertificateGroups()
@@ -480,14 +450,14 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
             .ToList();
 
         var statuses = CertificateItems.Select(c => c.ExpiryStatus).ToHashSet();
-        AvailableCertificateExpiryFilters.Clear();
-        AvailableCertificateExpiryFilters.Add("All");
+        var filters = new List<string> { "All" };
         if (statuses.Contains(CertificateExpiryStatus.Valid))
-            AvailableCertificateExpiryFilters.Add("Valid");
+            filters.Add("Valid");
         if (statuses.Contains(CertificateExpiryStatus.ExpiringSoon))
-            AvailableCertificateExpiryFilters.Add("Expiring Soon");
+            filters.Add("Expiring Soon");
         if (statuses.Contains(CertificateExpiryStatus.Expired))
-            AvailableCertificateExpiryFilters.Add("Expired");
+            filters.Add("Expired");
+        AvailableCertificateExpiryFilters.ReplaceAll(filters);
 
         ApplyCertificateFilter();
     }
@@ -496,8 +466,8 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
     {
         var query = CertificateSearchText;
         var expiryFilter = ActiveCertificateExpiryFilter;
-        FilteredCertificateGroups.Clear();
 
+        var filtered = new List<CertificateStoreGroupModel>();
         foreach (var group in _allCertificateGroups)
         {
             IEnumerable<CertificateCardModel> certs = group.Certificates;
@@ -518,10 +488,12 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
                     certs = certs.Where(c => c.ExpiryStatus == status);
             }
 
-            var filtered = new CertificateStoreGroupModel(group.Store, certs);
-            if (filtered.Certificates.Count > 0)
-                FilteredCertificateGroups.Add(filtered);
+            var filteredGroup = new CertificateStoreGroupModel(group.Store, certs);
+            if (filteredGroup.Certificates.Count > 0)
+                filtered.Add(filteredGroup);
         }
+
+        FilteredCertificateGroups.ReplaceAll(filtered);
     }
 
     private void OnFontPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

@@ -12,6 +12,7 @@ using Perch.Core.Registry;
 using Perch.Core.Scanner;
 using Perch.Core.Startup;
 using Perch.Core.Tweaks;
+using Perch.Desktop;
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
 using Perch.Desktop.ViewModels;
@@ -1269,6 +1270,64 @@ public sealed class GalleryViewModelBaseTests
         public static Task<HashSet<UserProfile>> TestLoadProfilesAsync(
             ISettingsProvider settingsProvider, CancellationToken cancellationToken = default)
             => LoadProfilesAsync(settingsProvider, cancellationToken);
+    }
+}
+
+[TestFixture]
+[Platform("Win")]
+[SupportedOSPlatform("windows")]
+public sealed class BulkObservableCollectionTests
+{
+    [Test]
+    public void ReplaceAll_ReplacesExistingItems()
+    {
+        var collection = new BulkObservableCollection<string> { "a", "b", "c" };
+
+        collection.ReplaceAll(["x", "y"]);
+
+        Assert.That(collection, Is.EqualTo(new[] { "x", "y" }));
+    }
+
+    [Test]
+    public void ReplaceAll_WithEmpty_ClearsCollection()
+    {
+        var collection = new BulkObservableCollection<int> { 1, 2, 3 };
+
+        collection.ReplaceAll([]);
+
+        Assert.That(collection, Is.Empty);
+    }
+
+    [Test]
+    public void ReplaceAll_FiresSingleResetNotification()
+    {
+        var collection = new BulkObservableCollection<string> { "a", "b" };
+        var notifications = new List<System.Collections.Specialized.NotifyCollectionChangedEventArgs>();
+        collection.CollectionChanged += (_, e) => notifications.Add(e);
+
+        collection.ReplaceAll(["x", "y", "z"]);
+
+        Assert.That(notifications, Has.Count.EqualTo(1));
+        Assert.That(notifications[0].Action,
+            Is.EqualTo(System.Collections.Specialized.NotifyCollectionChangedAction.Reset));
+    }
+
+    [Test]
+    public void ReplaceAll_UpdatesCountProperty()
+    {
+        var collection = new BulkObservableCollection<int> { 1, 2 };
+        var propertyNames = new List<string>();
+        ((System.ComponentModel.INotifyPropertyChanged)collection).PropertyChanged +=
+            (_, e) => propertyNames.Add(e.PropertyName!);
+
+        collection.ReplaceAll([10, 20, 30]);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(collection.Count, Is.EqualTo(3));
+            Assert.That(propertyNames, Does.Contain("Count"));
+            Assert.That(propertyNames, Does.Contain("Item[]"));
+        });
     }
 }
 #endif

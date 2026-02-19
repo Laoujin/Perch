@@ -20,8 +20,14 @@ public partial class StartupPage : Page
         viewModel.FilteredItems.CollectionChanged += (_, _) => UpdateEmptyState();
     }
 
+    private bool _isLoaded;
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        if (_isLoaded)
+            return;
+        _isLoaded = true;
+
         if (ViewModel.RefreshCommand.CanExecute(null))
             ViewModel.RefreshCommand.Execute(null);
     }

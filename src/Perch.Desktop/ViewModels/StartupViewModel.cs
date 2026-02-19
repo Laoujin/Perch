@@ -1,5 +1,3 @@
-using System.Collections.ObjectModel;
-
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -18,8 +16,8 @@ public sealed partial class StartupViewModel : ViewModelBase
     [ObservableProperty]
     private string _searchText = string.Empty;
 
-    public ObservableCollection<StartupCardModel> StartupItems { get; } = [];
-    public ObservableCollection<StartupCardModel> FilteredItems { get; } = [];
+    public BulkObservableCollection<StartupCardModel> StartupItems { get; } = [];
+    public BulkObservableCollection<StartupCardModel> FilteredItems { get; } = [];
 
     public StartupViewModel(IStartupService startupService)
     {
@@ -36,9 +34,7 @@ public sealed partial class StartupViewModel : ViewModelBase
         try
         {
             var entries = await _startupService.GetAllAsync(cancellationToken);
-            StartupItems.Clear();
-            foreach (var entry in entries)
-                StartupItems.Add(new StartupCardModel(entry));
+            StartupItems.ReplaceAll(entries.Select(e => new StartupCardModel(e)));
 
             ApplyFilter();
         }
@@ -81,11 +77,6 @@ public sealed partial class StartupViewModel : ViewModelBase
 
     private void ApplyFilter()
     {
-        FilteredItems.Clear();
-        foreach (var item in StartupItems)
-        {
-            if (item.MatchesSearch(SearchText))
-                FilteredItems.Add(item);
-        }
+        FilteredItems.ReplaceAll(StartupItems.Where(item => item.MatchesSearch(SearchText)));
     }
 }

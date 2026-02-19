@@ -16,8 +16,14 @@ public partial class DashboardPage : Page
         InitializeComponent();
     }
 
+    private bool _isLoaded;
+
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        if (_isLoaded)
+            return;
+        _isLoaded = true;
+
         if (ViewModel.RefreshCommand.CanExecute(null))
             ViewModel.RefreshCommand.Execute(null);
     }

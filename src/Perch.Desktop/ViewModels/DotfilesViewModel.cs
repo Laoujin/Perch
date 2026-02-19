@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Collections.ObjectModel;
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -38,7 +37,7 @@ public sealed partial class DotfilesViewModel : GalleryViewModelBase
     public bool HasNoModule => Detail is not null && Detail.OwningModule is null;
     public bool HasFileStatuses => Detail is not null && !Detail.FileStatuses.IsDefaultOrEmpty;
     public bool HasAlternatives => Detail is not null && !Detail.Alternatives.IsDefaultOrEmpty;
-    public ObservableCollection<AppCardModel> Dotfiles { get; } = [];
+    public BulkObservableCollection<AppCardModel> Dotfiles { get; } = [];
 
     public DotfilesViewModel(
         IGalleryDetectionService detectionService,
@@ -130,13 +129,7 @@ public sealed partial class DotfilesViewModel : GalleryViewModelBase
 
     private void ApplyFilter()
     {
-        Dotfiles.Clear();
-        foreach (var df in _allDotfiles)
-        {
-            if (df.MatchesSearch(SearchText))
-                Dotfiles.Add(df);
-        }
-
+        Dotfiles.ReplaceAll(_allDotfiles.Where(df => df.MatchesSearch(SearchText)));
         LinkedCount = _allDotfiles.Count(d => d.Status == CardStatus.Linked);
         TotalCount = _allDotfiles.Length;
     }

@@ -8,6 +8,7 @@ using Perch.Core.Config;
 using Perch.Desktop.Models;
 using Perch.Desktop.Services;
 
+
 namespace Perch.Desktop.ViewModels;
 
 public sealed partial class AppsViewModel : GalleryViewModelBase
@@ -68,9 +69,9 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
     public bool HasEcosystem => EcosystemGroups.Count > 0;
     public bool HasAlternatives => AlternativeApps.Count > 0;
 
-    public ObservableCollection<AppCategoryCardModel> Categories { get; } = [];
-    public ObservableCollection<EcosystemGroup> EcosystemGroups { get; } = [];
-    public ObservableCollection<AppCardModel> AlternativeApps { get; } = [];
+    public BulkObservableCollection<AppCategoryCardModel> Categories { get; } = [];
+    public BulkObservableCollection<EcosystemGroup> EcosystemGroups { get; } = [];
+    public BulkObservableCollection<AppCardModel> AlternativeApps { get; } = [];
 
     public AppsViewModel(
         IGalleryDetectionService detectionService,
@@ -130,26 +131,25 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
     private void RebuildCategories()
     {
         var query = SearchText;
-        Categories.Clear();
 
-        var filtered = _allApps.Where(a => a.MatchesSearch(query));
-        var groups = filtered
+        var categories = _allApps
+            .Where(a => a.MatchesSearch(query))
             .GroupBy(a => a.BroadCategory, StringComparer.OrdinalIgnoreCase)
             .OrderBy(g => GetBroadCategoryPriority(g.Key))
-            .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
+            .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(g =>
+            {
+                var items = g.ToList();
+                return new AppCategoryCardModel(
+                    g.Key,
+                    g.Key,
+                    items.Count,
+                    items.Count(a => a.IsManaged),
+                    items.Count(a => a.Status is CardStatus.Detected or CardStatus.Linked or CardStatus.Drift or CardStatus.Broken),
+                    items.Count(a => a.IsSuggested));
+            });
 
-        foreach (var group in groups)
-        {
-            var items = group.ToList();
-            Categories.Add(new AppCategoryCardModel(
-                group.Key,
-                group.Key,
-                items.Count,
-                items.Count(a => a.IsManaged),
-                items.Count(a => a.Status is CardStatus.Detected or CardStatus.Linked or CardStatus.Drift or CardStatus.Broken),
-                items.Count(a => a.IsSuggested)));
-        }
-
+        Categories.ReplaceAll(categories);
         UpdateSummary();
     }
 
@@ -211,8 +211,8 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
     {
         SelectedApp = card;
         Detail = null;
-        EcosystemGroups.Clear();
-        AlternativeApps.Clear();
+        EcosystemGroups.ReplaceAll([]);
+        AlternativeApps.ReplaceAll([]);
         OnPropertyChanged(nameof(HasEcosystem));
         OnPropertyChanged(nameof(HasAlternatives));
         IsLoadingDetail = true;
@@ -238,16 +238,14 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
     {
         SelectedApp = null;
         Detail = null;
-        EcosystemGroups.Clear();
-        AlternativeApps.Clear();
+        EcosystemGroups.ReplaceAll([]);
+        AlternativeApps.ReplaceAll([]);
         OnPropertyChanged(nameof(HasEcosystem));
         OnPropertyChanged(nameof(HasAlternatives));
     }
 
     private void BuildEcosystemGroups(AppCardModel card)
     {
-        EcosystemGroups.Clear();
-
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { card.Id };
         var ecosystemApps = new List<AppCardModel>();
 
@@ -269,44 +267,32 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
             }
         }
 
-        if (ecosystemApps.Count == 0)
-        {
-            OnPropertyChanged(nameof(HasEcosystem));
-            return;
-        }
-
         var groups = ecosystemApps
             .GroupBy(a => a.SubCategory, StringComparer.OrdinalIgnoreCase)
             .OrderBy(g => GetSubCategoryPriority(card.BroadCategory, g.Key))
-            .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase);
+            .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new EcosystemGroup(
+                g.Key,
+                g.OrderBy(a => TierSortOrder(a.Tier))
+                 .ThenBy(a => a.DisplayLabel, StringComparer.OrdinalIgnoreCase)
+                 .ToImmutableArray()));
 
-        foreach (var group in groups)
-        {
-            var sorted = group
-                .OrderBy(a => TierSortOrder(a.Tier))
-                .ThenBy(a => a.DisplayLabel, StringComparer.OrdinalIgnoreCase)
-                .ToImmutableArray();
-
-            EcosystemGroups.Add(new EcosystemGroup(group.Key, sorted));
-        }
-
+        EcosystemGroups.ReplaceAll(groups);
         OnPropertyChanged(nameof(HasEcosystem));
     }
 
     private void BuildAlternativeApps()
     {
-        AlternativeApps.Clear();
-
-        if (Detail is null || Detail.Alternatives.IsDefaultOrEmpty)
+        if (Detail is not null && !Detail.Alternatives.IsDefaultOrEmpty)
         {
-            OnPropertyChanged(nameof(HasAlternatives));
-            return;
+            AlternativeApps.ReplaceAll(
+                Detail.Alternatives
+                    .Select(alt => _allAppsByIdIncludingChildren.GetValueOrDefault(alt.Id))
+                    .Where(card => card is not null)!);
         }
-
-        foreach (var alt in Detail.Alternatives)
+        else
         {
-            if (_allAppsByIdIncludingChildren.TryGetValue(alt.Id, out var altCard))
-                AlternativeApps.Add(altCard);
+            AlternativeApps.ReplaceAll([]);
         }
 
         OnPropertyChanged(nameof(HasAlternatives));
