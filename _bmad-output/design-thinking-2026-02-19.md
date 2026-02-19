@@ -547,6 +547,203 @@ Same architecture as Languages. Category grid → category detail → item detai
 - **"Add unlisted app" button** at bottom — escape hatch for apps not in the gallery. Opens filtered list of installed-but-unrecognized apps (Core pre-filters non-apps), then guided flow to select config files to track.
 - All three pages (Languages, Dotfiles, Apps) use the same card components, same status badges, same buttons, same sort logic. Build one, get all three.
 
+#### Wizard Step 2: Config Repo
+
+**Bootstrapping prerequisite:** Perch installation handles git as a dependency for dev/power users. By the time the wizard opens, git is guaranteed to be available. Casual users never need git — local-only mode.
+
+**Bootstrap paths:**
+- **Casual user:** Downloads installer from website or `winget install Perch`. No git installed. Wizard opens with local-only mode.
+- **Dev/power user:** Bootstrap script (`irm perch.dev/install | iex`) installs git (if missing) → installs Perch → optionally clones perch-config → launches wizard. Git is guaranteed by the time wizard step 2 is reached.
+
+**Dev/PowerUser — Step 2:**
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│  Step 2 of 7                                             │
+│  ○ Profile  ● Config  ○ Languages  ○ Dotfiles            │
+│             ○ Apps  ○ Tweaks  ○ Deploy                   │
+│                                                          │
+│ ─────────────────────────────────────────────────────── │
+│                                                          │
+│  Where is your Perch config?                             │
+│                                                          │
+│  ◉ Select a folder                                       │
+│    ┌──────────────────────────────────────┐ [Browse]     │
+│    │ C:\Users\you\repos\perch-config     │              │
+│    └──────────────────────────────────────┘              │
+│    ✓ Existing Perch config detected (git repo)           │
+│                                                          │
+│  ○ Clone from URL                                        │
+│    ┌──────────────────────────────────────┐ [Clone]      │
+│    │                                     │              │
+│    └──────────────────────────────────────┘              │
+│                                                          │
+│                                    [Back]  [Next →]      │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+```
+
+Validation messages for "Select a folder":
+- Has perch-config structure → `✓ Existing Perch config detected`
+- Has perch-config structure + is git repo → `✓ Existing Perch config detected (git repo)`
+- Exists but empty → `✓ New config will be created here`
+- Doesn't exist → `✓ Folder will be created`
+- Invalid path → `✗ Path is not valid`
+
+**Casual/Gamer — Step 2:**
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│  Step 2 of 5                                             │
+│  ○ Profile  ● Config  ○ Apps  ○ Tweaks  ○ Deploy        │
+│                                                          │
+│ ─────────────────────────────────────────────────────── │
+│                                                          │
+│  Perch will save your preferences in a folder.           │
+│                                                          │
+│  ┌────────────────────────────────────────┐ [Browse]     │
+│  │ C:\Users\you\.perch-config            │              │
+│  └────────────────────────────────────────┘              │
+│  ✓ Ready                                                 │
+│                                                          │
+│                                    [Back]  [Next →]      │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+```
+
+- Pre-filled with default path. Browse to change if desired.
+- Empty or non-existent → created automatically. Existing perch-config → detected and used.
+- No git, no clone, no radio buttons. Just a folder.
+
+#### Wizard Deploy Step (merged Review + Deploy)
+
+**Before deploy:**
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│  Step 7 of 7                                             │
+│  ○ Profile  ○ Config  ○ Languages  ○ Dotfiles            │
+│             ○ Apps  ○ Tweaks  ● Deploy                   │
+│                                                          │
+│ ─────────────────────────────────────────────────────── │
+│                                                          │
+│  Ready to sync your machine                              │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │ Languages    .NET (8 items), Node (4 items)        │  │
+│  │ Dotfiles     Git, PowerShell, Claude               │  │
+│  │ Apps         Chrome, Discord, VS Code + 5 more     │  │
+│  │ Tweaks       Explorer settings, Mouse, Power + 9   │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+│  Total: 34 items will be installed, linked, or applied   │
+│                                                          │
+│                                    [Back]  [Deploy →]    │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+```
+
+**During deploy:**
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│  Syncing your machine...                                 │
+│                                                          │
+│  [████████████░░░░░░░░]  18 / 34                         │
+│                                                          │
+│  ✓ .NET 10 SDK              installed                    │
+│  ✓ Visual Studio 2026       linked config                │
+│  ✓ .gitconfig               symlinked                    │
+│  ✓ PowerShell profile       symlinked                    │
+│  ⚠ ReSharper                installed (restart needed)   │
+│  ◌ Chrome                   installing...                │
+│  ○ Discord                  pending                      │
+│  ...                                                     │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+```
+
+**After deploy:**
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│  ✓ Sync complete!                                        │
+│                                                          │
+│  32 succeeded  ·  1 warning  ·  1 skipped                │
+│                                                          │
+│  ⚠ ReSharper — requires Visual Studio restart            │
+│  ○ Hyper-V — requires admin elevation (skipped)          │
+│                                                          │
+│                               [Open Dashboard →]         │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+```
+
+Deploy step serves as both review (summary before clicking) and execution (progress + results). No separate review step needed.
+
+#### Drift Homepage / Dashboard
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ Home                                                     │
+├──────────────────────────────────────────────────────────┤
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │                                                    │  │
+│  │   42 Synced  ·  3 Drifted  ·  5 Detected          │  │
+│  │                                                    │  │
+│  │   [██████████████████████░░░]  84% healthy         │  │
+│  │                                                    │  │
+│  │                              [Sync Everything]     │  │
+│  │                                                    │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+│ ─── Drifted (3) ── needs attention ─────────────────── │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │ ⚠ Drifted    │  │ ⚠ Drifted    │  │ ⚠ Drifted    │  │
+│  │ [□] .NET 8   │  │ [□] dotnet   │  │ [□] Git      │  │
+│  │     SDK      │  │     ef       │  │   Config     │  │
+│  │              │  │              │  │              │  │
+│  │[Remove from  │  │[Remove from  │  │[Remove from  │  │
+│  │ Perch]       │  │ Perch]       │  │ Perch]       │  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  │
+│                                                          │
+│ ─── Pending (2) ── staged changes ──────────────────── │
+│  ┌──────────────┐  ┌──────────────┐                     │
+│  │ 🟢 Pending   │  │ 🔴 Pending   │                     │
+│  │ [□] Bun      │  │ [□] npm      │                     │
+│  │   Runtime    │  │   Package mgr│                     │
+│  │              │  │              │                     │
+│  │[Remove from  │  │[Add to       │                     │
+│  │ Perch]       │  │ Perch]       │                     │
+│  └──────────────┘  └──────────────┘                     │
+│                                                          │
+│ ─── Detected (5) ── on system, not managed ──────────  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │ ● Detected   │  │ ● Detected   │  │ ● Detected   │  │
+│  │ [□] ILSpy    │  │ [□] SSH      │  │ [□] Brave    │  │
+│  │ Decompiler   │  │   Config     │  │ Browser      │  │
+│  │              │  │              │  │              │  │
+│  │[Add to Perch]│  │[Add to Perch]│  │[Add to Perch]│  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  │
+│                                                          │
+│                                   + 2 more detected      │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+```
+
+- **Hero banner:** aggregate health counts + health percentage bar + "Sync Everything" button
+- **Drifted section:** items in perch-config that don't match system. "Remove from Perch" = intentional drift (stop tracking). "Sync Everything" = fix all drift at once.
+- **Pending section:** staged config changes not yet deployed. Green-tinted = pending install. Red-tinted = pending removal. These are the preview of what "Sync Everything" will do.
+- **Detected section:** items on system not in perch-config. Onboarding opportunities. "Add to Perch" stages them as Pending.
+- When fully synced with no pending or detected items, dashboard shows only the hero banner: "42 Synced · 100% healthy."
+- Same card components as every other page.
+
 #### Unified Architecture Confirmation
 
 All three pages proven to be the same architecture:
