@@ -63,5 +63,6 @@ See global `~/.claude/AGENTS-DOTNET-STYLE.md` and `~/.claude/AGENTS-DOTNET-TESTI
 
 ## Project Docs
 
+- `_bmad-output/project-context.md` — Critical implementation rules for AI agents
 - `_bmad-output/planning-artifacts/prd.md` — Product requirements
 - `_bmad-output/planning-artifacts/architecture.md` — Architecture decisions
