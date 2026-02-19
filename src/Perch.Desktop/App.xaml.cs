@@ -104,7 +104,9 @@ public partial class App : Application
 
             await _host.StartAsync();
 
-            _ = Services.GetRequiredService<IGalleryDetectionService>().WarmUpAsync();
+            _ = Services.GetRequiredService<IGalleryDetectionService>().WarmUpAsync()
+                .ContinueWith(t => Log.Warning(t.Exception!, "Gallery warm-up failed"),
+                    TaskContinuationOptions.OnlyOnFaulted);
 
             var settings = await Services.GetRequiredService<ISettingsProvider>().LoadAsync();
             var isFirstRun = string.IsNullOrWhiteSpace(settings.ConfigRepoPath);
