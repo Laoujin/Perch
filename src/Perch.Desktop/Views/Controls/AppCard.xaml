@@ -67,7 +67,7 @@
                     Padding="4,1"
                     Margin="4,0,0,0"
                     VerticalAlignment="Center"
-                    Visibility="{Binding KindBadge, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource CountToVisibilityConverter}}">
+                    Visibility="{Binding KindBadge, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NullToVisibilityConverter}}">
                     <TextBlock
                         Text="{Binding KindBadge, RelativeSource={RelativeSource AncestorType=UserControl}}"
                         FontSize="9"
@@ -161,7 +161,7 @@
                 TextTrimming="CharacterEllipsis"
                 MaxHeight="32"
                 Margin="0,4,0,0"
-                Visibility="{Binding Description, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource CountToVisibilityConverter}}" />
+                Visibility="{Binding Description, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NullToVisibilityConverter}}" />
 
             <!-- Row 3: Links bar (Website, Docs, GitHub) -->
             <StackPanel
@@ -176,7 +176,7 @@
                     Click="OnLinkClick"
                     Tag="{Binding Website, RelativeSource={RelativeSource AncestorType=UserControl}}"
                     ToolTip="{Binding Website, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                    Visibility="{Binding Website, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource CountToVisibilityConverter}}">
+                    Visibility="{Binding Website, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NullToVisibilityConverter}}">
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="Globe24" FontSize="12" Foreground="{StaticResource LinkTextBrush}" />
                         <TextBlock Text="Website" FontSize="10" Foreground="{StaticResource LinkTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
@@ -190,7 +190,7 @@
                     Click="OnLinkClick"
                     Tag="{Binding Docs, RelativeSource={RelativeSource AncestorType=UserControl}}"
                     ToolTip="{Binding Docs, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                    Visibility="{Binding Docs, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource CountToVisibilityConverter}}">
+                    Visibility="{Binding Docs, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NullToVisibilityConverter}}">
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="Document24" FontSize="12" Foreground="{StaticResource LinkTextBrush}" />
                         <TextBlock Text="Docs" FontSize="10" Foreground="{StaticResource LinkTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
@@ -203,7 +203,7 @@
                     Click="OnLinkClick"
                     Tag="{Binding GitHub, RelativeSource={RelativeSource AncestorType=UserControl}}"
                     ToolTip="{Binding GitHub, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                    Visibility="{Binding GitHub, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource CountToVisibilityConverter}}">
+                    Visibility="{Binding GitHub, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NullToVisibilityConverter}}">
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="Code24" FontSize="12" Foreground="{StaticResource LinkTextBrush}" />
                         <TextBlock Text="GitHub" FontSize="10" Foreground="{StaticResource LinkTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
@@ -213,7 +213,7 @@
                             Foreground="{StaticResource WarningBrush}"
                             Margin="2,0,0,0"
                             VerticalAlignment="Center"
-                            Visibility="{Binding GitHubStarsFormatted, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource CountToVisibilityConverter}}" />
+                            Visibility="{Binding GitHubStarsFormatted, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NullToVisibilityConverter}}" />
                     </StackPanel>
                 </Button>
                 <Button
@@ -223,7 +223,7 @@
                     Click="OnOpenLocationClick"
                     Tag="{Binding ConfigPath, RelativeSource={RelativeSource AncestorType=UserControl}}"
                     ToolTip="{Binding ConfigPath, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                    Visibility="{Binding ConfigPath, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource CountToVisibilityConverter}}">
+                    Visibility="{Binding ConfigPath, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NullToVisibilityConverter}}">
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="FolderOpen24" FontSize="12" Foreground="{StaticResource LinkTextBrush}" />
                         <TextBlock Text="Open Location" FontSize="10" Foreground="{StaticResource LinkTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
@@ -267,7 +267,7 @@
                 Padding="4,1"
                 Margin="0,6,0,0"
                 HorizontalAlignment="Left"
-                Visibility="{Binding License, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource CountToVisibilityConverter}}">
+                Visibility="{Binding License, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NullToVisibilityConverter}}">
                 <TextBlock
                     Text="{Binding License, RelativeSource={RelativeSource AncestorType=UserControl}}"
                     FontSize="9"

@@ -778,7 +778,7 @@
                                                                             </TextBlock>
 
                                                                             <TextBlock FontSize="10" Foreground="{StaticResource TextDimBrush}" Margin="0,2,0,0"
-                                                                                       Visibility="{Binding Certificate.FriendlyName, Converter={StaticResource CountToVisibilityConverter}}">
+                                                                                       Visibility="{Binding Certificate.FriendlyName, Converter={StaticResource NullToVisibilityConverter}}">
                                                                                 <Run Text="Friendly name: " /><Run Text="{Binding Certificate.FriendlyName, Mode=OneWay}" />
                                                                             </TextBlock>
 
@@ -1035,7 +1035,7 @@
                                                                                     FontSize="9"
                                                                                     Foreground="{StaticResource SpecimenTextBrush}"
                                                                                     TextTrimming="CharacterEllipsis"
-                                                                                    Visibility="{Binding FileName, Converter={StaticResource CountToVisibilityConverter}}" />
+                                                                                    Visibility="{Binding FileName, Converter={StaticResource NullToVisibilityConverter}}" />
                                                                             </StackPanel>
 
                                                                             <ui:Button
@@ -1056,7 +1056,7 @@
                                                                                 Height="22"
                                                                                 Margin="4,0,0,0"
                                                                                 VerticalAlignment="Center"
-                                                                                Visibility="{Binding FullPath, Converter={StaticResource CountToVisibilityConverter}}" />
+                                                                                Visibility="{Binding FullPath, Converter={StaticResource NullToVisibilityConverter}}" />
                                                                             <ui:Button
                                                                                 Grid.Column="3"
                                                                                 Icon="{ui:SymbolIcon FolderOpen16}"
@@ -1066,7 +1066,7 @@
                                                                                 Height="22"
                                                                                 Margin="4,0,0,0"
                                                                                 VerticalAlignment="Center"
-                                                                                Visibility="{Binding FullPath, Converter={StaticResource CountToVisibilityConverter}}" />
+                                                                                Visibility="{Binding FullPath, Converter={StaticResource NullToVisibilityConverter}}" />
                                                                             <ui:Button
                                                                                 Grid.Column="4"
                                                                                 Command="{Binding ToggleBackupCommand}"
@@ -1074,7 +1074,7 @@
                                                                                 Height="22"
                                                                                 Margin="4,0,0,0"
                                                                                 VerticalAlignment="Center"
-                                                                                Visibility="{Binding FullPath, Converter={StaticResource CountToVisibilityConverter}}">
+                                                                                Visibility="{Binding FullPath, Converter={StaticResource NullToVisibilityConverter}}">
                                                                                 <ui:Button.Style>
                                                                                     <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
                                                                                         <Setter Property="Icon" Value="{ui:SymbolIcon Delete16}" />
@@ -1103,7 +1103,7 @@
                                                                             Foreground="{StaticResource TextMutedBrush}"
                                                                             TextTrimming="CharacterEllipsis"
                                                                             Margin="0,4,0,0"
-                                                                            Visibility="{Binding Description, Converter={StaticResource CountToVisibilityConverter}}" />
+                                                                            Visibility="{Binding Description, Converter={StaticResource NullToVisibilityConverter}}" />
 
                                                                         <ui:TextBox
                                                                             Grid.Row="2"

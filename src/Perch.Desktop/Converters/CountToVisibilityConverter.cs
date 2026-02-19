@@ -8,7 +8,6 @@ public sealed class CountToVisibilityConverter : IValueConverter
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) => value switch
     {
         int count when count > 0 => Visibility.Visible,
-        string s when s.Length > 0 => Visibility.Visible,
         _ => Visibility.Collapsed,
     };
 

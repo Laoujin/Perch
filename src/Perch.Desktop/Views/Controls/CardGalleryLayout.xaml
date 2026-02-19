@@ -27,7 +27,7 @@
             VerticalScrollBarVisibility="Auto"
             HorizontalScrollBarVisibility="Disabled"
             Visibility="{Binding ErrorMessage,
-                Converter={StaticResource CountToVisibilityConverter}}">
+                Converter={StaticResource NullToVisibilityConverter}}">
             <Border Background="{StaticResource ErrorBannerBgBrush}" CornerRadius="8" Padding="16">
                 <StackPanel HorizontalAlignment="Center" MaxWidth="500">
                     <Image Source="/Assets/wizard-error.png" Width="640" Height="640"

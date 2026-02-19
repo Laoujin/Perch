@@ -1,6 +1,7 @@
 #if DESKTOP_TESTS
 using System.Collections.Immutable;
 using System.Runtime.Versioning;
+using System.Windows;
 
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -1329,5 +1330,53 @@ public sealed class BulkObservableCollectionTests
             Assert.That(propertyNames, Does.Contain("Item[]"));
         });
     }
+}
+
+[TestFixture]
+[Platform("Win")]
+[SupportedOSPlatform("windows")]
+public sealed class CountToVisibilityConverterTests
+{
+    private readonly Perch.Desktop.Converters.CountToVisibilityConverter _converter = new();
+
+    [Test]
+    public void Convert_PositiveInt_ReturnsVisible() =>
+        Assert.That(_converter.Convert(5, typeof(object), null!, null!), Is.EqualTo(Visibility.Visible));
+
+    [Test]
+    public void Convert_Zero_ReturnsCollapsed() =>
+        Assert.That(_converter.Convert(0, typeof(object), null!, null!), Is.EqualTo(Visibility.Collapsed));
+
+    [Test]
+    public void Convert_NegativeInt_ReturnsCollapsed() =>
+        Assert.That(_converter.Convert(-1, typeof(object), null!, null!), Is.EqualTo(Visibility.Collapsed));
+
+    [Test]
+    public void Convert_NonInt_ReturnsCollapsed() =>
+        Assert.That(_converter.Convert("hello", typeof(object), null!, null!), Is.EqualTo(Visibility.Collapsed));
+}
+
+[TestFixture]
+[Platform("Win")]
+[SupportedOSPlatform("windows")]
+public sealed class NullToVisibilityConverterTests
+{
+    private readonly Perch.Desktop.Converters.NullToVisibilityConverter _converter = new();
+
+    [Test]
+    public void Convert_NonNullObject_ReturnsVisible() =>
+        Assert.That(_converter.Convert(new object(), typeof(object), null!, null!), Is.EqualTo(Visibility.Visible));
+
+    [Test]
+    public void Convert_Null_ReturnsCollapsed() =>
+        Assert.That(_converter.Convert(null, typeof(object), null!, null!), Is.EqualTo(Visibility.Collapsed));
+
+    [Test]
+    public void Convert_NonEmptyString_ReturnsVisible() =>
+        Assert.That(_converter.Convert("hello", typeof(object), null!, null!), Is.EqualTo(Visibility.Visible));
+
+    [Test]
+    public void Convert_EmptyString_ReturnsCollapsed() =>
+        Assert.That(_converter.Convert("", typeof(object), null!, null!), Is.EqualTo(Visibility.Collapsed));
 }
 #endif

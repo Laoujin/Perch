@@ -839,7 +839,7 @@
                                                         Foreground="#888888"
                                                         TextTrimming="CharacterEllipsis"
                                                         Margin="0,4,0,0"
-                                                        Visibility="{Binding Description, Converter={StaticResource CountToVisibilityConverter}}" />
+                                                        Visibility="{Binding Description, Converter={StaticResource NullToVisibilityConverter}}" />
 
                                                     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
                                                         <ui:Button
@@ -855,7 +855,7 @@
                                                             ToolTip="View Font"
                                                             Padding="2"
                                                             Height="22"
-                                                            Visibility="{Binding FullPath, Converter={StaticResource CountToVisibilityConverter}}" />
+                                                            Visibility="{Binding FullPath, Converter={StaticResource NullToVisibilityConverter}}" />
                                                     </StackPanel>
 
                                                     <ui:TextBox

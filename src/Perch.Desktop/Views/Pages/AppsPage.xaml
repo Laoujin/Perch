@@ -280,7 +280,7 @@
                                     Foreground="{StaticResource TextSubtleBrush}"
                                     TextWrapping="Wrap"
                                     Margin="0,0,0,6"
-                                    Visibility="{Binding SelectedApp.Description, Converter={StaticResource CountToVisibilityConverter}}" />
+                                    Visibility="{Binding SelectedApp.Description, Converter={StaticResource NullToVisibilityConverter}}" />
 
                                 <TextBlock
                                     Grid.Row="2"
@@ -299,7 +299,7 @@
                                         Click="OnLinkClick"
                                         Tag="{Binding SelectedApp.Website}"
                                         ToolTip="{Binding SelectedApp.Website}"
-                                        Visibility="{Binding SelectedApp.Website, Converter={StaticResource CountToVisibilityConverter}}">
+                                        Visibility="{Binding SelectedApp.Website, Converter={StaticResource NullToVisibilityConverter}}">
                                         <StackPanel Orientation="Horizontal">
                                             <ui:SymbolIcon Symbol="Globe24" FontSize="12" Foreground="{StaticResource LinkTextBrush}" />
                                             <TextBlock Text="Website" FontSize="10" Foreground="{StaticResource LinkTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
@@ -313,7 +313,7 @@
                                         Click="OnLinkClick"
                                         Tag="{Binding SelectedApp.Docs}"
                                         ToolTip="{Binding SelectedApp.Docs}"
-                                        Visibility="{Binding SelectedApp.Docs, Converter={StaticResource CountToVisibilityConverter}}">
+                                        Visibility="{Binding SelectedApp.Docs, Converter={StaticResource NullToVisibilityConverter}}">
                                         <StackPanel Orientation="Horizontal">
                                             <ui:SymbolIcon Symbol="Document24" FontSize="12" Foreground="{StaticResource LinkTextBrush}" />
                                             <TextBlock Text="Docs" FontSize="10" Foreground="{StaticResource LinkTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
@@ -326,7 +326,7 @@
                                         Click="OnLinkClick"
                                         Tag="{Binding SelectedApp.GitHub}"
                                         ToolTip="{Binding SelectedApp.GitHub}"
-                                        Visibility="{Binding SelectedApp.GitHub, Converter={StaticResource CountToVisibilityConverter}}">
+                                        Visibility="{Binding SelectedApp.GitHub, Converter={StaticResource NullToVisibilityConverter}}">
                                         <StackPanel Orientation="Horizontal">
                                             <ui:SymbolIcon Symbol="Code24" FontSize="12" Foreground="{StaticResource LinkTextBrush}" />
                                             <TextBlock Text="GitHub" FontSize="10" Foreground="{StaticResource LinkTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
