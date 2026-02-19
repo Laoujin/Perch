@@ -732,17 +732,41 @@ Deploy step serves as both review (summary before clicking) and execution (progr
 │  │[Add to Perch]│  │[Add to Perch]│  │[Add to Perch]│  │
 │  └──────────────┘  └──────────────┘  └──────────────┘  │
 │                                                          │
-│                                   + 2 more detected      │
+│ ─── Detected (5) ── on system, not managed ──────────  │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│  │ ● Detected   │  │ ● Detected   │  │ ● Detected   │  │
+│  │ [□] Python   │  │ [□] Notepad++│  │              │  │
+│  │   3.12       │  │              │  │              │  │
+│  │              │  │              │  │              │  │
+│  │[Add to Perch]│  │[Add to Perch]│  │              │  │
+│  └──────────────┘  └──────────────┘  └──────────────┘  │
 │                                                          │
 └──────────────────────────────────────────────────────────┘
 ```
 
-- **Hero banner:** aggregate health counts + health percentage bar + "Sync Everything" button
+- **Hero banner:** aggregate health counts + health percentage bar + "Sync Everything" button. Uses `hero.png` as subtle background.
 - **Drifted section:** items in perch-config that don't match system. "Remove from Perch" = intentional drift (stop tracking). "Sync Everything" = fix all drift at once.
 - **Pending section:** staged config changes not yet deployed. Green-tinted = pending install. Red-tinted = pending removal. These are the preview of what "Sync Everything" will do.
-- **Detected section:** items on system not in perch-config. Onboarding opportunities. "Add to Perch" stages them as Pending.
-- When fully synced with no pending or detected items, dashboard shows only the hero banner: "42 Synced · 100% healthy."
+- **Detected section:** items on system not in perch-config. Onboarding opportunities. "Add to Perch" stages them as Pending. **All items shown — no truncation.**
 - Same card components as every other page.
+
+**Dashboard image logic:**
+
+| Dashboard state | Image | Display |
+|----------------|-------|---------|
+| Everything synced, 0 drift | **wizard-success.png** (phoenix in flight) | "42 Synced · 100% healthy" — celebration moment |
+| Nothing synced yet (brand new) | **wizard-empty.png** (empty nest) | Invitation to start — "Your nest is empty, time to set up!" |
+| Has drift / pending / detected | **hero.png** (subtle background only) | Cards take focus, image doesn't distract |
+
+**Other image placements:**
+
+| Image | Where used |
+|-------|-----------|
+| **startpage.png** (bird taking off) | App splash screen on launch (already implemented) |
+| **hero.png** (wide banner) | Wizard Profile step (step 1) background + Dashboard hero banner background |
+| **wizard-empty.png** (empty nest) | Dashboard when nothing is synced yet (new user, empty config) |
+| **wizard-error.png** (bird in rain) | Wizard Deploy step on errors + Crash window |
+| **wizard-success.png** (phoenix in flight) | Wizard Deploy step on completion + Dashboard when fully synced (0 drift) |
 
 #### Unified Architecture Confirmation
 
