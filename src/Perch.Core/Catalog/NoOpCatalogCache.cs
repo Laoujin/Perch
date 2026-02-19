@@ -7,4 +7,6 @@ public sealed class NoOpCatalogCache : ICatalogCache
 
     public Task SetAsync(string key, string content, CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
+
+    public void InvalidateAll() { }
 }

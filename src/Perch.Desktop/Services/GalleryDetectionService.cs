@@ -186,6 +186,12 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
 
     public void InvalidatePackageCache() => _cachedInstalledIds = null;
 
+    public void InvalidateCache()
+    {
+        _catalog.InvalidateAll();
+        _cachedInstalledIds = null;
+    }
+
     public async Task<TweakDetectionPageResult> DetectTweaksAsync(
         IReadOnlySet<UserProfile> selectedProfiles,
         CancellationToken cancellationToken = default)

@@ -12,6 +12,7 @@ public interface IGalleryDetectionService
     Task<TweakDetectionPageResult> DetectTweaksAsync(IReadOnlySet<UserProfile> selectedProfiles, CancellationToken cancellationToken = default);
     Task<ImmutableArray<AppCardModel>> DetectDotfilesAsync(CancellationToken cancellationToken = default);
     Task<FontDetectionResult> DetectFontsAsync(CancellationToken cancellationToken = default);
+    void InvalidateCache();
 }
 
 public sealed record GalleryDetectionResult(

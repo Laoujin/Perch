@@ -155,6 +155,15 @@ public sealed class CatalogService : ICatalogService
             .ToImmutableArray();
     }
 
+    public void InvalidateAll()
+    {
+        _allApps = null;
+        _allFonts = null;
+        _allTweaks = null;
+        _gitHubStars = null;
+        _cache.InvalidateAll();
+    }
+
     private async Task<string> ResolvePathAsync(string type, string id, CancellationToken cancellationToken)
     {
         var index = await GetIndexAsync(cancellationToken).ConfigureAwait(false);

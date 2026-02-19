@@ -81,6 +81,7 @@ public sealed partial class LanguagesViewModel : GalleryViewModelBase
 
         try
         {
+            _detectionService.InvalidateCache();
             var allApps = await _detectionService.DetectAllAppsAsync(cancellationToken);
             BuildEcosystems(allApps);
             ApplyFilter();

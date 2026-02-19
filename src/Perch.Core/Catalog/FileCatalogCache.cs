@@ -32,6 +32,12 @@ public sealed class FileCatalogCache : ICatalogCache
         await File.WriteAllTextAsync(path, content, cancellationToken).ConfigureAwait(false);
     }
 
+    public void InvalidateAll()
+    {
+        if (Directory.Exists(_cacheDir))
+            Directory.Delete(_cacheDir, recursive: true);
+    }
+
     private string GetPath(string key)
     {
         string sanitized = key.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
