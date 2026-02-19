@@ -802,15 +802,22 @@ All three pages proven to be the same architecture:
 
 ### Testing Plan
 
-{{testing_plan}}
+**Development:** TDD — unit tests for ViewModels and Core services before implementation. The state machine (no badge → Detected → Pending → Synced → Drifted → Pending removal) is the most critical piece to prove through tests. Screenshot smoke tests for visual verification of rendered UI.
+
+**User testing:** Manual testing with 3-5 real users once built. Focus on:
+1. Does "Add to Perch" / "Remove from Perch" communicate the right action?
+2. Do status badges (Drifted/Detected/Synced/Pending) make sense without explanation?
+3. Can users complete the wizard without getting confused at any step?
+4. Does the dashboard give a clear picture of machine health at a glance?
+5. Is the Languages page intuitive for a dev setting up their toolchain?
 
 ### User Feedback
 
-{{user_feedback}}
+*To be collected after implementation and user testing.*
 
 ### Key Learnings
 
-{{key_learnings}}
+*To be collected after implementation and user testing.*
 
 ---
 
@@ -818,15 +825,68 @@ All three pages proven to be the same architecture:
 
 ### Refinements Needed
 
-{{refinements}}
+1. **Terminology finalization** — "Add to Perch" / "Remove from Perch" is decided. "Sync Everything" for deploy. "Drifted / Detected / Synced / Pending" for statuses. Validate these feel right during implementation.
+2. **Pending badge color design** — green-tinted (install) and red-tinted (removal) need exact color values that work with the existing forest green (#10B981) accent and dark theme (#1A1A2E).
+3. **Revert mechanics** — perch-config stores original values but the exact behavior for chained changes (value changed 3 times) needs separate analysis.
+4. **Perch-config change detection** — if perch-config changes on disk while the WPF app is running, the app state goes stale. Needs a solution (file watcher or reload banner).
+5. **Dynamic paths** — VS 2026 hash-based settings path and similar. Path-resolution strategy (glob patterns, env var expansion, registry lookup) needs architectural design.
+6. **Gallery YAML schema for Languages** — the ecosystem structure (sub-categories, items, config files) needs to be defined in the gallery YAML format.
 
 ### Action Items
 
-{{action_items}}
+**Priority 1: Languages Page (brand new)**
+- Define gallery YAML schema for language ecosystems (sub-categories, items, relationships)
+- Build ecosystem card component (category card variant with aggregate status badges)
+- Build ecosystem detail view (sub-category sections with cards sorted by status → gallery index)
+- Implement "Add to Perch" / "Remove from Perch" button component (replaces toggle switch)
+- Implement ⚙ gear icon + item detail page with app-owned tweaks (App Settings checkboxes)
+- Implement machine override checkbox on detail page
+- Add Languages to sidebar navigation
+- Wire detection engine for language ecosystems
+
+**Priority 2: Dashboard Fix (broken, needs redesign)**
+- Implement hero banner with aggregate health counts + health percentage + "Sync Everything" button
+- Implement Drifted / Pending / Detected card sections (same card components)
+- Implement Pending status with green-tinted (install) / red-tinted (removal) badges
+- Wire "Sync Everything" to deploy engine
+- Wire "Remove from Perch" on drifted cards to update perch-config
+- Implement image logic: phoenix (0 drift), empty nest (nothing synced), hero bg (has drift)
+
+**Priority 3: Wizard Updates**
+- Add Languages step (step 3 for Dev/PowerUser, hidden for Casual/Gamer)
+- Redesign Config Repo step: radio buttons (Select folder / Clone from URL) for Dev/PowerUser, auto-local-folder for Casual/Gamer
+- Merge Review + Deploy into single Deploy step with summary → progress → results
+- Add welcome copy on Profile step ("Perch remembers how you like your computer set up...")
+- Add first-time micro-copy on first card grid ("Choose what Perch should manage. Nothing changes until you click Deploy.")
+- Implement deploy step image logic: success → phoenix, error → bird in rain
+- Update step bar to reflect new step order
+
+**Priority 4: Apps & Dotfiles Page Alignment**
+- Replace toggle switches with "Add to Perch" / "Remove from Perch" buttons across all pages
+- Align Apps page to same card components and sort logic (category → status → gallery index)
+- Align Dotfiles page: flat grid, cross-cutting only, same card components
+- Move language-specific dotfiles (nuget.config, .npmrc, etc.) from Dotfiles page to Languages page
+- Add "Add unlisted app" button to Apps page with guided onboarding flow
+- Implement sub-category status badges on category headers
+
+**Priority 5: Bootstrap & Installation**
+- Create dev/power-user bootstrap script (`irm perch.dev/install | iex`): installs git → installs Perch → optionally clones perch-config → launches wizard
+- Create casual user installer: installs Perch only, no git dependency
+
+**Deferred:**
+- Perch Cloud (casual user cross-machine sync) — future monetization opportunity
+- Revert mechanics for chained changes — needs separate analysis
+- Dynamic path resolution strategy — needs architectural design
+- Perch-config file watcher for live reload
 
 ### Success Metrics
 
-{{success_metrics}}
+1. **Wizard completion rate** — users who start the wizard finish through Deploy without abandoning
+2. **Time to first sync** — from opening Perch to "Sync complete" on a new machine
+3. **Drift resolution rate** — percentage of drifted items resolved (either synced or intentionally removed) within one session
+4. **Re-onboarding friction** — can a user bring a drifted dotfile back under management in under 3 clicks?
+5. **Zero confusion on Add vs Deploy** — user testing confirms no one thinks "Add to Perch" installs something on their machine
+6. **Unified architecture holds** — Languages, Dotfiles, and Apps all built with the same components, no page-specific hacks needed
 
 ---
 
