@@ -171,7 +171,13 @@ public partial class App : Application
     public static void ShowWizard()
     {
         var wizard = Services.GetRequiredService<WizardWindow>();
-        wizard.WizardCompleted += () => ShowMainWindow();
+        Action? handler = null;
+        handler = () =>
+        {
+            wizard.WizardCompleted -= handler;
+            ShowMainWindow();
+        };
+        wizard.WizardCompleted += handler;
         wizard.Show();
     }
 
