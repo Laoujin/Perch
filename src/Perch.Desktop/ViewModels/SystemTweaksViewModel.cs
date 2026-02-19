@@ -408,6 +408,7 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
 
     private void BuildFontGroups()
     {
+        DisposeFontGroups();
         _allInstalledFontGroups = InstalledFonts
             .GroupBy(f => f.FamilyName ?? f.Name, StringComparer.OrdinalIgnoreCase)
             .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
@@ -512,10 +513,19 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
             f.PropertyChanged -= OnFontPropertyChanged;
     }
 
+    private void DisposeFontGroups()
+    {
+        foreach (var group in _allInstalledFontGroups)
+            group.Dispose();
+    }
+
     protected override void Dispose(bool disposing)
     {
         if (disposing)
+        {
             UnsubscribeFontChanges();
+            DisposeFontGroups();
+        }
         base.Dispose(disposing);
     }
 }

@@ -5,7 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Perch.Desktop.Models;
 
-public partial class FontFamilyGroupModel : ObservableObject
+public partial class FontFamilyGroupModel : ObservableObject, IDisposable
 {
     private static readonly string[] FallbackSpecimens =
     [
@@ -87,6 +87,13 @@ public partial class FontFamilyGroupModel : ObservableObject
         }
 
         SyncFromChildren();
+    }
+
+    public void Dispose()
+    {
+        Fonts.CollectionChanged -= OnFontsCollectionChanged;
+        foreach (var font in Fonts)
+            font.PropertyChanged -= OnChildPropertyChanged;
     }
 
     public bool MatchesSearch(string query)
