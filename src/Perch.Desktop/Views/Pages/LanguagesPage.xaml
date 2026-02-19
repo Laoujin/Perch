@@ -1,0 +1,379 @@
+<Page
+    x:Class="Perch.Desktop.Views.Pages.LanguagesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+    xmlns:vm="clr-namespace:Perch.Desktop.ViewModels"
+    xmlns:models="clr-namespace:Perch.Desktop.Models"
+    xmlns:controls="clr-namespace:Perch.Desktop.Views.Controls"
+    d:DataContext="{d:DesignInstance vm:LanguagesViewModel}"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Foreground="White"
+    Loaded="OnLoaded">
+
+    <controls:CardGalleryLayout ErrorTitle="Failed to load languages">
+        <controls:CardGalleryLayout.HeaderContent>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Breadcrumb title -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <!-- Back button (visible on Screen 2 and 3) -->
+                    <ui:Button
+                        Icon="{ui:SymbolIcon ArrowLeft24}"
+                        Command="{Binding BackToGridCommand}"
+                        Margin="0,0,8,0"
+                        Visibility="{Binding ShowDetail, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <ui:TextBlock FontTypography="Title" Text="Languages"
+                        Visibility="{Binding ShowGrid, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <!-- Screen 2 breadcrumb: Languages > EcosystemName -->
+                    <StackPanel Orientation="Horizontal"
+                        Visibility="{Binding ShowEcosystemDetail, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}">
+                            <Run Text="Languages" />
+                            <Run Text=" &gt; " />
+                        </TextBlock>
+                        <TextBlock
+                            Text="{Binding SelectedEcosystem.Name}"
+                            FontSize="20"
+                            FontWeight="SemiBold"
+                            Foreground="White" />
+                    </StackPanel>
+
+                    <!-- Screen 3 breadcrumb: Languages > EcosystemName > ItemName -->
+                    <StackPanel Orientation="Horizontal"
+                        Visibility="{Binding ShowItemDetail, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextMutedBrush}">
+                            <Run Text="Languages" />
+                            <Run Text=" &gt; " />
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource TextMutedBrush}" FontSize="20" FontWeight="SemiBold"
+                            Cursor="Hand" MouseLeftButtonUp="OnEcosystemBreadcrumbClick">
+                            <Run Text="{Binding SelectedEcosystem.Name, Mode=OneWay}" />
+                            <Run Text=" &gt; " />
+                        </TextBlock>
+                        <TextBlock
+                            Text="{Binding SelectedItem.DisplayLabel}"
+                            FontSize="20"
+                            FontWeight="SemiBold"
+                            Foreground="White" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Status summary badges -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0"
+                    Visibility="{Binding ShowGrid, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Border Background="{StaticResource SuccessSubtleBrush}" CornerRadius="10" Padding="8,3" Margin="0,0,8,0"
+                        Visibility="{Binding SyncedCount, Converter={StaticResource CountToVisibilityConverter}}">
+                        <TextBlock FontSize="11">
+                            <Run Text="{Binding SyncedCount, Mode=OneWay}" Foreground="{StaticResource SuccessBrush}" FontWeight="SemiBold" />
+                            <Run Text=" synced" Foreground="{StaticResource SuccessBrush}" />
+                        </TextBlock>
+                    </Border>
+                    <Border Background="{StaticResource WarningSubtleBrush}" CornerRadius="10" Padding="8,3" Margin="0,0,8,0"
+                        Visibility="{Binding DriftedCount, Converter={StaticResource CountToVisibilityConverter}}">
+                        <TextBlock FontSize="11">
+                            <Run Text="{Binding DriftedCount, Mode=OneWay}" Foreground="{StaticResource WarningBrush}" FontWeight="SemiBold" />
+                            <Run Text=" drifted" Foreground="{StaticResource WarningBrush}" />
+                        </TextBlock>
+                    </Border>
+                    <Border Background="{StaticResource InfoSubtleBrush}" CornerRadius="10" Padding="8,3"
+                        Visibility="{Binding DetectedCount, Converter={StaticResource CountToVisibilityConverter}}">
+                        <TextBlock FontSize="11">
+                            <Run Text="{Binding DetectedCount, Mode=OneWay}" Foreground="{StaticResource InfoBrush}" FontWeight="SemiBold" />
+                            <Run Text=" detected" Foreground="{StaticResource InfoBrush}" />
+                        </TextBlock>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal">
+                    <ui:TextBox
+                        PlaceholderText="Search languages..."
+                        Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                        Width="200"
+                        Margin="0,0,8,0" />
+                    <ui:Button
+                        Icon="{ui:SymbolIcon ArrowClockwise24}"
+                        Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </controls:CardGalleryLayout.HeaderContent>
+
+        <!-- ============================================================ -->
+        <!-- SCREEN 1: Ecosystem Grid                                     -->
+        <!-- ============================================================ -->
+        <controls:CardGalleryLayout.GridContent>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Ecosystems}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type models:EcosystemCardModel}">
+                            <controls:EcosystemCard
+                                DisplayName="{Binding Name}"
+                                Description="{Binding Description}"
+                                LogoUrl="{Binding LogoUrl}"
+                                SyncedCount="{Binding SyncedCount}"
+                                DriftedCount="{Binding DriftedCount}"
+                                DetectedCount="{Binding DetectedCount}"
+                                CardClicked="OnEcosystemCardClicked"
+                                Margin="0,0,12,12" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </controls:CardGalleryLayout.GridContent>
+
+        <!-- ============================================================ -->
+        <!-- SCREEN 2 + 3: Detail (ecosystem detail or item detail)       -->
+        <!-- ============================================================ -->
+        <controls:CardGalleryLayout.DetailContent>
+            <Grid>
+                <!-- Screen 2: Ecosystem Detail -->
+                <ScrollViewer
+                    VerticalScrollBarVisibility="Auto"
+                    Visibility="{Binding ShowEcosystemDetail, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <StackPanel Margin="0,0,0,16">
+                        <!-- Ecosystem info card -->
+                        <Border Background="{StaticResource CardBackgroundBrush}" CornerRadius="8" Padding="16" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock
+                                    Text="{Binding SelectedEcosystem.Description}"
+                                    FontSize="12"
+                                    Foreground="{StaticResource TextSubtleBrush}"
+                                    TextWrapping="Wrap"
+                                    Margin="0,0,0,8"
+                                    Visibility="{Binding SelectedEcosystem.Description, Converter={StaticResource NullToVisibilityConverter}}" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Sub-category sections with app cards -->
+                        <ItemsControl ItemsSource="{Binding SubCategories}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type models:AppCategoryGroup}">
+                                    <StackPanel Margin="0,0,0,16">
+                                        <!-- Sub-category header -->
+                                        <TextBlock
+                                            Text="{Binding SubCategory}"
+                                            FontSize="13"
+                                            FontWeight="SemiBold"
+                                            Foreground="{StaticResource SubcategoryTextBrush}"
+                                            Margin="0,0,0,8" />
+
+                                        <!-- App cards in wrap panel -->
+                                        <ItemsControl ItemsSource="{Binding Apps}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type models:AppCardModel}">
+                                                    <controls:AppCard
+                                                        DisplayLabel="{Binding DisplayLabel}"
+                                                        Description="{Binding Description}"
+                                                        Category="{Binding Category}"
+                                                        Status="{Binding Status}"
+                                                        LogoUrl="{Binding LogoUrl}"
+                                                        Website="{Binding Website}"
+                                                        Docs="{Binding Docs}"
+                                                        GitHub="{Binding GitHub}"
+                                                        ConfigPath="{Binding ConfigPath}"
+                                                        License="{Binding License}"
+                                                        IsManaged="{Binding IsManaged}"
+                                                        CanToggle="{Binding CanToggle}"
+                                                        IsSuggested="{Binding IsSuggested}"
+                                                        KindBadge="{Binding KindBadge}"
+                                                        GitHubStarsFormatted="{Binding GitHubStarsFormatted}"
+                                                        IsTopPick="{Binding IsTopPick}"
+                                                        Tags="{Binding Tags}"
+                                                        ConfigureClicked="OnConfigureClicked"
+                                                        ToggleChanged="OnToggleChanged"
+                                                        Margin="0,0,12,12" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Screen 3: Item Detail -->
+                <Grid Visibility="{Binding ShowItemDetail, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Back to ecosystem button -->
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
+                        <ui:Button
+                            Icon="{ui:SymbolIcon ArrowLeft24}"
+                            Command="{Binding BackToEcosystemCommand}"
+                            Margin="0,0,12,0" />
+                        <TextBlock
+                            Text="{Binding SelectedItem.DisplayLabel}"
+                            FontSize="18"
+                            FontWeight="SemiBold"
+                            Foreground="White"
+                            VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- Detail loading spinner -->
+                    <ui:ProgressRing
+                        Grid.Row="1"
+                        IsIndeterminate="True"
+                        Width="32"
+                        Height="32"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Visibility="{Binding IsLoadingDetail, Converter={StaticResource BooleanToVisibilityConverter}}" />
+
+                    <!-- Detail content -->
+                    <ScrollViewer
+                        Grid.Row="1"
+                        VerticalScrollBarVisibility="Auto"
+                        Visibility="{Binding IsLoadingDetail, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                        <StackPanel Margin="0,0,0,16">
+                            <!-- Item info card -->
+                            <Border Background="{StaticResource CardBackgroundBrush}" CornerRadius="8" Padding="16" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+
+                                    <controls:StatusRibbon
+                                        Grid.Row="0"
+                                        Status="{Binding SelectedItem.Status}"
+                                        Margin="0,0,0,8" />
+
+                                    <TextBlock
+                                        Grid.Row="1"
+                                        Text="{Binding SelectedItem.Description}"
+                                        FontSize="12"
+                                        Foreground="{StaticResource TextSubtleBrush}"
+                                        TextWrapping="Wrap"
+                                        Margin="0,0,0,6"
+                                        Visibility="{Binding SelectedItem.Description, Converter={StaticResource NullToVisibilityConverter}}" />
+
+                                    <TextBlock
+                                        Grid.Row="2"
+                                        Text="{Binding SelectedItem.Category}"
+                                        FontSize="11"
+                                        Foreground="{StaticResource TextMutedBrush}"
+                                        Margin="0,0,0,6" />
+
+                                    <!-- Links -->
+                                    <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,0,0,6">
+                                        <Button
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="4,2"
+                                            Margin="0,0,4,0"
+                                            Click="OnLinkClick"
+                                            Tag="{Binding SelectedItem.Website}"
+                                            ToolTip="{Binding SelectedItem.Website}"
+                                            Visibility="{Binding SelectedItem.Website, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Symbol="Globe24" FontSize="12" Foreground="{StaticResource LinkTextBrush}" />
+                                                <TextBlock Text="Website" FontSize="10" Foreground="{StaticResource LinkTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="4,2"
+                                            Margin="0,0,4,0"
+                                            Click="OnLinkClick"
+                                            Tag="{Binding SelectedItem.Docs}"
+                                            ToolTip="{Binding SelectedItem.Docs}"
+                                            Visibility="{Binding SelectedItem.Docs, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Symbol="Document24" FontSize="12" Foreground="{StaticResource LinkTextBrush}" />
+                                                <TextBlock Text="Docs" FontSize="10" Foreground="{StaticResource LinkTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="4,2"
+                                            Click="OnLinkClick"
+                                            Tag="{Binding SelectedItem.GitHub}"
+                                            ToolTip="{Binding SelectedItem.GitHub}"
+                                            Visibility="{Binding SelectedItem.GitHub, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Symbol="Code24" FontSize="12" Foreground="{StaticResource LinkTextBrush}" />
+                                                <TextBlock Text="GitHub" FontSize="10" Foreground="{StaticResource LinkTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Alternatives section -->
+                            <Border
+                                Background="{StaticResource CardBackgroundBrush}"
+                                CornerRadius="8"
+                                Padding="16"
+                                Margin="0,0,0,12"
+                                Visibility="{Binding HasAlternatives, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="Alternatives" FontSize="14" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,12" />
+                                    <ItemsControl ItemsSource="{Binding AlternativeApps}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type models:AppCardModel}">
+                                                <controls:AppCard
+                                                    DisplayLabel="{Binding DisplayLabel}"
+                                                    Description="{Binding Description}"
+                                                    Category="{Binding Category}"
+                                                    Status="{Binding Status}"
+                                                    LogoUrl="{Binding LogoUrl}"
+                                                    Website="{Binding Website}"
+                                                    Docs="{Binding Docs}"
+                                                    GitHub="{Binding GitHub}"
+                                                    License="{Binding License}"
+                                                    IsManaged="{Binding IsManaged}"
+                                                    CanToggle="{Binding CanToggle}"
+                                                    IsSuggested="{Binding IsSuggested}"
+                                                    KindBadge="{Binding KindBadge}"
+                                                    GitHubStarsFormatted="{Binding GitHubStarsFormatted}"
+                                                    IsTopPick="{Binding IsTopPick}"
+                                                    Tags="{Binding Tags}"
+                                                    ConfigureClicked="OnConfigureClicked"
+                                                    ToggleChanged="OnToggleChanged"
+                                                    Margin="0,0,12,12" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+        </controls:CardGalleryLayout.DetailContent>
+    </controls:CardGalleryLayout>
+
+</Page>

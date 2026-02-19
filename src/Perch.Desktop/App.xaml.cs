@@ -61,6 +61,8 @@ public partial class App : Application
             services.AddSingleton<DashboardViewModel>();
             services.AddSingleton<DotfilesPage>();
             services.AddSingleton<DotfilesViewModel>();
+            services.AddSingleton<LanguagesPage>();
+            services.AddSingleton<LanguagesViewModel>();
             services.AddSingleton<AppsPage>();
             services.AddSingleton<AppsViewModel>();
             services.AddSingleton<SystemTweaksPage>();

@@ -68,6 +68,15 @@
                 </ui:NavigationViewItem>
 
                 <ui:NavigationViewItem
+                    Content="Languages"
+                    ToolTip="Languages"
+                    TargetPageType="{x:Type pages:LanguagesPage}">
+                    <ui:NavigationViewItem.Icon>
+                        <ui:SymbolIcon Symbol="Code24" />
+                    </ui:NavigationViewItem.Icon>
+                </ui:NavigationViewItem>
+
+                <ui:NavigationViewItem
                     Content="Dotfiles"
                     ToolTip="Dotfiles"
                     TargetPageType="{x:Type pages:DotfilesPage}">
