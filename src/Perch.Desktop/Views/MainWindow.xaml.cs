@@ -46,15 +46,4 @@ public partial class MainWindow : INavigationWindow
         RootNavigation.IsPaneOpen = !RootNavigation.IsPaneOpen;
     }
 
-    private async void OnDeployRequested(object sender, RoutedEventArgs e)
-    {
-        if (_viewModel.DeployCommand.CanExecute(null))
-            await _viewModel.DeployCommand.ExecuteAsync(null);
-    }
-
-    private void OnClearRequested(object sender, RoutedEventArgs e)
-    {
-        if (_viewModel.ClearPendingChangesCommand.CanExecute(null))
-            _viewModel.ClearPendingChangesCommand.Execute(null);
-    }
 }

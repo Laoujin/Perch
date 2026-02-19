@@ -157,8 +157,13 @@ public sealed partial class LanguagesViewModel : GalleryViewModelBase
                 runtime.Id,
                 ecosystemName,
                 runtime.Description,
-                runtime.LogoUrl);
+                runtime.LogoUrl,
+                runtime.Website,
+                runtime.Docs,
+                runtime.GitHub,
+                runtime.License);
 
+            eco.GitHubStars = runtime.GitHubStars;
             eco.Items = [.. items];
             eco.UpdateCounts();
             return eco;
@@ -202,7 +207,7 @@ public sealed partial class LanguagesViewModel : GalleryViewModelBase
 
         var groups = SelectedEcosystem.Items
             .GroupBy(a => a.SubCategory, StringComparer.OrdinalIgnoreCase)
-            .OrderBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(g => SubCategorySortOrder(g.Key))
             .Select(g => new AppCategoryGroup(
                 g.Key,
                 new System.Collections.ObjectModel.ObservableCollection<AppCardModel>(
@@ -279,5 +284,16 @@ public sealed partial class LanguagesViewModel : GalleryViewModelBase
         CardStatus.Detected => 1,
         CardStatus.Linked => 2,
         _ => 3,
+    };
+
+    private static int SubCategorySortOrder(string subCategory) => subCategory switch
+    {
+        _ when subCategory.Equals("Languages", StringComparison.OrdinalIgnoreCase) => 0,
+        _ when subCategory.Equals("IDEs", StringComparison.OrdinalIgnoreCase) => 1,
+        _ when subCategory.Equals("Decompilers", StringComparison.OrdinalIgnoreCase) => 2,
+        _ when subCategory.Equals("Profilers", StringComparison.OrdinalIgnoreCase) => 3,
+        _ when subCategory.Equals("IDE Extensions", StringComparison.OrdinalIgnoreCase) => 4,
+        _ when subCategory.Equals("CLI Tools", StringComparison.OrdinalIgnoreCase) => 5,
+        _ => 10,
     };
 }

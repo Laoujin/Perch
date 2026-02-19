@@ -148,15 +148,106 @@
                     <StackPanel Margin="0,0,0,16">
                         <!-- Ecosystem info card -->
                         <Border Background="{StaticResource CardBackgroundBrush}" CornerRadius="8" Padding="16" Margin="0,0,0,12">
-                            <StackPanel>
-                                <TextBlock
-                                    Text="{Binding SelectedEcosystem.Description}"
-                                    FontSize="12"
-                                    Foreground="{StaticResource TextSubtleBrush}"
-                                    TextWrapping="Wrap"
-                                    Margin="0,0,0,8"
-                                    Visibility="{Binding SelectedEcosystem.Description, Converter={StaticResource NullToVisibilityConverter}}" />
-                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Logo -->
+                                <Border Grid.Column="0" Width="48" Height="48" CornerRadius="8"
+                                        Background="{StaticResource SurfaceBrush}" Margin="0,0,16,0"
+                                        VerticalAlignment="Top">
+                                    <Image Width="40" Height="40" Stretch="Uniform"
+                                           RenderOptions.BitmapScalingMode="HighQuality"
+                                           Source="{Binding SelectedEcosystem.LogoUrl, Converter={StaticResource UrlToImageSourceConverter}}" />
+                                </Border>
+
+                                <StackPanel Grid.Column="1">
+                                    <!-- Description -->
+                                    <TextBlock
+                                        Text="{Binding SelectedEcosystem.Description}"
+                                        FontSize="13"
+                                        Foreground="{StaticResource TextSubtleBrush}"
+                                        TextWrapping="Wrap"
+                                        Margin="0,0,0,8"
+                                        Visibility="{Binding SelectedEcosystem.Description, Converter={StaticResource NullToVisibilityConverter}}" />
+
+                                    <!-- Meta row: stars, license, badges -->
+                                    <WrapPanel Margin="0,0,0,6">
+                                        <!-- GitHub Stars -->
+                                        <Border Background="{StaticResource SurfaceBrush}" CornerRadius="10" Padding="8,3" Margin="0,0,8,4"
+                                                Visibility="{Binding SelectedEcosystem.GitHubStarsFormatted, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="&#x2605;" FontSize="11" Foreground="{StaticResource WarningBrush}" />
+                                                <TextBlock Text="{Binding SelectedEcosystem.GitHubStarsFormatted}" FontSize="11"
+                                                           Foreground="White" Margin="4,0,0,0" />
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- License -->
+                                        <Border Background="{StaticResource SurfaceBrush}" CornerRadius="10" Padding="8,3" Margin="0,0,8,4"
+                                                Visibility="{Binding SelectedEcosystem.License, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <TextBlock Text="{Binding SelectedEcosystem.License}" FontSize="11"
+                                                       Foreground="{StaticResource TextMutedBrush}" />
+                                        </Border>
+
+                                        <!-- Status badges -->
+                                        <Border Background="{StaticResource SuccessSubtleBrush}" CornerRadius="10" Padding="8,3" Margin="0,0,8,4"
+                                                Visibility="{Binding SelectedEcosystem.SyncedCount, Converter={StaticResource CountToVisibilityConverter}}">
+                                            <TextBlock FontSize="11">
+                                                <Run Text="{Binding SelectedEcosystem.SyncedCount, Mode=OneWay}" Foreground="{StaticResource SuccessBrush}" FontWeight="SemiBold" />
+                                                <Run Text=" synced" Foreground="{StaticResource SuccessBrush}" />
+                                            </TextBlock>
+                                        </Border>
+                                        <Border Background="{StaticResource WarningSubtleBrush}" CornerRadius="10" Padding="8,3" Margin="0,0,8,4"
+                                                Visibility="{Binding SelectedEcosystem.DriftedCount, Converter={StaticResource CountToVisibilityConverter}}">
+                                            <TextBlock FontSize="11">
+                                                <Run Text="{Binding SelectedEcosystem.DriftedCount, Mode=OneWay}" Foreground="{StaticResource WarningBrush}" FontWeight="SemiBold" />
+                                                <Run Text=" drifted" Foreground="{StaticResource WarningBrush}" />
+                                            </TextBlock>
+                                        </Border>
+                                        <Border Background="{StaticResource InfoSubtleBrush}" CornerRadius="10" Padding="8,3" Margin="0,0,0,4"
+                                                Visibility="{Binding SelectedEcosystem.DetectedCount, Converter={StaticResource CountToVisibilityConverter}}">
+                                            <TextBlock FontSize="11">
+                                                <Run Text="{Binding SelectedEcosystem.DetectedCount, Mode=OneWay}" Foreground="{StaticResource InfoBrush}" FontWeight="SemiBold" />
+                                                <Run Text=" detected" Foreground="{StaticResource InfoBrush}" />
+                                            </TextBlock>
+                                        </Border>
+                                    </WrapPanel>
+
+                                    <!-- Links -->
+                                    <StackPanel Orientation="Horizontal">
+                                        <Button Background="Transparent" BorderThickness="0" Padding="4,2" Margin="0,0,4,0"
+                                                Click="OnLinkClick" Tag="{Binding SelectedEcosystem.Website}"
+                                                ToolTip="{Binding SelectedEcosystem.Website}"
+                                                Visibility="{Binding SelectedEcosystem.Website, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Symbol="Globe24" FontSize="12" Foreground="{StaticResource LinkTextBrush}" />
+                                                <TextBlock Text="Website" FontSize="10" Foreground="{StaticResource LinkTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Background="Transparent" BorderThickness="0" Padding="4,2" Margin="0,0,4,0"
+                                                Click="OnLinkClick" Tag="{Binding SelectedEcosystem.Docs}"
+                                                ToolTip="{Binding SelectedEcosystem.Docs}"
+                                                Visibility="{Binding SelectedEcosystem.Docs, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Symbol="Document24" FontSize="12" Foreground="{StaticResource LinkTextBrush}" />
+                                                <TextBlock Text="Docs" FontSize="10" Foreground="{StaticResource LinkTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Background="Transparent" BorderThickness="0" Padding="4,2"
+                                                Click="OnLinkClick" Tag="{Binding SelectedEcosystem.GitHub}"
+                                                ToolTip="{Binding SelectedEcosystem.GitHub}"
+                                                Visibility="{Binding SelectedEcosystem.GitHub, Converter={StaticResource NullToVisibilityConverter}}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <ui:SymbolIcon Symbol="Code24" FontSize="12" Foreground="{StaticResource LinkTextBrush}" />
+                                                <TextBlock Text="GitHub" FontSize="10" Foreground="{StaticResource LinkTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Grid>
                         </Border>
 
                         <!-- Sub-category sections with app cards -->

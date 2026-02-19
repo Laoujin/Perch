@@ -73,6 +73,7 @@
             <converters:BooleanToForegroundConverter x:Key="BooleanToForegroundConverter" />
             <converters:PathEllipsisConverter x:Key="PathEllipsisConverter" />
             <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+            <converters:UrlToImageSourceConverter x:Key="UrlToImageSourceConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

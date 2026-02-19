@@ -18,7 +18,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <ui:TitleBar
@@ -124,12 +123,6 @@
             HorizontalAlignment="Center"
             Margin="0,0,0,16" />
 
-        <controls:DeployBar
-            Grid.Row="2"
-            SelectedCount="{Binding PendingChangeCount}"
-            IsDeploying="{Binding IsDeploying}"
-            DeployRequested="OnDeployRequested"
-            ClearRequested="OnClearRequested" />
     </Grid>
 
 </ui:FluentWindow>
