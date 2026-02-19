@@ -105,7 +105,7 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
 
         try
         {
-            var profiles = await LoadProfilesAsync(cancellationToken);
+            var profiles = await LoadProfilesAsync(_settingsProvider, cancellationToken);
             _activeProfiles = profiles;
             var result = await _detectionService.DetectAppsAsync(profiles, cancellationToken);
 
@@ -433,24 +433,6 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
         return index >= 0 ? index : int.MaxValue;
     }
 
-    private async Task<HashSet<UserProfile>> LoadProfilesAsync(CancellationToken cancellationToken)
-    {
-        var settings = await _settingsProvider.LoadAsync(cancellationToken);
-        var profiles = new HashSet<UserProfile>();
-        if (settings.Profiles is { Count: > 0 })
-        {
-            foreach (var name in settings.Profiles)
-            {
-                if (Enum.TryParse<UserProfile>(name, ignoreCase: true, out var profile))
-                    profiles.Add(profile);
-            }
-        }
-
-        if (profiles.Count == 0)
-            profiles = [UserProfile.Developer, UserProfile.PowerUser];
-
-        return profiles;
-    }
 }
 
 public sealed record AppCategoryGroup(string SubCategory, ObservableCollection<AppCardModel> Apps);

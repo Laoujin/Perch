@@ -1205,4 +1205,70 @@ public sealed class SystemTweaksViewModelTests
             store);
     }
 }
+
+[TestFixture]
+[Platform("Win")]
+[SupportedOSPlatform("windows")]
+public sealed class GalleryViewModelBaseTests
+{
+    [Test]
+    public async Task LoadProfilesAsync_ParsesStoredProfiles()
+    {
+        var settings = Substitute.For<ISettingsProvider>();
+        settings.LoadAsync(Arg.Any<CancellationToken>())
+            .Returns(new PerchSettings { Profiles = ["Gamer", "Casual"] });
+
+        var profiles = await TestableGalleryViewModel.TestLoadProfilesAsync(settings);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(profiles, Has.Count.EqualTo(2));
+            Assert.That(profiles, Does.Contain(UserProfile.Gamer));
+            Assert.That(profiles, Does.Contain(UserProfile.Casual));
+        });
+    }
+
+    [Test]
+    public async Task LoadProfilesAsync_FallsBackToDefaults_WhenNoProfiles()
+    {
+        var settings = Substitute.For<ISettingsProvider>();
+        settings.LoadAsync(Arg.Any<CancellationToken>())
+            .Returns(new PerchSettings());
+
+        var profiles = await TestableGalleryViewModel.TestLoadProfilesAsync(settings);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(profiles, Has.Count.EqualTo(2));
+            Assert.That(profiles, Does.Contain(UserProfile.Developer));
+            Assert.That(profiles, Does.Contain(UserProfile.PowerUser));
+        });
+    }
+
+    [Test]
+    public async Task LoadProfilesAsync_IgnoresInvalidProfileNames()
+    {
+        var settings = Substitute.For<ISettingsProvider>();
+        settings.LoadAsync(Arg.Any<CancellationToken>())
+            .Returns(new PerchSettings { Profiles = ["Developer", "InvalidProfile"] });
+
+        var profiles = await TestableGalleryViewModel.TestLoadProfilesAsync(settings);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(profiles, Has.Count.EqualTo(1));
+            Assert.That(profiles, Does.Contain(UserProfile.Developer));
+        });
+    }
+
+    private sealed class TestableGalleryViewModel : GalleryViewModelBase
+    {
+        public override bool ShowGrid => true;
+        public override bool ShowDetail => false;
+
+        public static Task<HashSet<UserProfile>> TestLoadProfilesAsync(
+            ISettingsProvider settingsProvider, CancellationToken cancellationToken = default)
+            => LoadProfilesAsync(settingsProvider, cancellationToken);
+    }
+}
 #endif

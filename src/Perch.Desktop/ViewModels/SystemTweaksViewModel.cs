@@ -106,7 +106,7 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
 
         try
         {
-            _userProfiles = await LoadProfilesAsync(cancellationToken);
+            _userProfiles = await LoadProfilesAsync(_settingsProvider, cancellationToken);
             var tweaksTask = _detectionService.DetectTweaksAsync(_userProfiles, cancellationToken);
             var fontsTask = _detectionService.DetectFontsAsync(cancellationToken);
             var startupTask = _startupService.GetAllAsync(cancellationToken);
@@ -543,24 +543,6 @@ public sealed partial class SystemTweaksViewModel : GalleryViewModelBase
             f.PropertyChanged -= OnFontPropertyChanged;
     }
 
-    private async Task<HashSet<UserProfile>> LoadProfilesAsync(CancellationToken cancellationToken)
-    {
-        var settings = await _settingsProvider.LoadAsync(cancellationToken);
-        var profiles = new HashSet<UserProfile>();
-        if (settings.Profiles is { Count: > 0 })
-        {
-            foreach (var name in settings.Profiles)
-            {
-                if (Enum.TryParse<UserProfile>(name, ignoreCase: true, out var profile))
-                    profiles.Add(profile);
-            }
-        }
-
-        if (profiles.Count == 0)
-            profiles = [UserProfile.Developer, UserProfile.PowerUser];
-
-        return profiles;
-    }
 }
 
 public sealed record TweakSubCategoryGroup(string SubCategory, ImmutableArray<TweakCardModel> Tweaks);
