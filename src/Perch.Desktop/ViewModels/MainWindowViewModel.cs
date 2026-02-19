@@ -49,18 +49,24 @@ public sealed partial class MainWindowViewModel : ViewModelBase
             return;
 
         IsDeploying = true;
-        var result = await _applyChangesService.ApplyAsync(cancellationToken);
-        IsDeploying = false;
+        try
+        {
+            var result = await _applyChangesService.ApplyAsync(cancellationToken);
 
-        if (result.Success)
-        {
-            _snackbarService.Show("Applied", $"{result.Applied} change{(result.Applied == 1 ? "" : "s")} applied successfully",
-                ControlAppearance.Success, null, TimeSpan.FromSeconds(3));
+            if (result.Success)
+            {
+                _snackbarService.Show("Applied", $"{result.Applied} change{(result.Applied == 1 ? "" : "s")} applied successfully",
+                    ControlAppearance.Success, null, TimeSpan.FromSeconds(3));
+            }
+            else
+            {
+                _snackbarService.Show("Errors", $"{result.Errors.Count} error{(result.Errors.Count == 1 ? "" : "s")}: {result.Errors[0]}",
+                    ControlAppearance.Danger, null, TimeSpan.FromSeconds(5));
+            }
         }
-        else
+        finally
         {
-            _snackbarService.Show("Errors", $"{result.Errors.Count} error{(result.Errors.Count == 1 ? "" : "s")}: {result.Errors[0]}",
-                ControlAppearance.Danger, null, TimeSpan.FromSeconds(5));
+            IsDeploying = false;
         }
     }
 
