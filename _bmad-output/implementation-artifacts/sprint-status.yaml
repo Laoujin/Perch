@@ -99,16 +99,16 @@ development_status:
   # New WPF page for language ecosystem onboarding. Each language gets a
   # gallery entry covering SDK, tools, IDE, config files. Detection logic
   # identifies what's installed.
-  epic-20: backlog
-  20-1-languages-page-scaffold: backlog
-  20-2-language-sdk-detection: backlog
-  20-3-gallery-language-dotnet: backlog
-  20-4-gallery-language-node: backlog
-  20-5-gallery-language-python: backlog
-  20-6-gallery-language-java: backlog
-  20-7-gallery-language-ruby: backlog
-  20-8-gallery-language-rust: backlog
-  20-9-gallery-language-go: backlog
+  epic-20: in-progress
+  20-1-languages-page-scaffold: ready-for-dev
+  20-2-language-sdk-detection: ready-for-dev
+  20-3-gallery-language-dotnet: ready-for-dev
+  20-4-gallery-language-node: ready-for-dev
+  20-5-gallery-language-python: ready-for-dev
+  20-6-gallery-language-java: ready-for-dev
+  20-7-gallery-language-ruby: ready-for-dev
+  20-8-gallery-language-rust: ready-for-dev
+  20-9-gallery-language-go: ready-for-dev
 
   # ============================================================
   # P2: Dotfiles + Apps — WPF improvements + gallery content
@@ -118,10 +118,10 @@ development_status:
   # Improve dotfiles WPF page + configure gallery entries for each dotfile.
   epic-21: in-progress
   21-1-dotfiles-page-improvements: ready-for-dev
-  21-2-gallery-dotfile-git: backlog
-  21-3-gallery-dotfile-powershell: backlog
-  21-4-gallery-dotfile-node-npm: backlog
-  21-5-gallery-dotfile-bash: backlog
+  21-2-gallery-dotfile-git: ready-for-dev
+  21-3-gallery-dotfile-powershell: ready-for-dev
+  21-4-gallery-dotfile-node-npm: ready-for-dev
+  21-5-gallery-dotfile-bash: ready-for-dev
 
   # Epic 22: Apps Page + Gallery
   # Improve apps WPF page: sorting, categories, alternatives, top choices,
