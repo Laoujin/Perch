@@ -4,6 +4,7 @@ using System.Runtime.Versioning;
 using Perch.Core;
 using Perch.Core.Catalog;
 using Perch.Core.Config;
+using Perch.Core.Modules;
 using Perch.Core.Packages;
 using Perch.Core.Scanner;
 using Perch.Core.Symlinks;
@@ -23,6 +24,7 @@ public sealed class GalleryDetectionServiceAppTests
     private ISymlinkProvider _symlinkProvider = null!;
     private ISettingsProvider _settingsProvider = null!;
     private IPackageManagerProvider _packageProvider = null!;
+    private IRuntimeDetectionService _runtimeDetection = null!;
     private GalleryDetectionService _service = null!;
     private string _tempDir = null!;
 
@@ -34,6 +36,7 @@ public sealed class GalleryDetectionServiceAppTests
         _symlinkProvider = Substitute.For<ISymlinkProvider>();
         _settingsProvider = Substitute.For<ISettingsProvider>();
         _packageProvider = Substitute.For<IPackageManagerProvider>();
+        _runtimeDetection = Substitute.For<IRuntimeDetectionService>();
 
         _platformDetector.CurrentPlatform.Returns(Platform.Windows);
         _settingsProvider.LoadAsync(Arg.Any<CancellationToken>())
@@ -56,7 +59,7 @@ public sealed class GalleryDetectionServiceAppTests
             _settingsProvider,
             [_packageProvider],
             Substitute.For<ITweakService>(),
-            Substitute.For<IRuntimeDetectionService>(),
+            _runtimeDetection,
             Substitute.For<ILogger<GalleryDetectionService>>());
     }
 
@@ -389,6 +392,170 @@ public sealed class GalleryDetectionServiceAppTests
         var result = await _service.DetectAllAppsAsync();
 
         Assert.That(result[0].GitHubStars, Is.EqualTo(181800));
+    }
+
+    [Test]
+    public async Task WarmUpAsync_CallsAllPreloadMethods()
+    {
+        _catalog.GetAllAppsAsync(Arg.Any<CancellationToken>()).Returns(ImmutableArray<CatalogEntry>.Empty);
+        _catalog.GetAllTweaksAsync(Arg.Any<CancellationToken>()).Returns(ImmutableArray<TweakCatalogEntry>.Empty);
+        _catalog.GetAllFontsAsync(Arg.Any<CancellationToken>()).Returns(ImmutableArray<FontCatalogEntry>.Empty);
+        _catalog.GetGitHubStarsAsync(Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<string, int>() as IReadOnlyDictionary<string, int>);
+
+        await _service.WarmUpAsync();
+
+        await _catalog.Received(1).GetAllAppsAsync(Arg.Any<CancellationToken>());
+        await _catalog.Received(1).GetAllTweaksAsync(Arg.Any<CancellationToken>());
+        await _catalog.Received(1).GetAllFontsAsync(Arg.Any<CancellationToken>());
+        await _catalog.Received(1).GetGitHubStarsAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public void InvalidateCache_DelegatesToCatalog()
+    {
+        _service.InvalidateCache();
+        _catalog.Received(1).InvalidateAll();
+    }
+
+    [Test]
+    public void InvalidatePackageCache_ClearsCache()
+    {
+        _service.InvalidatePackageCache();
+        // Verify by scanning again - should call provider again
+        _catalog.GetAllAppsAsync(Arg.Any<CancellationToken>()).Returns(ImmutableArray<CatalogEntry>.Empty);
+    }
+
+    [Test]
+    public async Task DetectAllAppsAsync_RuntimeNotDetectedByPackage_ChecksRuntimeDetection()
+    {
+        var runtime = new CatalogEntry(
+            "dotnet", "dotnet", ".NET", "Development/Runtimes",
+            [], null, null, null,
+            new InstallDefinition("Microsoft.DotNet.SDK.8", null),
+            null, null, CatalogKind.Runtime);
+
+        _catalog.GetAllAppsAsync(Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(runtime));
+
+        _runtimeDetection.DetectRuntimeAsync(runtime, Arg.Any<CancellationToken>())
+            .Returns(new RuntimeDetectionResult(true, "8.0.100"));
+        _runtimeDetection.DetectGlobalToolsAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<CatalogEntry>>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray<GlobalToolMatch>.Empty);
+
+        var result = await _service.DetectAllAppsAsync();
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result[0].Status, Is.EqualTo(CardStatus.Detected));
+            Assert.That(result[0].DetectedVersion, Is.EqualTo("8.0.100"));
+        });
+    }
+
+    [Test]
+    public async Task DetectAllAppsAsync_RuntimeNotInstalled_StaysUnmanaged()
+    {
+        var runtime = new CatalogEntry(
+            "dotnet", "dotnet", ".NET", "Development/Runtimes",
+            [], null, null, null,
+            new InstallDefinition("Microsoft.DotNet.SDK.8", null),
+            null, null, CatalogKind.Runtime);
+
+        _catalog.GetAllAppsAsync(Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(runtime));
+
+        _runtimeDetection.DetectRuntimeAsync(runtime, Arg.Any<CancellationToken>())
+            .Returns(new RuntimeDetectionResult(false, null));
+
+        var result = await _service.DetectAllAppsAsync();
+
+        Assert.That(result[0].Status, Is.EqualTo(CardStatus.Unmanaged));
+    }
+
+    [Test]
+    public async Task DetectAllAppsAsync_GlobalToolDetected_MarksTool()
+    {
+        var runtime = new CatalogEntry(
+            "dotnet", "dotnet", ".NET", "Development/Runtimes",
+            [], null, null, null,
+            new InstallDefinition("Microsoft.DotNet.SDK.8", null),
+            null, null, CatalogKind.Runtime);
+
+        var tool = new CatalogEntry(
+            "fantomas", "fantomas", "Fantomas", "Development/Tools",
+            [], null, null, null,
+            new InstallDefinition(null, null, DotnetTool: "fantomas"),
+            null, null);
+
+        _catalog.GetAllAppsAsync(Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(runtime, tool));
+
+        _packageProvider.ScanInstalledAsync(Arg.Any<CancellationToken>())
+            .Returns(new PackageManagerScanResult(true,
+                ImmutableArray.Create(new InstalledPackage("Microsoft.DotNet.SDK.8", PackageManager.Winget)),
+                null));
+
+        _runtimeDetection.DetectGlobalToolsAsync("dotnet", Arg.Any<IReadOnlyList<CatalogEntry>>(), Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(new GlobalToolMatch("fantomas", "fantomas")));
+
+        var result = await _service.DetectAllAppsAsync();
+
+        var toolCard = result.First(c => c.Id == "fantomas");
+        Assert.That(toolCard.Status, Is.EqualTo(CardStatus.Detected));
+    }
+
+    [Test]
+    public async Task DetectAppsAsync_LocalGalleryPath_UsesFileUri()
+    {
+        _settingsProvider.LoadAsync(Arg.Any<CancellationToken>())
+            .Returns(new PerchSettings
+            {
+                ConfigRepoPath = @"C:\config",
+                GalleryLocalPath = @"C:\gallery\catalog"
+            });
+
+        var app = MakeApp("vscode", "VS Code",
+            install: new InstallDefinition("Microsoft.VisualStudioCode", null));
+        _catalog.GetAllAppsAsync(Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(app));
+
+        var result = await _service.DetectAppsAsync(new HashSet<UserProfile> { UserProfile.Developer });
+
+        var allCards = result.YourApps.AsEnumerable().Concat(result.Suggested).Concat(result.OtherApps);
+        var card = allCards.First();
+        Assert.That(card.LogoUrl, Does.StartWith("file:///"));
+    }
+
+    [Test]
+    public async Task DetectAppsAsync_PackageCacheHit_DoesNotScanTwice()
+    {
+        var app = MakeApp("vscode", "VS Code",
+            install: new InstallDefinition("Microsoft.VisualStudioCode", null));
+        _catalog.GetAllAppsAsync(Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(app));
+
+        await _service.DetectAppsAsync(new HashSet<UserProfile> { UserProfile.Developer });
+        await _service.DetectAppsAsync(new HashSet<UserProfile> { UserProfile.Developer });
+
+        await _packageProvider.Received(1).ScanInstalledAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Test]
+    public async Task DetectAppsAsync_HotApp_SetsIsHot()
+    {
+        var app = new CatalogEntry(
+            "vscode", "vscode", null, "Development/Tools",
+            [], null, null, null,
+            new InstallDefinition("Microsoft.VisualStudioCode", null),
+            null, null, Hot: true);
+
+        _catalog.GetAllAppsAsync(Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(app));
+
+        var result = await _service.DetectAppsAsync(new HashSet<UserProfile> { UserProfile.Developer });
+
+        var allCards = result.YourApps.AsEnumerable().Concat(result.Suggested).Concat(result.OtherApps);
+        Assert.That(allCards.First().IsHot, Is.True);
     }
 
     private static CatalogConfigLink MakeLink(string source, string target) =>

@@ -189,6 +189,28 @@ public sealed class GalleryDetectionServiceTweakTests
         });
     }
 
+    [Test]
+    public async Task DetectTweaksAsync_DetectionThrows_ReportsError()
+    {
+        var tweak = MakeTweak("broken", "Broken Tweak", []);
+        _catalog.GetAllTweaksAsync(Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(tweak));
+
+        _tweakService.DetectWithCaptureAsync(tweak, Arg.Any<CancellationToken>())
+            .Returns<TweakDetectionResult>(x => throw new InvalidOperationException("Registry access denied"));
+
+        var result = await _service.DetectTweaksAsync(
+            new HashSet<UserProfile> { UserProfile.Developer });
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Tweaks, Is.Empty);
+            Assert.That(result.Errors, Has.Length.EqualTo(1));
+            Assert.That(result.Errors[0].TweakName, Is.EqualTo("Broken Tweak"));
+            Assert.That(result.Errors[0].ErrorMessage, Does.Contain("Registry access denied"));
+        });
+    }
+
     private static TweakCatalogEntry MakeTweak(string id, string name, string[] profiles) =>
         new(id, name, "System", [], null, true,
             profiles.ToImmutableArray(), []);
