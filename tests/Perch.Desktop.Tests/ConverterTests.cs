@@ -286,4 +286,135 @@ public sealed class ConverterTests
                 _converter.ConvertBack(Brushes.Red, typeof(bool), null!, CultureInfo.InvariantCulture));
         }
     }
+
+    [TestFixture]
+    [Platform("Win")]
+    [SupportedOSPlatform("windows")]
+    public sealed class CountToVisibilityConverterTests
+    {
+        private CountToVisibilityConverter _converter = null!;
+
+        [SetUp]
+        public void SetUp() => _converter = new CountToVisibilityConverter();
+
+        [Test]
+        public void Convert_PositiveCount_ReturnsVisible()
+        {
+            var result = _converter.Convert(5, typeof(Visibility), null!, CultureInfo.InvariantCulture);
+            Assert.That(result, Is.EqualTo(Visibility.Visible));
+        }
+
+        [Test]
+        public void Convert_Zero_ReturnsCollapsed()
+        {
+            var result = _converter.Convert(0, typeof(Visibility), null!, CultureInfo.InvariantCulture);
+            Assert.That(result, Is.EqualTo(Visibility.Collapsed));
+        }
+
+        [Test]
+        public void Convert_NonInt_ReturnsCollapsed()
+        {
+            var result = _converter.Convert("text", typeof(Visibility), null!, CultureInfo.InvariantCulture);
+            Assert.That(result, Is.EqualTo(Visibility.Collapsed));
+        }
+
+        [Test]
+        public void ConvertBack_ThrowsNotSupported()
+        {
+            Assert.Throws<NotSupportedException>(() =>
+                _converter.ConvertBack(Visibility.Visible, typeof(int), null!, CultureInfo.InvariantCulture));
+        }
+    }
+
+    [TestFixture]
+    [Platform("Win")]
+    [SupportedOSPlatform("windows")]
+    public sealed class NullToVisibilityConverterTests
+    {
+        private NullToVisibilityConverter _converter = null!;
+
+        [SetUp]
+        public void SetUp() => _converter = new NullToVisibilityConverter();
+
+        [Test]
+        public void Convert_Null_ReturnsCollapsed()
+        {
+            var result = _converter.Convert(null, typeof(Visibility), null!, CultureInfo.InvariantCulture);
+            Assert.That(result, Is.EqualTo(Visibility.Collapsed));
+        }
+
+        [Test]
+        public void Convert_EmptyString_ReturnsCollapsed()
+        {
+            var result = _converter.Convert("", typeof(Visibility), null!, CultureInfo.InvariantCulture);
+            Assert.That(result, Is.EqualTo(Visibility.Collapsed));
+        }
+
+        [Test]
+        public void Convert_NonEmptyString_ReturnsVisible()
+        {
+            var result = _converter.Convert("hello", typeof(Visibility), null!, CultureInfo.InvariantCulture);
+            Assert.That(result, Is.EqualTo(Visibility.Visible));
+        }
+
+        [Test]
+        public void Convert_NonNullObject_ReturnsVisible()
+        {
+            var result = _converter.Convert(42, typeof(Visibility), null!, CultureInfo.InvariantCulture);
+            Assert.That(result, Is.EqualTo(Visibility.Visible));
+        }
+
+        [Test]
+        public void ConvertBack_ThrowsNotSupported()
+        {
+            Assert.Throws<NotSupportedException>(() =>
+                _converter.ConvertBack(Visibility.Visible, typeof(object), null!, CultureInfo.InvariantCulture));
+        }
+    }
+
+    [TestFixture]
+    [Platform("Win")]
+    [SupportedOSPlatform("windows")]
+    public sealed class UrlToImageSourceConverterTests
+    {
+        private UrlToImageSourceConverter _converter = null!;
+
+        [SetUp]
+        public void SetUp() => _converter = new UrlToImageSourceConverter();
+
+        [Test]
+        public void Convert_Null_ReturnsNull()
+        {
+            var result = _converter.Convert(null, typeof(object), null!, CultureInfo.InvariantCulture);
+            Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void Convert_EmptyString_ReturnsNull()
+        {
+            var result = _converter.Convert("", typeof(object), null!, CultureInfo.InvariantCulture);
+            Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void Convert_NonString_ReturnsNull()
+        {
+            var result = _converter.Convert(42, typeof(object), null!, CultureInfo.InvariantCulture);
+            Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void Convert_InvalidUrl_ReturnsNull()
+        {
+            var result = _converter.Convert("not-a-url", typeof(object), null!, CultureInfo.InvariantCulture);
+            Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void ConvertBack_ThrowsNotSupported()
+        {
+            Assert.Throws<NotSupportedException>(() =>
+                _converter.ConvertBack("test", typeof(string), null!, CultureInfo.InvariantCulture));
+        }
+    }
 }
