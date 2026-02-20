@@ -1897,4 +1897,139 @@ public sealed class DeployServiceTests
             Directory.Delete(tempDir, true);
         }
     }
+
+    [Test]
+    public async Task DeployAsync_FontsYaml_InstallsFonts()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(tempDir, "fonts.yaml"),
+                "- fira-code-nerd\n- cascadia-code");
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty, ImmutableArray<string>.Empty));
+            _installResolver.ResolveFontsAsync(Arg.Any<ImmutableArray<string>>(), Arg.Any<Platform>(), Arg.Any<CancellationToken>())
+                .Returns(new InstallResolution(
+                    ImmutableArray.Create(
+                        new PackageDefinition("nerd-fonts-FiraCode", PackageManager.Chocolatey),
+                        new PackageDefinition("Microsoft.CascadiaCode", PackageManager.Winget)),
+                    ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            Assert.That(exitCode, Is.EqualTo(0));
+            await _systemPackageInstaller.Received(1).InstallAsync("nerd-fonts-FiraCode", PackageManager.Chocolatey, false, Arg.Any<CancellationToken>());
+            await _systemPackageInstaller.Received(1).InstallAsync("Microsoft.CascadiaCode", PackageManager.Winget, false, Arg.Any<CancellationToken>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_FontsYaml_InvalidYaml_ReportsError()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(tempDir, "fonts.yaml"), "{{invalid yaml");
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(_reported.Any(r => r.Level == ResultLevel.Error && r.ModuleName == "fonts"), Is.True);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_FontsYaml_ResolutionErrors_ReportsAndContinues()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(tempDir, "fonts.yaml"), "- unknown-font");
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty, ImmutableArray<string>.Empty));
+            _installResolver.ResolveFontsAsync(Arg.Any<ImmutableArray<string>>(), Arg.Any<Platform>(), Arg.Any<CancellationToken>())
+                .Returns(new InstallResolution(
+                    ImmutableArray<PackageDefinition>.Empty,
+                    ImmutableArray.Create("Font 'unknown-font' not found in catalog")));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(_reported.Any(r => r.Level == ResultLevel.Error && r.Message!.Contains("unknown-font")), Is.True);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_FontsYaml_InstallFailure_ReturnsError()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(tempDir, "fonts.yaml"), "- fira-code-nerd");
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty, ImmutableArray<string>.Empty));
+            _installResolver.ResolveFontsAsync(Arg.Any<ImmutableArray<string>>(), Arg.Any<Platform>(), Arg.Any<CancellationToken>())
+                .Returns(new InstallResolution(
+                    ImmutableArray.Create(new PackageDefinition("nerd-fonts-FiraCode", PackageManager.Chocolatey)),
+                    ImmutableArray<string>.Empty));
+            _systemPackageInstaller.InstallAsync("nerd-fonts-FiraCode", PackageManager.Chocolatey, false, Arg.Any<CancellationToken>())
+                .Returns(new DeployResult("fonts", "", "nerd-fonts-FiraCode", ResultLevel.Error, "Installation failed"));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            Assert.That(exitCode, Is.EqualTo(1));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_FontsYaml_DryRun_PassesDryRunFlag()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            await File.WriteAllTextAsync(Path.Combine(tempDir, "fonts.yaml"), "- fira-code-nerd");
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty, ImmutableArray<string>.Empty));
+            _installResolver.ResolveFontsAsync(Arg.Any<ImmutableArray<string>>(), Arg.Any<Platform>(), Arg.Any<CancellationToken>())
+                .Returns(new InstallResolution(
+                    ImmutableArray.Create(new PackageDefinition("nerd-fonts-FiraCode", PackageManager.Chocolatey)),
+                    ImmutableArray<string>.Empty));
+
+            await _deployService.DeployAsync(tempDir, new DeployOptions { DryRun = true, Progress = _progress });
+
+            await _systemPackageInstaller.Received(1).InstallAsync("nerd-fonts-FiraCode", PackageManager.Chocolatey, true, Arg.Any<CancellationToken>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
 }
