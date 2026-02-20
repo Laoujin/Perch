@@ -23,6 +23,7 @@ public sealed class StatusServiceTests
     private List<IPackageManagerProvider> _packageManagerProviders = null!;
     private PackageManifestParser _packageManifestParser = null!;
     private IProcessRunner _processRunner = null!;
+    private IInstallResolver _installResolver = null!;
     private StatusService _statusService = null!;
     private List<StatusResult> _reported = null!;
     private IProgress<StatusResult> _progress = null!;
@@ -41,6 +42,7 @@ public sealed class StatusServiceTests
         _packageManagerProviders = [];
         _packageManifestParser = new PackageManifestParser();
         _processRunner = Substitute.For<IProcessRunner>();
+        _installResolver = Substitute.For<IInstallResolver>();
         _statusService = CreateService();
         _reported = [];
         _progress = new SynchronousProgress<StatusResult>(r => _reported.Add(r));
@@ -59,7 +61,7 @@ public sealed class StatusServiceTests
             _processRunner,
             new TemplateProcessor(),
             new FontManifestParser(),
-            Substitute.For<IInstallResolver>());
+            _installResolver);
 
     [Test]
     public async Task CheckAsync_AllLinksCorrect_ReturnsZero()
@@ -1049,6 +1051,291 @@ public sealed class StatusServiceTests
                 Assert.That(_reported, Has.Count.EqualTo(1));
                 Assert.That(_reported[0].Level, Is.EqualTo(DriftLevel.Ok));
                 Assert.That(_reported[0].TargetPath, Is.EqualTo(targetFile));
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task CheckAsync_DiscoveryErrors_ReportsAndReturnsDrift()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty, ImmutableArray.Create("bad manifest")));
+
+            int exitCode = await _statusService.CheckAsync(tempDir, _progress);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(1));
+                Assert.That(_reported, Has.Count.EqualTo(1));
+                Assert.That(_reported[0].Level, Is.EqualTo(DriftLevel.Error));
+                Assert.That(_reported[0].Message, Is.EqualTo("bad manifest"));
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task CheckAsync_DisabledModule_Skipped()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        try
+        {
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", false, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("file.txt", Path.Combine(tempDir, "t"), LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _statusService.CheckAsync(tempDir, _progress);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(_reported, Is.Empty);
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task CheckAsync_ExcludedModule_Skipped()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        try
+        {
+            var profile = new MachineProfile(ImmutableArray<string>.Empty, ImmutableArray.Create("mod"), ImmutableDictionary<string, string>.Empty);
+            _machineProfileService.LoadAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(profile);
+
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("file.txt", Path.Combine(tempDir, "t"), LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _statusService.CheckAsync(tempDir, _progress);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(_reported, Is.Empty);
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task CheckAsync_CheckLinkException_ReportsError()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+        string targetFile = Path.Combine(tempDir, "file.txt");
+        File.WriteAllText(targetFile, "content");
+
+        try
+        {
+            _symlinkProvider.IsSymlink(targetFile).Returns(_ => throw new IOException("Access denied"));
+
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
+                    new LinkEntry("file.txt", targetFile, LinkType.Symlink))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _statusService.CheckAsync(tempDir, _progress);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(1));
+                Assert.That(_reported, Has.Count.EqualTo(1));
+                Assert.That(_reported[0].Level, Is.EqualTo(DriftLevel.Error));
+                Assert.That(_reported[0].Message, Does.Contain("Access denied"));
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task CheckAsync_FontsYamlParseError_ReportsError()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(Path.Combine(tempDir, "fonts.yaml"), "{{invalid yaml::");
+
+        try
+        {
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty, ImmutableArray<string>.Empty));
+
+            int exitCode = await _statusService.CheckAsync(tempDir, _progress);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(1));
+                var fontResult = _reported.First(r => r.Category == StatusCategory.Font);
+                Assert.That(fontResult.Level, Is.EqualTo(DriftLevel.Error));
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task CheckAsync_FontsYamlEmptyList_NoDrift()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(Path.Combine(tempDir, "fonts.yaml"), "[]");
+
+        try
+        {
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty, ImmutableArray<string>.Empty));
+
+            int exitCode = await _statusService.CheckAsync(tempDir, _progress);
+
+            Assert.That(exitCode, Is.EqualTo(0));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task CheckAsync_FontsInstalled_ReportsOk()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(Path.Combine(tempDir, "fonts.yaml"), "- cascadia-code");
+
+        try
+        {
+            var chocoProvider = Substitute.For<IPackageManagerProvider>();
+            chocoProvider.Manager.Returns(PackageManager.Chocolatey);
+            chocoProvider.ScanInstalledAsync(Arg.Any<CancellationToken>())
+                .Returns(new PackageManagerScanResult(true, ImmutableArray.Create(new InstalledPackage("cascadia-code-nf", PackageManager.Chocolatey)), null));
+            _packageManagerProviders.Add(chocoProvider);
+            _statusService = CreateService();
+
+            _installResolver.ResolveFontsAsync(Arg.Any<ImmutableArray<string>>(), Arg.Any<Platform>(), Arg.Any<CancellationToken>())
+                .Returns(new InstallResolution(
+                    ImmutableArray.Create(new PackageDefinition("cascadia-code-nf", PackageManager.Chocolatey)),
+                    ImmutableArray<string>.Empty));
+
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty, ImmutableArray<string>.Empty));
+
+            int exitCode = await _statusService.CheckAsync(tempDir, _progress);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                var fontResult = _reported.First(r => r.Category == StatusCategory.Font);
+                Assert.That(fontResult.Level, Is.EqualTo(DriftLevel.Ok));
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task CheckAsync_FontsMissing_ReportsMissing()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(Path.Combine(tempDir, "fonts.yaml"), "- cascadia-code");
+
+        try
+        {
+            var chocoProvider = Substitute.For<IPackageManagerProvider>();
+            chocoProvider.Manager.Returns(PackageManager.Chocolatey);
+            chocoProvider.ScanInstalledAsync(Arg.Any<CancellationToken>())
+                .Returns(new PackageManagerScanResult(true, ImmutableArray<InstalledPackage>.Empty, null));
+            _packageManagerProviders.Add(chocoProvider);
+            _statusService = CreateService();
+
+            _installResolver.ResolveFontsAsync(Arg.Any<ImmutableArray<string>>(), Arg.Any<Platform>(), Arg.Any<CancellationToken>())
+                .Returns(new InstallResolution(
+                    ImmutableArray.Create(new PackageDefinition("cascadia-code-nf", PackageManager.Chocolatey)),
+                    ImmutableArray<string>.Empty));
+
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty, ImmutableArray<string>.Empty));
+
+            int exitCode = await _statusService.CheckAsync(tempDir, _progress);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(1));
+                var fontResult = _reported.First(r => r.Category == StatusCategory.Font);
+                Assert.That(fontResult.Level, Is.EqualTo(DriftLevel.Missing));
+                Assert.That(fontResult.Message, Does.Contain("cascadia-code-nf"));
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task CheckAsync_LinkTargetNullForPlatform_SkipsLink()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        try
+        {
+            _platformDetector.CurrentPlatform.Returns(Platform.Windows);
+            var link = new LinkEntry("file.txt", null, new Dictionary<Platform, string> { [Platform.Linux] = "/home/user/file.txt" }.ToImmutableDictionary(), LinkType.Symlink);
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(link)));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _statusService.CheckAsync(tempDir, _progress);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(_reported, Is.Empty);
             });
         }
         finally

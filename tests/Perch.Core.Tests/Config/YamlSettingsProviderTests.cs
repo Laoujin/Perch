@@ -279,4 +279,87 @@ public sealed class YamlSettingsProviderTests
 
         Assert.That(result.ConfigRepoPath, Is.EqualTo("C:\\explicit-config"));
     }
+
+    [Test]
+    public void DiscoverConfigRepoFromSymlink_FileDoesNotExist_ReturnsNull()
+    {
+        var provider = new YamlSettingsProvider(Path.Combine(_tempDir, "nonexistent", "settings.yaml"));
+
+        Assert.That(provider.DiscoverConfigRepoFromSymlink(), Is.Null);
+    }
+
+    [Test]
+    public async Task LoadAsync_NullYamlContent_ReturnsDefaults()
+    {
+        await File.WriteAllTextAsync(_settingsPath, "~");
+
+        PerchSettings result = await _provider.LoadAsync();
+
+        Assert.That(result.ConfigRepoPath, Is.Null);
+    }
+
+    [Test]
+    public async Task LoadAsync_EmptyStringContent_ReturnsDefaults()
+    {
+        await File.WriteAllTextAsync(_settingsPath, "   ");
+
+        PerchSettings result = await _provider.LoadAsync();
+
+        Assert.That(result.ConfigRepoPath, Is.Null);
+    }
+
+    [Test]
+    public async Task SaveAsync_ExistingDirectory_WritesFile()
+    {
+        var settings = new PerchSettings { ConfigRepoPath = @"C:\config" };
+
+        await _provider.SaveAsync(settings);
+
+        Assert.That(File.Exists(_settingsPath), Is.True);
+        string content = await File.ReadAllTextAsync(_settingsPath);
+        Assert.That(content, Does.Contain("config-repo-path"));
+    }
+
+    [Test]
+    public async Task LoadAsync_LocalFileOverridesNullValues()
+    {
+        await File.WriteAllTextAsync(_settingsPath, "~");
+        await File.WriteAllTextAsync(
+            Path.Combine(_tempDir, "settings.local.yaml"),
+            "config-repo-path: C:\\from-local\n");
+
+        PerchSettings result = await _provider.LoadAsync();
+
+        Assert.That(result.ConfigRepoPath, Is.EqualTo("C:\\from-local"));
+    }
+
+    [Test]
+    public void DiscoverConfigRepoFromSymlink_RelativeSymlink_ResolvesCorrectly()
+    {
+        var configRepo = Path.Combine(_tempDir, "fake-config-repo");
+        var moduleDir = Path.Combine(configRepo, "perch");
+        Directory.CreateDirectory(moduleDir);
+        var sourceFile = Path.Combine(moduleDir, "settings.yaml");
+        File.WriteAllText(sourceFile, "profiles:\n  - developer\n");
+
+        try
+        {
+            var relativePath = Path.GetRelativePath(Path.GetDirectoryName(_settingsPath)!, sourceFile);
+            File.CreateSymbolicLink(_settingsPath, relativePath);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Assert.Ignore("Symlink creation requires elevated privileges or Developer Mode");
+            return;
+        }
+        catch (IOException)
+        {
+            Assert.Ignore("Symlink creation not supported in this environment");
+            return;
+        }
+
+        var result = _provider.DiscoverConfigRepoFromSymlink();
+
+        Assert.That(result, Is.EqualTo(configRepo));
+    }
 }
