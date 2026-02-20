@@ -1619,6 +1619,101 @@ public sealed class SystemTweaksViewModelTests
         Assert.That(_vm.ActiveCertificateExpiryFilter, Is.EqualTo("All"));
     }
 
+    [Test]
+    public async Task NerdFonts_SortedDetectedFirst()
+    {
+        var unmanaged = new FontCardModel("unmanaged", "Unmanaged Font", null, null, null, null, FontCardSource.Gallery, [], CardStatus.Unmanaged);
+        var detected = new FontCardModel("detected", "Detected Font", null, null, null, null, FontCardSource.Gallery, [], CardStatus.Detected);
+        var fonts = new FontDetectionResult(
+            ImmutableArray<FontCardModel>.Empty,
+            ImmutableArray.Create(unmanaged, detected));
+
+        _detectionService.DetectFontsAsync(Arg.Any<CancellationToken>())
+            .Returns(fonts);
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+
+        Assert.That(_vm.FilteredNerdFonts[0].Status, Is.EqualTo(CardStatus.Detected));
+        Assert.That(_vm.FilteredNerdFonts[1].Status, Is.EqualTo(CardStatus.Unmanaged));
+    }
+
+    [Test]
+    public void SelectCategory_Startup_ShowsStartupDetail()
+    {
+        _vm.SelectCategoryCommand.Execute("Startup");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.ShowStartupDetail, Is.True);
+            Assert.That(_vm.ShowFontDetail, Is.False);
+            Assert.That(_vm.ShowCertificateDetail, Is.False);
+        });
+    }
+
+    [Test]
+    public void SelectCategory_Fonts_ShowsFontDetail()
+    {
+        _vm.SelectCategoryCommand.Execute("Fonts");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.ShowFontDetail, Is.True);
+            Assert.That(_vm.ShowStartupDetail, Is.False);
+            Assert.That(_vm.ShowCertificateDetail, Is.False);
+        });
+    }
+
+    [Test]
+    public void SelectCategory_Certificates_ShowsCertificateDetail()
+    {
+        _vm.SelectCategoryCommand.Execute("Certificates");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.ShowCertificateDetail, Is.True);
+            Assert.That(_vm.ShowStartupDetail, Is.False);
+            Assert.That(_vm.ShowFontDetail, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task CertificateExpiryFilter_ExpiringSoon_FiltersCorrectly()
+    {
+        var validCert = new DetectedCertificate("AA", "CN=Valid", "CN=Issuer", null,
+            DateTime.Now.AddYears(-1), DateTime.Now.AddYears(1), false, CertificateStoreName.Personal);
+        var expiringSoon = new DetectedCertificate("BB", "CN=ExpiringSoon", "CN=Issuer", null,
+            DateTime.Now.AddYears(-1), DateTime.Now.AddDays(15), false, CertificateStoreName.Personal);
+
+        _certificateScanner.ScanAsync(Arg.Any<CancellationToken>())
+            .Returns(ImmutableArray.Create(validCert, expiringSoon));
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+        _vm.SelectCategoryCommand.Execute("Certificates");
+
+        _vm.SetCertificateExpiryFilterCommand.Execute("Expiring Soon");
+        Assert.That(_vm.FilteredCertificateGroups[0].Certificates, Has.Count.EqualTo(1));
+        Assert.That(_vm.FilteredCertificateGroups[0].Certificates[0].SubjectDisplayName, Does.Contain("ExpiringSoon"));
+    }
+
+    [Test]
+    public async Task OnSelectedCategoryChanged_RaisesAllPropertyChanges()
+    {
+        var raised = new List<string>();
+        _vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName!);
+
+        _vm.SelectCategoryCommand.Execute("System Tweaks");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(raised, Does.Contain(nameof(SystemTweaksViewModel.ShowGrid)));
+            Assert.That(raised, Does.Contain(nameof(SystemTweaksViewModel.ShowDetail)));
+            Assert.That(raised, Does.Contain(nameof(SystemTweaksViewModel.ShowSubCategories)));
+            Assert.That(raised, Does.Contain(nameof(SystemTweaksViewModel.ShowStartupDetail)));
+            Assert.That(raised, Does.Contain(nameof(SystemTweaksViewModel.ShowFontDetail)));
+            Assert.That(raised, Does.Contain(nameof(SystemTweaksViewModel.ShowCertificateDetail)));
+        });
+    }
+
     private static TweakCardModel MakeTweak(string name, string category)
     {
         var entry = new TweakCatalogEntry(name, name, category, [], null, true, [], []);
