@@ -48,6 +48,7 @@ public sealed class GalleryDetectionServiceDotfileTests
             _settingsProvider,
             [],
             Substitute.For<ITweakService>(),
+            Substitute.For<IRuntimeDetectionService>(),
             Substitute.For<ILogger<GalleryDetectionService>>());
     }
 

@@ -53,6 +53,7 @@ public partial class App : Application
             services.AddSingleton<IApplyChangesService, ApplyChangesService>();
             services.AddSingleton<IGalleryDetectionService, GalleryDetectionService>();
             services.AddSingleton<IAppDetailService, AppDetailService>();
+            services.AddSingleton<IRuntimeDetectionService, RuntimeDetectionService>();
 
             services.AddSingleton<INavigationWindow, MainWindow>();
             services.AddSingleton<MainWindowViewModel>();

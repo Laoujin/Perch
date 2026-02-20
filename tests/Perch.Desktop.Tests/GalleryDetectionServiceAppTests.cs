@@ -56,6 +56,7 @@ public sealed class GalleryDetectionServiceAppTests
             _settingsProvider,
             [_packageProvider],
             Substitute.For<ITweakService>(),
+            Substitute.For<IRuntimeDetectionService>(),
             Substitute.For<ILogger<GalleryDetectionService>>());
     }
 

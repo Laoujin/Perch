@@ -101,7 +101,7 @@ development_status:
   # identifies what's installed.
   epic-20: in-progress
   20-1-languages-page-scaffold: review
-  20-2-language-sdk-detection: ready-for-dev
+  20-2-language-sdk-detection: review
   20-3-gallery-language-dotnet: ready-for-dev
   20-4-gallery-language-node: ready-for-dev
   20-5-gallery-language-python: ready-for-dev

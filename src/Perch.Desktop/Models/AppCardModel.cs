@@ -37,6 +37,7 @@ public partial class AppCardModel : ObservableObject
     [ObservableProperty]
     private AppDetail? _detail;
 
+    public string? DetectedVersion { get; set; }
     public int? GitHubStars { get; set; }
     public bool IsHot { get; set; }
 

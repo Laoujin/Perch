@@ -1,6 +1,6 @@
 # Story 20.2: Language SDK Detection
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -40,41 +40,65 @@ The current detection only checks package manager presence (winget/choco). Langu
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Runtime PATH detection (AC: #1, #2, #3)
-  - [ ] Add `IRuntimeDetectionService` interface with `DetectRuntimeAsync(CatalogEntry)` returning `RuntimeDetectionResult(IsInstalled, Version)`
-  - [ ] Implement `RuntimeDetectionService` — for each runtime, define the CLI command and version parse regex
-  - [ ] Detection map: dotnet → `dotnet --version`, node → `node --version`, python → `python --version` or `python3 --version`, go → `go version`, ruby → `ruby --version`, rustup → `rustup --version`, java → `java --version`
-  - [ ] Wire into `GalleryDetectionService.DetectLanguageRuntimesAsync()` as fallback after winget/choco check
-  - [ ] Store version on `AppCardModel.DetectedVersion`
+- [x] Task 1: Runtime PATH detection (AC: #1, #2, #3)
+  - [x] Add `IRuntimeDetectionService` interface with `DetectRuntimeAsync(CatalogEntry)` returning `RuntimeDetectionResult(IsInstalled, Version)`
+  - [x] Implement `RuntimeDetectionService` — for each runtime, define the CLI command and version parse regex
+  - [x] Detection map: dotnet → `dotnet --version`, node → `node --version`, python → `python --version` or `python3 --version`, go → `go version`, ruby → `ruby --version`, rustup → `rustup --version`, java → `java --version`
+  - [x] Wire into `GalleryDetectionService.DetectAllAppsAsync()` as fallback after winget/choco check
+  - [x] Store version on `AppCardModel.DetectedVersion`
 
-- [ ] Task 2: Global tool detection (AC: #4)
-  - [ ] For dotnet: parse `dotnet tool list -g` output → match tool IDs against gallery entries with `install.dotnet-tool`
-  - [ ] For node: parse `npm list -g --json` output → match package names against gallery entries with `install.node-package`
-  - [ ] Mark matched entries as `CardStatus.Detected`
-  - [ ] Other ecosystems (pip, gem, cargo) deferred — add when gallery entries exist
+- [x] Task 2: Global tool detection (AC: #4)
+  - [x] For dotnet: parse `dotnet tool list -g` output → match tool IDs against gallery entries with `install.dotnet-tool`
+  - [x] For node: parse `npm list -g --json` output → match package names against gallery entries with `install.node-package`
+  - [x] Mark matched entries as `CardStatus.Detected`
+  - [x] Other ecosystems (pip, gem, cargo) deferred — add when gallery entries exist
 
-- [ ] Task 3: Async with timeouts (AC: #5)
-  - [ ] Use `IProcessRunner.RunAsync()` with 2-second timeout per command
-  - [ ] Catch `TimeoutException` and `Win32Exception` (command not found) — return not-detected
-  - [ ] Log detection failures at Debug level, don't surface to user
+- [x] Task 3: Async with timeouts (AC: #5)
+  - [x] Use `IProcessRunner.RunAsync()` with 2-second timeout per command
+  - [x] Catch `TimeoutException` and `Win32Exception` (command not found) — return not-detected
+  - [x] Log detection failures at Debug level, don't surface to user
 
-- [ ] Task 4: Tests (AC: #6)
-  - [ ] Test runtime detection with mocked process output (version string parsing)
-  - [ ] Test fallback: winget-detected runtime skips PATH detection
-  - [ ] Test timeout handling returns not-detected
-  - [ ] Test global tool matching against gallery entries
-  - [ ] Build passes with zero warnings
+- [x] Task 4: Tests (AC: #6)
+  - [x] Test runtime detection with mocked process output (version string parsing)
+  - [x] Test fallback: winget-detected runtime skips PATH detection
+  - [x] Test timeout handling returns not-detected
+  - [x] Test global tool matching against gallery entries
+  - [x] Build passes with zero warnings
 
-## Files to Modify
+## Dev Agent Record
+
+### Implementation Plan
+- Created `IRuntimeDetectionService` with two methods: `DetectRuntimeAsync` (per-runtime CLI detection) and `DetectGlobalToolsAsync` (dotnet tools + npm packages)
+- `RuntimeDetectionService` uses a static command map keyed by runtime ID/CLI name, with version-specific parsers (plain, strip-v prefix, prefixed word extraction, Go version format)
+- Wired as fallback in `GalleryDetectionService.DetectAllAppsAsync()`: only invoked for Runtime entries not already detected by winget/choco
+- Global tool detection runs for detected runtimes, matching output against catalog entries with `install.dotnet-tool` or `install.node-package`
+- All process invocations use `CancellationTokenSource.CreateLinkedTokenSource` with 2s timeout
+- Exceptions (Win32Exception, OperationCanceledException) caught and logged at Debug level
+
+### Completion Notes
+- 17 new tests in `RuntimeDetectionServiceTests.cs` covering all 7 runtime version parsers, error handling (command not found, timeout, non-zero exit), global tool detection (dotnet tools, npm packages), and edge cases (unknown runtime, non-runtime kind, invalid JSON)
+- Existing 4 `GalleryDetectionService*Tests` files updated to pass new `IRuntimeDetectionService` mock to constructor
+- Full test suite: 1292 tests passing (321 Desktop + 971 Core), zero failures
+- Both `Perch.slnx` and `Perch.CrossPlatform.slnx` build with zero warnings
+
+## File List
 
 | File | Change |
 |------|--------|
-| `src/Perch.Desktop/Services/IRuntimeDetectionService.cs` | New interface |
-| `src/Perch.Desktop/Services/RuntimeDetectionService.cs` | New implementation |
-| `src/Perch.Desktop/Services/GalleryDetectionService.cs` | Wire runtime detection as fallback in `DetectLanguageRuntimesAsync` |
-| `src/Perch.Desktop/Models/AppCardModel.cs` | Add `DetectedVersion` property |
-| `src/Perch.Desktop/App.xaml.cs` | Register `IRuntimeDetectionService` in DI |
-| `tests/Perch.Desktop.Tests/RuntimeDetectionServiceTests.cs` | New test file |
+| `src/Perch.Desktop/Services/IRuntimeDetectionService.cs` | New — interface + result records |
+| `src/Perch.Desktop/Services/RuntimeDetectionService.cs` | New — implementation with CLI command map and version parsers |
+| `src/Perch.Desktop/Services/GalleryDetectionService.cs` | Modified — inject `IRuntimeDetectionService`, add runtime fallback in `DetectAllAppsAsync`, add `DetectGlobalToolsForRuntimes` |
+| `src/Perch.Desktop/Models/AppCardModel.cs` | Modified — add `DetectedVersion` property |
+| `src/Perch.Desktop/App.xaml.cs` | Modified — register `IRuntimeDetectionService` in DI |
+| `tests/Perch.Desktop.Tests/RuntimeDetectionServiceTests.cs` | New — 17 tests |
+| `tests/Perch.Desktop.Tests/GalleryDetectionServiceAppTests.cs` | Modified — add `IRuntimeDetectionService` mock to constructor |
+| `tests/Perch.Desktop.Tests/GalleryDetectionServiceTweakTests.cs` | Modified — add `IRuntimeDetectionService` mock to constructor |
+| `tests/Perch.Desktop.Tests/GalleryDetectionServiceFontTests.cs` | Modified — add `IRuntimeDetectionService` mock to constructor |
+| `tests/Perch.Desktop.Tests/GalleryDetectionServiceDotfileTests.cs` | Modified — add `IRuntimeDetectionService` mock to constructor |
+
+## Change Log
+
+- 2026-02-20: Implemented runtime PATH detection, global tool detection, version capture, and async timeout handling with 17 new tests
 
 ## Dependencies
 

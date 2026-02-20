@@ -22,6 +22,7 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
     private readonly ISettingsProvider _settingsProvider;
     private readonly IEnumerable<IPackageManagerProvider> _packageProviders;
     private readonly ITweakService _tweakService;
+    private readonly IRuntimeDetectionService _runtimeDetection;
     private readonly ILogger<GalleryDetectionService> _logger;
 
     private readonly SemaphoreSlim _packageScanLock = new(1, 1);
@@ -35,6 +36,7 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         ISettingsProvider settingsProvider,
         IEnumerable<IPackageManagerProvider> packageProviders,
         ITweakService tweakService,
+        IRuntimeDetectionService runtimeDetection,
         ILogger<GalleryDetectionService> logger)
     {
         _catalog = catalog;
@@ -44,6 +46,7 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         _settingsProvider = settingsProvider;
         _packageProviders = packageProviders;
         _tweakService = tweakService;
+        _runtimeDetection = runtimeDetection;
         _logger = logger;
     }
 
@@ -119,15 +122,45 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         var logoBaseUrl = GetLogoBaseUrl(settings);
         var builder = ImmutableArray.CreateBuilder<AppCardModel>();
 
+        var runtimeTasks = new List<(int Index, Task<RuntimeDetectionResult> Task)>();
+
         foreach (var app in allApps)
         {
             if (IsPureConfigDotfile(app))
                 continue;
 
-            var status = ResolveStatus(app, platform, settings.ConfigRepoPath, installedIds);
+            var detected = IsAppDetected(app, platform, installedIds);
+            var status = detected
+                ? (IsAppLinked(app, platform, settings.ConfigRepoPath) ? CardStatus.Synced : CardStatus.Detected)
+                : CardStatus.Unmanaged;
+
             int? appStars = stars.TryGetValue(app.Id, out var starCount) ? starCount : null;
-            builder.Add(new AppCardModel(app, CardTier.Other, status, $"{logoBaseUrl}{app.Id}.png") { GitHubStars = appStars, IsHot = app.Hot });
+            var card = new AppCardModel(app, CardTier.Other, status, $"{logoBaseUrl}{app.Id}.png") { GitHubStars = appStars, IsHot = app.Hot };
+            builder.Add(card);
+
+            if (!detected && app.Kind == CatalogKind.Runtime)
+            {
+                runtimeTasks.Add((builder.Count - 1, _runtimeDetection.DetectRuntimeAsync(app, cancellationToken)));
+            }
         }
+
+        if (runtimeTasks.Count > 0)
+        {
+            await Task.WhenAll(runtimeTasks.Select(t => t.Task));
+
+            foreach (var (index, task) in runtimeTasks)
+            {
+                var result = task.Result;
+                if (result.IsInstalled)
+                {
+                    var card = builder[index];
+                    card.Status = CardStatus.Detected;
+                    card.DetectedVersion = result.Version;
+                }
+            }
+        }
+
+        await DetectGlobalToolsForRuntimes(builder, allApps, cancellationToken);
 
         return builder.ToImmutable();
     }
@@ -510,6 +543,44 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         }
 
         return false;
+    }
+
+    private async Task DetectGlobalToolsForRuntimes(
+        ImmutableArray<AppCardModel>.Builder cards,
+        ImmutableArray<CatalogEntry> allApps,
+        CancellationToken cancellationToken)
+    {
+        var detectedRuntimes = cards
+            .Where(c => c.CatalogEntry.Kind == CatalogKind.Runtime && c.Status != CardStatus.Unmanaged)
+            .ToList();
+
+        if (detectedRuntimes.Count == 0)
+            return;
+
+        var cardIndex = new Dictionary<string, AppCardModel>(StringComparer.OrdinalIgnoreCase);
+        foreach (var card in cards)
+            cardIndex[card.Id] = card;
+
+        var toolCandidates = allApps
+            .Where(a => a.Install is not null && (a.Install.DotnetTool is not null || a.Install.NodePackage is not null))
+            .ToList();
+
+        var tasks = new List<Task<ImmutableArray<GlobalToolMatch>>>(detectedRuntimes.Count);
+        foreach (var runtime in detectedRuntimes)
+            tasks.Add(_runtimeDetection.DetectGlobalToolsAsync(runtime.Id, toolCandidates, cancellationToken));
+
+        var results = await Task.WhenAll(tasks);
+        foreach (var matches in results)
+        {
+            foreach (var match in matches)
+            {
+                if (cardIndex.TryGetValue(match.CatalogEntryId, out var card)
+                    && card.Status == CardStatus.Unmanaged)
+                {
+                    card.Status = CardStatus.Detected;
+                }
+            }
+        }
     }
 
     private static bool IsPureConfigDotfile(CatalogEntry app) =>

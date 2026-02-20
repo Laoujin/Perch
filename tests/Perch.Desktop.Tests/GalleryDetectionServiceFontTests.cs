@@ -53,6 +53,7 @@ public sealed class GalleryDetectionServiceFontTests
             settingsProvider,
             [_packageProvider],
             Substitute.For<ITweakService>(),
+            Substitute.For<IRuntimeDetectionService>(),
             Substitute.For<ILogger<GalleryDetectionService>>());
     }
 
