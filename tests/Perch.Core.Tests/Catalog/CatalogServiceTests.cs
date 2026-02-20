@@ -371,8 +371,12 @@ public sealed class CatalogServiceTests
     public async Task GetGitHubStarsAsync_ParsesStars()
     {
         string starsYaml = """
-            vscode: 150000
-            firefox: 800
+            vscode:
+              repo: microsoft/vscode
+              stars: 150000
+            firefox:
+              repo: nicothin/firefox
+              stars: 800
             """;
 
         _cache.GetAsync("metadata/github-stars.yaml", Arg.Any<CancellationToken>()).Returns(starsYaml);
@@ -390,7 +394,9 @@ public sealed class CatalogServiceTests
     public async Task GetGitHubStarsAsync_CachesResult()
     {
         string starsYaml = """
-            vscode: 150000
+            vscode:
+              repo: microsoft/vscode
+              stars: 150000
             """;
 
         _cache.GetAsync("metadata/github-stars.yaml", Arg.Any<CancellationToken>()).Returns(starsYaml);

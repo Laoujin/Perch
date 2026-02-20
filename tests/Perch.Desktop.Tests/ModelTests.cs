@@ -5,7 +5,9 @@ using System.Runtime.Versioning;
 using Perch.Core.Catalog;
 using Perch.Core.Scanner;
 using Perch.Core.Startup;
+using Perch.Core.Status;
 using Perch.Desktop.Models;
+using Perch.Desktop.ViewModels;
 
 namespace Perch.Desktop.Tests;
 
@@ -1063,6 +1065,40 @@ public sealed class ModelTests
         {
             var model = new TweakCategoryCardModel(category, category, null, 0, 0);
             Assert.That(model.IconSymbol, Is.Not.EqualTo(default(Wpf.Ui.Controls.SymbolRegular)));
+        }
+    }
+
+    [TestFixture]
+    [Platform("Win")]
+    [SupportedOSPlatform("windows")]
+    public sealed class StatusItemViewModelTests
+    {
+        [Test]
+        public void Constructor_SetsPropertiesFromResult()
+        {
+            var result = new StatusResult("my-module", @"C:\source", @"C:\target", DriftLevel.Drift, "Files differ", StatusCategory.Link);
+            var vm = new StatusItemViewModel(result);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.ModuleName, Is.EqualTo("my-module"));
+                Assert.That(vm.SourcePath, Is.EqualTo(@"C:\source"));
+                Assert.That(vm.TargetPath, Is.EqualTo(@"C:\target"));
+                Assert.That(vm.Level, Is.EqualTo(DriftLevel.Drift));
+                Assert.That(vm.Message, Is.EqualTo("Files differ"));
+                Assert.That(vm.Category, Is.EqualTo(StatusCategory.Link));
+            });
+        }
+
+        [TestCase(DriftLevel.Missing, "Missing")]
+        [TestCase(DriftLevel.Drift, "Drift")]
+        [TestCase(DriftLevel.Error, "Error")]
+        [TestCase(DriftLevel.Ok, "OK")]
+        public void LevelDisplay_CorrectForLevel(DriftLevel level, string expected)
+        {
+            var result = new StatusResult("m", "", "", level, "");
+            var vm = new StatusItemViewModel(result);
+            Assert.That(vm.LevelDisplay, Is.EqualTo(expected));
         }
     }
 }
