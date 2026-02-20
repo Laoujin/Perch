@@ -38,7 +38,6 @@ public partial class AppCardModel : ObservableObject
     private AppDetail? _detail;
 
     public int? GitHubStars { get; set; }
-    public bool IsTopPick { get; set; }
     public bool IsHot { get; set; }
 
     public string? GitHubStarsFormatted => GitHubStars switch

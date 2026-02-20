@@ -38,7 +38,6 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
@@ -75,22 +74,9 @@
                         Foreground="{StaticResource TextMutedBrush}" />
                 </Border>
 
-                <!-- Top Pick badge -->
-                <Border
-                    Grid.Column="3"
-                    Background="{StaticResource AccentSubtleBrush}"
-                    CornerRadius="4"
-                    Padding="4,1"
-                    Margin="4,0,0,0"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Left"
-                    Visibility="{Binding IsTopPick, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <TextBlock Text="Top Pick" FontSize="9" Foreground="{StaticResource AccentBrush}" />
-                </Border>
-
                 <!-- Hot badge -->
                 <Border
-                    Grid.Column="4"
+                    Grid.Column="3"
                     Background="{StaticResource HotBadgeBrush}"
                     CornerRadius="4"
                     Padding="4,1"
@@ -102,7 +88,7 @@
                 </Border>
 
                 <ui:Button
-                    Grid.Column="5"
+                    Grid.Column="4"
                     Icon="{ui:SymbolIcon Settings24}"
                     Appearance="Secondary"
                     Padding="2"

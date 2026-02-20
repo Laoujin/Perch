@@ -378,7 +378,7 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
                 continue;
 
             if (sorted[0].GitHubStars!.Value >= sorted[1].GitHubStars!.Value * 2)
-                sorted[0].IsTopPick = true;
+                sorted[0].IsHot = true;
         }
     }
 

@@ -77,10 +77,6 @@ public partial class AppCard : UserControl
         DependencyProperty.Register(nameof(GitHubStarsFormatted), typeof(string), typeof(AppCard),
             new PropertyMetadata(null));
 
-    public static readonly DependencyProperty IsTopPickProperty =
-        DependencyProperty.Register(nameof(IsTopPick), typeof(bool), typeof(AppCard),
-            new PropertyMetadata(false));
-
     public static readonly DependencyProperty IsHotProperty =
         DependencyProperty.Register(nameof(IsHot), typeof(bool), typeof(AppCard),
             new PropertyMetadata(false));
@@ -199,12 +195,6 @@ public partial class AppCard : UserControl
     {
         get => (string?)GetValue(GitHubStarsFormattedProperty);
         set => SetValue(GitHubStarsFormattedProperty, value);
-    }
-
-    public bool IsTopPick
-    {
-        get => (bool)GetValue(IsTopPickProperty);
-        set => SetValue(IsTopPickProperty, value);
     }
 
     public bool IsHot
