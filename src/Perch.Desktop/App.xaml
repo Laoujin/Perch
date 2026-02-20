@@ -51,6 +51,8 @@
             <SolidColorBrush x:Key="DimOverlayBrush" Color="#40000000" />
 
             <!-- Special-purpose -->
+            <SolidColorBrush x:Key="HotBadgeBrush" Color="#3D2A1A" />
+            <SolidColorBrush x:Key="HotTextBrush" Color="#F97316" />
             <SolidColorBrush x:Key="SuggestedBadgeBrush" Color="#1E3A5F" />
             <SolidColorBrush x:Key="SuggestedTextBrush" Color="#60A5FA" />
             <SolidColorBrush x:Key="SuggestedLightBrush" Color="#93C5FD" />

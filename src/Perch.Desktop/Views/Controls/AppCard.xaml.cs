@@ -81,6 +81,10 @@ public partial class AppCard : UserControl
         DependencyProperty.Register(nameof(IsTopPick), typeof(bool), typeof(AppCard),
             new PropertyMetadata(false));
 
+    public static readonly DependencyProperty IsHotProperty =
+        DependencyProperty.Register(nameof(IsHot), typeof(bool), typeof(AppCard),
+            new PropertyMetadata(false));
+
     public static readonly DependencyProperty ConfigPathProperty =
         DependencyProperty.Register(nameof(ConfigPath), typeof(string), typeof(AppCard),
             new PropertyMetadata(null));
@@ -201,6 +205,12 @@ public partial class AppCard : UserControl
     {
         get => (bool)GetValue(IsTopPickProperty);
         set => SetValue(IsTopPickProperty, value);
+    }
+
+    public bool IsHot
+    {
+        get => (bool)GetValue(IsHotProperty);
+        set => SetValue(IsHotProperty, value);
     }
 
     public string? ConfigPath

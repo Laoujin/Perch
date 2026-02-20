@@ -77,6 +77,7 @@
                                 KindBadge="{Binding KindBadge}"
                                 GitHubStarsFormatted="{Binding GitHubStarsFormatted}"
                                 IsTopPick="{Binding IsTopPick}"
+                                IsHot="{Binding IsHot}"
                                 Tags="{Binding Tags}"
                                 ConfigureClicked="OnConfigureClicked"
                                 ActionClicked="OnActionClicked"
