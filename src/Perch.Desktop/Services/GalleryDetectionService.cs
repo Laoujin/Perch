@@ -431,6 +431,12 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
 
     private static string GetLogoBaseUrl(PerchSettings settings)
     {
+        if (!string.IsNullOrWhiteSpace(settings.GalleryLocalPath))
+        {
+            var logosDir = Path.Combine(settings.GalleryLocalPath, "logos");
+            return new Uri(logosDir + Path.DirectorySeparatorChar).AbsoluteUri;
+        }
+
         var baseUrl = settings.GalleryUrl.TrimEnd('/');
         return $"{baseUrl}/catalog/logos/";
     }
