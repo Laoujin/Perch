@@ -2180,4 +2180,120 @@ public sealed class DeployServiceTests
             Directory.Delete(tempDir, true);
         }
     }
+
+    [Test]
+    public async Task DeployAsync_CleanFilterErrors_ReportsAndReturnsError()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty, ImmutableArray<string>.Empty));
+            _cleanFilterService.SetupAsync(Arg.Any<string>(), Arg.Any<ImmutableArray<AppModule>>(), Arg.Any<CancellationToken>())
+                .Returns(ImmutableArray.Create(
+                    new CleanFilterResult("mod", ResultLevel.Error, "Failed to setup clean filter")));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(1));
+                var cleanResult = _reported.First(r => r.Message == "Failed to setup clean filter");
+                Assert.That(cleanResult.Level, Is.EqualTo(ResultLevel.Error));
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_CleanFilterSuccess_ReportsOk()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty, ImmutableArray<string>.Empty));
+            _cleanFilterService.SetupAsync(Arg.Any<string>(), Arg.Any<ImmutableArray<AppModule>>(), Arg.Any<CancellationToken>())
+                .Returns(ImmutableArray.Create(
+                    new CleanFilterResult("mod", ResultLevel.Ok, "Clean filter installed")));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                var cleanResult = _reported.First(r => r.Message == "Clean filter installed");
+                Assert.That(cleanResult.Level, Is.EqualTo(ResultLevel.Ok));
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_VscodeExtensionFails_ReportsModuleError()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        try
+        {
+            _vscodeExtensionInstaller.InstallAsync(Arg.Any<string>(), "failing-ext", Arg.Any<bool>(), Arg.Any<CancellationToken>())
+                .Returns(new DeployResult("Module", "", "failing-ext", ResultLevel.Error, "Install failed"));
+
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty,
+                    ImmutableArray<LinkEntry>.Empty, VscodeExtensions: ImmutableArray.Create("failing-ext")));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { DryRun = true, Progress = _progress });
+
+            Assert.That(exitCode, Is.EqualTo(1));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_PsModuleFails_ReportsModuleError()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        try
+        {
+            _psModuleInstaller.InstallAsync(Arg.Any<string>(), "failing-module", Arg.Any<bool>(), Arg.Any<CancellationToken>())
+                .Returns(new DeployResult("Module", "", "failing-module", ResultLevel.Error, "Install failed"));
+
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty,
+                    ImmutableArray<LinkEntry>.Empty, PsModules: ImmutableArray.Create("failing-module")));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { DryRun = true, Progress = _progress });
+
+            Assert.That(exitCode, Is.EqualTo(1));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
 }

@@ -100,6 +100,18 @@ public sealed class TweakServiceRevertToCapturedTests
         Assert.That(result.Entries, Is.Empty);
     }
 
+    [Test]
+    public async Task RevertToCaptured_DryRun_NoCapturedNoDefault_ReportsDelete()
+    {
+        var tweak = MakeTweak(
+            new RegistryEntryDefinition(@"HKCU\Software\Test", "Value1", 1, RegistryValueType.DWord));
+
+        var result = await _service.RevertToCapturedAsync(tweak, dryRun: true);
+
+        Assert.That(result.Entries[0].Message, Does.Contain("Would delete"));
+        _registry.DidNotReceive().DeleteValue(Arg.Any<string>(), Arg.Any<string>());
+    }
+
     private static TweakCatalogEntry MakeTweak(params RegistryEntryDefinition[] entries) =>
         new("test-tweak", "Test Tweak", "Test", [], null, true, [],
             entries.ToImmutableArray());

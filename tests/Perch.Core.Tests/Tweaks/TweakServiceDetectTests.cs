@@ -114,6 +114,26 @@ public sealed class TweakServiceDetectTests
         });
     }
 
+    [Test]
+    public void Detect_RegistryThrows_TreatsAsNotApplied()
+    {
+        _registry.GetValue(@"HKCU\Software\Test", "Value1")
+            .Returns(_ => throw new UnauthorizedAccessException("access denied"));
+
+        var tweak = MakeTweak(
+            new RegistryEntryDefinition(@"HKCU\Software\Test", "Value1", 1, RegistryValueType.DWord));
+
+        var result = _service.Detect(tweak);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Status, Is.EqualTo(TweakStatus.NotApplied));
+            Assert.That(result.Entries, Has.Length.EqualTo(1));
+            Assert.That(result.Entries[0].IsApplied, Is.False);
+            Assert.That(result.Entries[0].CurrentValue, Is.Null);
+        });
+    }
+
     private static TweakCatalogEntry MakeTweak(params RegistryEntryDefinition[] entries) =>
         new("test-tweak", "Test Tweak", "Test", [], null, true, [],
             entries.ToImmutableArray());
