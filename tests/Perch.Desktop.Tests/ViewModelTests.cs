@@ -731,6 +731,91 @@ public sealed class DotfilesViewModelTests
         Assert.That(_vm.HasNoModule, Is.True);
     }
 
+    [Test]
+    public void ToggleDotfile_PendingLink_RemovesIt()
+    {
+        var card = MakeDotfileCard("bashrc", CardStatus.Detected);
+        _pendingChanges.Contains("bashrc", PendingChangeKind.LinkDotfile).Returns(true);
+
+        _vm.ToggleDotfileCommand.Execute(card);
+
+        _pendingChanges.Received(1).Remove("bashrc", PendingChangeKind.LinkDotfile);
+        _pendingChanges.DidNotReceive().Add(Arg.Any<PendingChange>());
+    }
+
+    [Test]
+    public void ToggleDotfile_ManagedApp_DoesNotAdd()
+    {
+        var card = MakeDotfileCard("bashrc", CardStatus.Synced);
+
+        _vm.ToggleDotfileCommand.Execute(card);
+
+        _pendingChanges.DidNotReceive().Add(Arg.Any<PendingChange>());
+    }
+
+    [Test]
+    public async Task ConfigureAsync_Cancellation_KeepsSelectedApp()
+    {
+        var card = MakeDotfileCard("bashrc", CardStatus.Synced);
+        _detailService.LoadDetailAsync(card, Arg.Any<CancellationToken>())
+            .ThrowsAsync(new OperationCanceledException());
+
+        await _vm.ConfigureAppCommand.ExecuteAsync(card);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(_vm.SelectedApp, Is.EqualTo(card));
+            Assert.That(_vm.IsLoadingDetail, Is.False);
+        });
+    }
+
+    [Test]
+    public async Task RefreshAsync_Cancellation_NoError()
+    {
+        _detectionService.DetectDotfilesAsync(Arg.Any<CancellationToken>())
+            .ThrowsAsync(new OperationCanceledException());
+
+        await _vm.RefreshCommand.ExecuteAsync(null);
+
+        Assert.That(_vm.ErrorMessage, Is.Null);
+    }
+
+    [Test]
+    public async Task OnSelectedAppChanged_RaisesShowGridAndShowDetail()
+    {
+        var card = MakeDotfileCard("bashrc", CardStatus.Synced);
+        var detail = new AppDetail(card, null, null, null, null, []);
+        _detailService.LoadDetailAsync(card, Arg.Any<CancellationToken>())
+            .Returns(detail);
+
+        var changed = new List<string>();
+        _vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName!);
+
+        await _vm.ConfigureAppCommand.ExecuteAsync(card);
+
+        Assert.That(changed, Does.Contain("ShowGrid"));
+        Assert.That(changed, Does.Contain("ShowDetail"));
+    }
+
+    [Test]
+    public async Task OnDetailChanged_RaisesHasModuleAndHasNoModule()
+    {
+        var card = MakeDotfileCard("bashrc", CardStatus.Synced);
+        var detail = new AppDetail(card, null, null, null, null, []);
+        _detailService.LoadDetailAsync(card, Arg.Any<CancellationToken>())
+            .Returns(detail);
+
+        var changed = new List<string>();
+        _vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName!);
+
+        await _vm.ConfigureAppCommand.ExecuteAsync(card);
+
+        Assert.That(changed, Does.Contain("HasModule"));
+        Assert.That(changed, Does.Contain("HasNoModule"));
+        Assert.That(changed, Does.Contain("HasFileStatuses"));
+        Assert.That(changed, Does.Contain("HasAlternatives"));
+    }
+
     private static AppCardModel MakeDotfileCard(string name, CardStatus status)
     {
         var entry = new CatalogEntry(name, name, name, "Shell", [], null, null, null, null, null, null, CatalogKind.Dotfile);
@@ -1774,5 +1859,162 @@ public sealed class AppCardModelTests
     {
         var card = MakeCard(status);
         Assert.That(card.IsActionAdd, Is.EqualTo(expected));
+    }
+
+    [TestCase(null, null)]
+    [TestCase(0, null)]
+    [TestCase(1000, "1k")]
+    [TestCase(10000, "10k")]
+    public void GitHubStarsFormatted_FormatsCorrectly(int? stars, string? expected)
+    {
+        var card = MakeCard(CardStatus.Detected);
+        card.GitHubStars = stars;
+        Assert.That(card.GitHubStarsFormatted, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void GitHubStarsFormatted_SmallValue_ReturnsRaw()
+    {
+        var card = MakeCard(CardStatus.Detected);
+        card.GitHubStars = 500;
+        Assert.That(card.GitHubStarsFormatted, Is.EqualTo("500"));
+    }
+
+    [Test]
+    public void GitHubStarsFormatted_1500_ContainsK()
+    {
+        var card = MakeCard(CardStatus.Detected);
+        card.GitHubStars = 1500;
+        Assert.That(card.GitHubStarsFormatted, Does.EndWith("k"));
+        Assert.That(card.GitHubStarsFormatted, Does.Contain("5"));
+    }
+
+    [TestCase(CatalogKind.CliTool, "cli-tool")]
+    [TestCase(CatalogKind.Runtime, "runtime")]
+    [TestCase(CatalogKind.Dotfile, "dotfile")]
+    [TestCase(CatalogKind.App, null)]
+    public void KindBadge_ReturnsCorrectValue(CatalogKind kind, string? expected)
+    {
+        var entry = new CatalogEntry("test", "Test", null, "Dev", [], null, null, null, null, null, null, Kind: kind);
+        var card = new AppCardModel(entry, CardTier.Other, CardStatus.Detected);
+        Assert.That(card.KindBadge, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void OnStatusChanged_RaisesPropertyChanged()
+    {
+        var card = MakeCard(CardStatus.Unmanaged);
+        var changed = new List<string>();
+        card.PropertyChanged += (_, e) => changed.Add(e.PropertyName!);
+
+        card.Status = CardStatus.Synced;
+
+        Assert.That(changed, Is.SupersetOf(new[] { "IsManaged", "IsActionAdd", "ActionButtonText" }));
+    }
+
+    [Test]
+    public void OnDetailChanged_RaisesHasFileStatuses()
+    {
+        var card = MakeCard(CardStatus.Synced);
+        var changed = new List<string>();
+        card.PropertyChanged += (_, e) => changed.Add(e.PropertyName!);
+
+        card.Detail = new AppDetail(card, null, null, null, null, []);
+
+        Assert.That(changed, Does.Contain("HasFileStatuses"));
+    }
+
+    [Test]
+    public void MatchesSearch_ByTag_ReturnsTrue()
+    {
+        var entry = new CatalogEntry("test", "Test", null, "Dev", ["editor"], null, null, null, null, null, null);
+        var card = new AppCardModel(entry, CardTier.Other, CardStatus.Detected);
+        Assert.That(card.MatchesSearch("editor"), Is.True);
+    }
+
+    [Test]
+    public void MatchesSearch_ByDependent_ReturnsTrue()
+    {
+        var parentEntry = new CatalogEntry("parent", "Parent", null, "Dev", [], null, null, null, null, null, null);
+        var childEntry = new CatalogEntry("child", "ChildName", null, "Dev", [], null, null, null, null, null, null);
+        var parent = new AppCardModel(parentEntry, CardTier.Other, CardStatus.Detected);
+        var child = new AppCardModel(childEntry, CardTier.Other, CardStatus.Detected);
+        parent.DependentApps = [child];
+
+        Assert.That(parent.MatchesSearch("ChildName"), Is.True);
+    }
+
+    [Test]
+    public void HasInstall_WithWinget_True()
+    {
+        var install = new InstallDefinition("some.winget.id", null);
+        var entry = new CatalogEntry("test", "Test", null, "Dev", [], null, null, null, install, null, null);
+        var card = new AppCardModel(entry, CardTier.Other, CardStatus.Detected);
+        Assert.That(card.HasInstall, Is.True);
+    }
+
+    [Test]
+    public void HasInstall_NullInstall_False()
+    {
+        var card = MakeCard(CardStatus.Detected);
+        Assert.That(card.HasInstall, Is.False);
+    }
+
+    [Test]
+    public void HasExtensions_WithBundled_True()
+    {
+        var ext = new CatalogExtensions(["ext1"], []);
+        var entry = new CatalogEntry("test", "Test", null, "Dev", [], null, null, null, null, null, ext);
+        var card = new AppCardModel(entry, CardTier.Other, CardStatus.Detected);
+        Assert.That(card.HasExtensions, Is.True);
+    }
+
+    [Test]
+    public void DisplayLabel_UsesDisplayNameIfPresent()
+    {
+        var entry = new CatalogEntry("test", "Name", "DisplayName", "Dev", [], null, null, null, null, null, null);
+        var card = new AppCardModel(entry, CardTier.Other, CardStatus.Detected);
+        Assert.That(card.DisplayLabel, Is.EqualTo("DisplayName"));
+    }
+
+    [Test]
+    public void DisplayLabel_FallsBackToName()
+    {
+        var card = MakeCard(CardStatus.Detected);
+        Assert.That(card.DisplayLabel, Is.EqualTo("Test"));
+    }
+
+    [Test]
+    public void BroadCategory_ExtractsFirstSegment()
+    {
+        var entry = new CatalogEntry("test", "Test", null, "Development/IDEs", [], null, null, null, null, null, null);
+        var card = new AppCardModel(entry, CardTier.Other, CardStatus.Detected);
+        Assert.That(card.BroadCategory, Is.EqualTo("Development"));
+    }
+
+    [Test]
+    public void SubCategory_ExtractsAfterSlash()
+    {
+        var entry = new CatalogEntry("test", "Test", null, "Development/IDEs", [], null, null, null, null, null, null);
+        var card = new AppCardModel(entry, CardTier.Other, CardStatus.Detected);
+        Assert.That(card.SubCategory, Is.EqualTo("IDEs"));
+    }
+
+    [Test]
+    public void HasDetailPage_WithRequires_True()
+    {
+        var entry = new CatalogEntry("test", "Test", null, "Dev", [], null, null, null, null, null, null,
+            Requires: ["dotnet"]);
+        var card = new AppCardModel(entry, CardTier.Other, CardStatus.Detected);
+        Assert.That(card.HasDetailPage, Is.True);
+    }
+
+    [Test]
+    public void HasDetailPage_WithSuggests_True()
+    {
+        var entry = new CatalogEntry("test", "Test", null, "Dev", [], null, null, null, null, null, null,
+            Suggests: ["rider"]);
+        var card = new AppCardModel(entry, CardTier.Other, CardStatus.Detected);
+        Assert.That(card.HasDetailPage, Is.True);
     }
 }
