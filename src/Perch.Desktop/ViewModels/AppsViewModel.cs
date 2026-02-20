@@ -177,10 +177,6 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
     [RelayCommand]
     private void ToggleApp(AppCardModel app)
     {
-        if (!app.CanToggle)
-            return;
-
-
         if (_pendingChanges.Contains(app.Id, PendingChangeKind.LinkApp))
         {
             _pendingChanges.Remove(app.Id, PendingChangeKind.LinkApp);
