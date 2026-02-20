@@ -38,6 +38,7 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
@@ -87,8 +88,35 @@
                     <TextBlock Text="Hot" FontSize="9" Foreground="{StaticResource HotTextBrush}" />
                 </Border>
 
-                <ui:Button
+                <!-- GitHub stars badge -->
+                <Border
                     Grid.Column="4"
+                    Background="{StaticResource SurfaceBrush}"
+                    CornerRadius="10"
+                    Margin="4,0,0,0"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Left"
+                    Visibility="{Binding GitHubStarsFormatted, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NullToVisibilityConverter}}">
+                    <Button
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Padding="6,1"
+                        Click="OnLinkClick"
+                        Tag="{Binding GitHub, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        ToolTip="{Binding GitHub, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#x2605;" FontSize="9" Foreground="{StaticResource WarningBrush}" />
+                            <TextBlock
+                                Text="{Binding GitHubStarsFormatted, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                FontSize="9"
+                                Foreground="White"
+                                Margin="3,0,0,0" />
+                        </StackPanel>
+                    </Button>
+                </Border>
+
+                <ui:Button
+                    Grid.Column="5"
                     Icon="{ui:SymbolIcon Settings24}"
                     Appearance="Secondary"
                     Padding="2"
@@ -200,13 +228,6 @@
                     <StackPanel Orientation="Horizontal">
                         <ui:SymbolIcon Symbol="Code24" FontSize="12" Foreground="{StaticResource LinkTextBrush}" />
                         <TextBlock Text="GitHub" FontSize="10" Foreground="{StaticResource LinkTextBrush}" Margin="4,0,0,0" VerticalAlignment="Center" />
-                        <TextBlock
-                            Text="{Binding GitHubStarsFormatted, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            FontSize="9"
-                            Foreground="{StaticResource WarningBrush}"
-                            Margin="2,0,0,0"
-                            VerticalAlignment="Center"
-                            Visibility="{Binding GitHubStarsFormatted, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource NullToVisibilityConverter}}" />
                     </StackPanel>
                 </Button>
                 <Button
