@@ -1,7 +1,6 @@
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 
-using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using Perch.Core.Config;
@@ -32,33 +31,19 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
         ["Networking"] = ["Remote Access", "FTP", "Protocol", "Security"],
     };
 
-    [ObservableProperty]
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
     private int _linkedCount;
 
-    [ObservableProperty]
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
     private int _driftedCount;
 
-    [ObservableProperty]
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
     private int _detectedCount;
 
-    [ObservableProperty]
-    private AppCardModel? _selectedApp;
-
-    [ObservableProperty]
-    private AppDetail? _detail;
-
-    [ObservableProperty]
-    private bool _isLoadingDetail;
-
-    public override bool ShowGrid => SelectedApp is null;
-    public override bool ShowDetail => SelectedApp is not null;
-    public bool HasModule => Detail?.OwningModule is not null;
-    public bool HasEcosystem => EcosystemGroups.Count > 0;
-    public bool HasAlternatives => AlternativeApps.Count > 0;
+    public override bool ShowGrid => true;
+    public override bool ShowDetail => false;
 
     public BulkObservableCollection<AppCategoryCardModel> Categories { get; } = [];
-    public BulkObservableCollection<EcosystemGroup> EcosystemGroups { get; } = [];
-    public BulkObservableCollection<AppCardModel> AlternativeApps { get; } = [];
 
     public AppsViewModel(
         IGalleryDetectionService detectionService,
@@ -70,17 +55,6 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
         _detailService = detailService;
         _settingsProvider = settingsProvider;
         _pendingChanges = pendingChanges;
-    }
-
-    partial void OnSelectedAppChanged(AppCardModel? value)
-    {
-        OnPropertyChanged(nameof(ShowGrid));
-        OnPropertyChanged(nameof(ShowDetail));
-    }
-
-    partial void OnDetailChanged(AppDetail? value)
-    {
-        OnPropertyChanged(nameof(HasModule));
     }
 
     protected override void OnSearchTextUpdated() => RebuildCategories();
@@ -205,95 +179,42 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
     private void TagClick(string tag) => SearchText = tag;
 
     [RelayCommand]
-    private async Task ConfigureAppAsync(AppCardModel card, CancellationToken cancellationToken)
+    private async Task ToggleExpandAsync(AppCardModel card, CancellationToken cancellationToken)
     {
-        SelectedApp = card;
-        Detail = null;
-        EcosystemGroups.ReplaceAll([]);
-        AlternativeApps.ReplaceAll([]);
-        OnPropertyChanged(nameof(HasEcosystem));
-        OnPropertyChanged(nameof(HasAlternatives));
-        IsLoadingDetail = true;
+        if (card.IsExpanded)
+        {
+            card.IsExpanded = false;
+            return;
+        }
 
+        card.IsExpanded = true;
+
+        if (card.Detail is not null)
+            return;
+
+        card.IsLoadingDetail = true;
         try
         {
-            Detail = await _detailService.LoadDetailAsync(card, cancellationToken);
-            BuildEcosystemGroups(card);
-            BuildAlternativeApps();
+            card.Detail = await _detailService.LoadDetailAsync(card, cancellationToken);
         }
         catch (OperationCanceledException)
         {
+            card.IsExpanded = false;
             return;
         }
         finally
         {
-            IsLoadingDetail = false;
+            card.IsLoadingDetail = false;
         }
     }
 
     [RelayCommand]
-    private void BackToGrid()
+    private void NavigateToApp(string appId)
     {
-        SelectedApp = null;
-        Detail = null;
-        EcosystemGroups.ReplaceAll([]);
-        AlternativeApps.ReplaceAll([]);
-        OnPropertyChanged(nameof(HasEcosystem));
-        OnPropertyChanged(nameof(HasAlternatives));
-    }
-
-    private void BuildEcosystemGroups(AppCardModel card)
-    {
-        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { card.Id };
-        var ecosystemApps = new List<AppCardModel>();
-
-        if (!card.DependentApps.IsDefaultOrEmpty)
-        {
-            foreach (var dep in card.DependentApps)
-            {
-                if (seen.Add(dep.Id))
-                    ecosystemApps.Add(dep);
-            }
-        }
-
-        if (!card.CatalogEntry.Suggests.IsDefaultOrEmpty)
-        {
-            foreach (var suggestId in card.CatalogEntry.Suggests)
-            {
-                if (seen.Add(suggestId) && _allAppsByIdIncludingChildren.TryGetValue(suggestId, out var suggested))
-                    ecosystemApps.Add(suggested);
-            }
-        }
-
-        var groups = ecosystemApps
-            .GroupBy(a => a.SubCategory, StringComparer.OrdinalIgnoreCase)
-            .OrderBy(g => GetSubCategoryPriority(card.BroadCategory, g.Key))
-            .ThenBy(g => g.Key, StringComparer.OrdinalIgnoreCase)
-            .Select(g => new EcosystemGroup(
-                g.Key,
-                g.OrderBy(a => TierSortOrder(a.Tier))
-                 .ThenBy(a => a.DisplayLabel, StringComparer.OrdinalIgnoreCase)
-                 .ToImmutableArray()));
-
-        EcosystemGroups.ReplaceAll(groups);
-        OnPropertyChanged(nameof(HasEcosystem));
-    }
-
-    private void BuildAlternativeApps()
-    {
-        if (Detail is not null && !Detail.Alternatives.IsDefaultOrEmpty)
-        {
-            AlternativeApps.ReplaceAll(
-                Detail.Alternatives
-                    .Select(alt => _allAppsByIdIncludingChildren.GetValueOrDefault(alt.Id))
-                    .Where(card => card is not null)!);
-        }
+        if (_allAppsByIdIncludingChildren.TryGetValue(appId, out var target))
+            SearchText = target.DisplayLabel;
         else
-        {
-            AlternativeApps.ReplaceAll([]);
-        }
-
-        OnPropertyChanged(nameof(HasAlternatives));
+            SearchText = appId;
     }
 
     private void BuildDependencyGraph(
@@ -399,5 +320,3 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
     }
 
 }
-
-public sealed record EcosystemGroup(string Name, ImmutableArray<AppCardModel> Apps);

@@ -32,6 +32,9 @@ public partial class AppCardModel : ObservableObject
     private bool _isSelected;
 
     [ObservableProperty]
+    private bool _isExpanded;
+
+    [ObservableProperty]
     private bool _isLoadingDetail;
 
     [ObservableProperty]
@@ -80,7 +83,19 @@ public partial class AppCardModel : ObservableObject
         || !CatalogEntry.Requires.IsDefaultOrEmpty
         || !CatalogEntry.Suggests.IsDefaultOrEmpty
         || !CatalogEntry.Alternatives.IsDefaultOrEmpty
-        || CatalogEntry.Config is not null;
+        || CatalogEntry.Config is not null
+        || CatalogEntry.Install is not null;
+
+    public bool HasRequires => !CatalogEntry.Requires.IsDefaultOrEmpty;
+    public bool HasInstall => CatalogEntry.Install is { } i
+        && (i.Winget is not null || i.Choco is not null || i.DotnetTool is not null || i.NodePackage is not null);
+    public bool HasExtensions => CatalogEntry.Extensions is not null
+        && (!CatalogEntry.Extensions.Bundled.IsDefaultOrEmpty || !CatalogEntry.Extensions.Recommended.IsDefaultOrEmpty);
+    public bool HasTweaks => !CatalogEntry.Tweaks.IsDefaultOrEmpty;
+    public bool HasAlternatives => !CatalogEntry.Alternatives.IsDefaultOrEmpty;
+    public bool HasSuggests => !CatalogEntry.Suggests.IsDefaultOrEmpty;
+    public bool HasOs => !CatalogEntry.Os.IsDefaultOrEmpty;
+    public bool HasFileStatuses => Detail is not null && !Detail.FileStatuses.IsDefaultOrEmpty;
 
     public AppCardModel(CatalogEntry entry, CardTier tier, CardStatus status, string? logoUrl = null)
     {
@@ -107,6 +122,11 @@ public partial class AppCardModel : ObservableObject
         OnPropertyChanged(nameof(IsManaged));
         OnPropertyChanged(nameof(IsActionAdd));
         OnPropertyChanged(nameof(ActionButtonText));
+    }
+
+    partial void OnDetailChanged(AppDetail? value)
+    {
+        OnPropertyChanged(nameof(HasFileStatuses));
     }
 
     public bool MatchesSearch(string query)
