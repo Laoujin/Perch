@@ -5,9 +5,11 @@ using System.Runtime.Versioning;
 using Perch.Core.Catalog;
 using Perch.Core.Scanner;
 using Perch.Core.Startup;
+using Perch.Core.Deploy;
 using Perch.Core.Status;
 using Perch.Desktop.Models;
 using Perch.Desktop.ViewModels;
+using Perch.Desktop.ViewModels.Wizard;
 
 namespace Perch.Desktop.Tests;
 
@@ -1099,6 +1101,28 @@ public sealed class ModelTests
             var result = new StatusResult("m", "", "", level, "");
             var vm = new StatusItemViewModel(result);
             Assert.That(vm.LevelDisplay, Is.EqualTo(expected));
+        }
+    }
+
+    [TestFixture]
+    [Platform("Win")]
+    [SupportedOSPlatform("windows")]
+    public sealed class DeployResultItemViewModelTests
+    {
+        [Test]
+        public void Constructor_SetsPropertiesFromResult()
+        {
+            var result = new DeployResult("git", @"C:\config\git", @"C:\Users\test\.gitconfig", ResultLevel.Ok, "Symlink created");
+            var vm = new DeployResultItemViewModel(result);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vm.ModuleName, Is.EqualTo("git"));
+                Assert.That(vm.SourcePath, Is.EqualTo(@"C:\config\git"));
+                Assert.That(vm.TargetPath, Is.EqualTo(@"C:\Users\test\.gitconfig"));
+                Assert.That(vm.Level, Is.EqualTo(ResultLevel.Ok));
+                Assert.That(vm.Message, Is.EqualTo("Symlink created"));
+            });
         }
     }
 }

@@ -347,4 +347,121 @@ public sealed class ContentFilterProcessorTests
 
         Assert.That(result, Is.EqualTo(content));
     }
+
+    [Test]
+    public void Apply_StripJsonKeys_StringWithEscapedQuotes()
+    {
+        string content = "{\n    \"path\": \"C:\\\\Users\\\\test\\\\\\\"\",\n    \"keep\": 1\n}\n";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("path")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Does.Contain("\"keep\": 1"));
+            Assert.That(result, Does.Not.Contain("path"));
+        });
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_UnterminatedString_ReturnsUnchanged()
+    {
+        string content = "{\n    \"broken\": \"no end quote\n}\n";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("broken")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.That(result, Is.EqualTo(content));
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_CrLfLineEndings()
+    {
+        string content = "{\r\n    \"remove\": 42,\r\n    \"keep\": true\r\n}\r\n";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("remove")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Does.Contain("\"keep\": true"));
+            Assert.That(result, Does.Not.Contain("remove"));
+        });
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_NestedObjectWithEscapedStrings()
+    {
+        string content = "{\n    \"config\": {\n        \"key\": \"value with \\\"quotes\\\"\"\n    },\n    \"keep\": 1\n}\n";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("config")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Does.Contain("\"keep\": 1"));
+            Assert.That(result, Does.Not.Contain("config"));
+        });
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_NestedArray()
+    {
+        string content = "{\n    \"items\": [\n        [1, 2],\n        [3, 4]\n    ],\n    \"keep\": 1\n}\n";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("items")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Does.Contain("\"keep\": 1"));
+            Assert.That(result, Does.Not.Contain("items"));
+        });
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_NumericValue()
+    {
+        string content = "{\n    \"version\": 42,\n    \"keep\": true\n}\n";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("version")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Does.Contain("\"keep\": true"));
+            Assert.That(result, Does.Not.Contain("version"));
+        });
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_EmptyContentAfterValue_ReturnsNeg1()
+    {
+        // Edge case: value starts with nothing left after whitespace skip
+        string content = "{\n    \"key\":    ";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("key")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.That(result, Is.EqualTo(content));
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_SingleKeyObject()
+    {
+        string content = "{\n    \"only\": \"value\"\n}\n";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("only")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.That(result, Does.Not.Contain("only"));
+    }
 }
