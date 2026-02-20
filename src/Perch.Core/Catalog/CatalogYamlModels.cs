@@ -87,6 +87,7 @@ internal sealed class CatalogLinksYamlModel
 {
     public string? Website { get; set; }
     public string? Docs { get; set; }
+    [YamlMember(Alias = "github")]
     public string? GitHub { get; set; }
 }
 
