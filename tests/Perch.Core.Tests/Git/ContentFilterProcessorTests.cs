@@ -464,4 +464,152 @@ public sealed class ContentFilterProcessorTests
 
         Assert.That(result, Does.Not.Contain("only"));
     }
+
+    [Test]
+    public void Apply_StripJsonKeys_LastKeyRemoved_LineRemoved()
+    {
+        // Remove the last key; line is removed but trailing comma on prev line stays (behavior)
+        string content = "{\n    \"keep\": 1,\n    \"remove\": 2\n}\n";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("remove")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Does.Contain("\"keep\": 1"));
+            Assert.That(result, Does.Not.Contain("remove"));
+        });
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_LastKeyRemoved_ClosingBraceOnSameLine()
+    {
+        // Closing brace on same line as value -- triggers AdjustForTrailingCommaBeforeClosingBrace
+        string content = "{\n    \"keep\": 1,\n    \"remove\": 2}";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("remove")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Does.Contain("\"keep\": 1"));
+            Assert.That(result, Does.Not.Contain("remove"));
+        });
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_LastKeyRemoved_ClosingBraceOnSameLine_CrLf()
+    {
+        string content = "{\r\n    \"keep\": 1,\r\n    \"remove\": 2}";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("remove")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Does.Contain("\"keep\": 1"));
+            Assert.That(result, Does.Not.Contain("remove"));
+        });
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_MiddleKeyRemoved_NoTrailingCommaIssue()
+    {
+        string content = "{\n    \"first\": 1,\n    \"middle\": 2,\n    \"last\": 3\n}\n";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("middle")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Does.Contain("\"first\": 1"));
+            Assert.That(result, Does.Contain("\"last\": 3"));
+            Assert.That(result, Does.Not.Contain("middle"));
+        });
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_FirstKeyRemoved()
+    {
+        string content = "{\n    \"first\": 1,\n    \"second\": 2\n}\n";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("first")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Does.Contain("\"second\": 2"));
+            Assert.That(result, Does.Not.Contain("first"));
+        });
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_LastKeyWithNestedObject_ClosingBraceOnSameLine()
+    {
+        string content = "{\n    \"keep\": true,\n    \"remove\": {\"a\": 1}}";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("remove")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Does.Contain("\"keep\": true"));
+            Assert.That(result, Does.Not.Contain("remove"));
+        });
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_AdjustBrace_NoCommaBeforeKey()
+    {
+        // First key removed, closing brace on same line, no preceding comma
+        string content = "{\n    \"remove\": 1}";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("remove")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.That(result, Does.Not.Contain("remove"));
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_UnterminatedString_ReturnsOriginal()
+    {
+        string content = "{\n    \"key\": \"unterminated\n}\n";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("key")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.That(result, Is.EqualTo(content));
+    }
+
+    [Test]
+    public void Apply_StripJsonKeys_UnterminatedObject_ReturnsOriginal()
+    {
+        string content = "{\n    \"key\": {\"nested\": true\n";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-json-keys", ImmutableArray.Create("key")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.That(result, Is.EqualTo(content));
+    }
+
+    [Test]
+    public void Apply_UnknownRuleType_IgnoresRule()
+    {
+        string content = "some content";
+
+        var rules = ImmutableArray.Create(new FilterRule("strip-unknown", ImmutableArray.Create("key")));
+
+        string result = _processor.Apply(content, rules);
+
+        Assert.That(result, Is.EqualTo(content));
+    }
 }
