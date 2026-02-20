@@ -72,4 +72,34 @@ public sealed class FileBackupProviderTests
 
         Assert.That(backupPath, Is.EqualTo(file + ".backup.2"));
     }
+
+    [Test]
+    public void BackupFile_Directory_MovesDirectory()
+    {
+        string dir = Path.Combine(_tempDir, "mydir");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "file.txt"), "content");
+
+        string backupPath = _provider.BackupFile(dir);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(backupPath, Is.EqualTo(dir + ".backup"));
+            Assert.That(Directory.Exists(dir), Is.False);
+            Assert.That(Directory.Exists(backupPath), Is.True);
+            Assert.That(File.Exists(Path.Combine(backupPath, "file.txt")), Is.True);
+        });
+    }
+
+    [Test]
+    public void BackupFile_Directory_BackupDirExists_IncrementsCounter()
+    {
+        string dir = Path.Combine(_tempDir, "mydir");
+        Directory.CreateDirectory(dir);
+        Directory.CreateDirectory(dir + ".backup");
+
+        string backupPath = _provider.BackupFile(dir);
+
+        Assert.That(backupPath, Is.EqualTo(dir + ".backup.1"));
+    }
 }

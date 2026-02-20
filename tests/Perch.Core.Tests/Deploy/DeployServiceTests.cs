@@ -2296,4 +2296,144 @@ public sealed class DeployServiceTests
             Directory.Delete(tempDir, true);
         }
     }
+
+    [Test]
+    public async Task DeployAsync_DiscoveryErrors_ReportsErrorsAndReturnsError()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty,
+                    ImmutableArray.Create("Failed to parse module.yaml", "Missing required field")));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(1));
+                Assert.That(_reported.Where(r => r.Level == ResultLevel.Error).ToList(), Has.Count.EqualTo(2));
+                Assert.That(_reported[0].Message, Does.Contain("Failed to parse"));
+                Assert.That(_reported[1].Message, Does.Contain("Missing required"));
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_RegistryEntry_NullValue_DeletesKey()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+
+        try
+        {
+            _registryProvider.GetValue(@"HKCU\Software\Test", "DelMe").Returns(42);
+
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty,
+                    ImmutableArray<LinkEntry>.Empty,
+                    Registry: ImmutableArray.Create(
+                        new RegistryEntryDefinition(@"HKCU\Software\Test", "DelMe", null, RegistryValueType.DWord))));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            Assert.That(exitCode, Is.EqualTo(0));
+            _registryProvider.Received(1).DeleteValue(@"HKCU\Software\Test", "DelMe");
+            Assert.That(_reported.Any(r => r.Message.Contains("Deleted")), Is.True);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_PackagesYaml_ParseError_ReportsError()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(Path.Combine(tempDir, "packages.yaml"), "{{invalid yaml");
+
+        try
+        {
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(1));
+                Assert.That(_reported.Any(r => r.Level == ResultLevel.Error), Is.True);
+            });
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_PackagesYaml_InstallError_ReturnsError()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        File.WriteAllText(Path.Combine(tempDir, "packages.yaml"), "- name: broken-pkg\n  manager: winget\n");
+
+        try
+        {
+            _systemPackageInstaller.InstallAsync("broken-pkg", Arg.Any<PackageManager>(), Arg.Any<bool>(), Arg.Any<CancellationToken>())
+                .Returns(new DeployResult("system-packages", "", "broken-pkg", ResultLevel.Error, "Install failed"));
+
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(ImmutableArray<AppModule>.Empty, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            Assert.That(exitCode, Is.EqualTo(1));
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Test]
+    public async Task DeployAsync_PostHookSuccess_Reports()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        string modulePath = Path.Combine(tempDir, "mod");
+        Directory.CreateDirectory(modulePath);
+        File.WriteAllText(Path.Combine(modulePath, "post.ps1"), "echo done");
+
+        try
+        {
+            var modules = ImmutableArray.Create(
+                new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty,
+                    ImmutableArray<LinkEntry>.Empty,
+                    Hooks: new DeployHooks(null, "post.ps1")));
+            _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
+
+            int exitCode = await _deployService.DeployAsync(tempDir, new DeployOptions { Progress = _progress });
+
+            Assert.That(exitCode, Is.EqualTo(0));
+            await _hookRunner.Received(1).RunAsync("Module", Arg.Any<string>(), modulePath, Arg.Any<CancellationToken>());
+        }
+        finally
+        {
+            Directory.Delete(tempDir, true);
+        }
+    }
 }
