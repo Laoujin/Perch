@@ -175,9 +175,19 @@ public sealed partial class LanguagesViewModel : GalleryViewModelBase
     private void ApplyFilter()
     {
         var query = SearchText;
-        Ecosystems.ReplaceAll(_allEcosystems.Where(e => e.MatchesSearch(query)));
+        var sorted = _allEcosystems
+            .Where(e => e.MatchesSearch(query))
+            .OrderBy(EcosystemStatusPriority)
+            .ThenBy(e => e.Name, StringComparer.OrdinalIgnoreCase);
+        Ecosystems.ReplaceAll(sorted);
         UpdateSummary();
     }
+
+    private static int EcosystemStatusPriority(EcosystemCardModel eco) =>
+        eco.DriftedCount > 0 ? 0
+        : eco.DetectedCount > 0 ? 1
+        : eco.SyncedCount > 0 ? 2
+        : 3;
 
     private void UpdateSummary()
     {
@@ -206,13 +216,30 @@ public sealed partial class LanguagesViewModel : GalleryViewModelBase
         }
 
         var groups = SelectedEcosystem.Items
+            .Where(a => a.CatalogEntry.Kind != CatalogKind.Dotfile)
             .GroupBy(a => a.SubCategory, StringComparer.OrdinalIgnoreCase)
             .OrderBy(g => SubCategorySortOrder(g.Key))
             .Select(g => new AppCategoryGroup(
                 g.Key,
-                new System.Collections.ObjectModel.ObservableCollection<AppCardModel>(g)));
+                new System.Collections.ObjectModel.ObservableCollection<AppCardModel>(
+                    g.OrderBy(a => StatusSortOrder(a.Status))
+                     .ThenBy(a => a.DisplayLabel, StringComparer.OrdinalIgnoreCase))));
 
-        SubCategories.ReplaceAll(groups);
+        var configFiles = SelectedEcosystem.Items
+            .Where(a => a.CatalogEntry.Kind == CatalogKind.Dotfile)
+            .OrderBy(a => StatusSortOrder(a.Status))
+            .ThenBy(a => a.DisplayLabel, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var result = groups.ToList();
+        if (configFiles.Count > 0)
+        {
+            result.Add(new AppCategoryGroup(
+                "Configuration Files",
+                new System.Collections.ObjectModel.ObservableCollection<AppCardModel>(configFiles)));
+        }
+
+        SubCategories.ReplaceAll(result);
     }
 
     [RelayCommand]
@@ -289,6 +316,7 @@ public sealed partial class LanguagesViewModel : GalleryViewModelBase
         _ when subCategory.Equals("Profilers", StringComparison.OrdinalIgnoreCase) => 3,
         _ when subCategory.Equals("IDE Extensions", StringComparison.OrdinalIgnoreCase) => 4,
         _ when subCategory.Equals("CLI Tools", StringComparison.OrdinalIgnoreCase) => 5,
+        _ when subCategory.Equals("Configuration Files", StringComparison.OrdinalIgnoreCase) => 99,
         _ => 10,
     };
 }

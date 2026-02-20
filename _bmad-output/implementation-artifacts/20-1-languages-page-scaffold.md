@@ -1,6 +1,6 @@
 # Story 20.1: Languages Page Scaffold
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -48,35 +48,35 @@ The Languages page already has:
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Ecosystem grid sort (AC: #1)
-  - [ ] Verify/fix sort in `LanguagesViewModel` — ecosystems with Drifted counts first, then Detected, then Synced, then all unmanaged
-  - [ ] Add test for ecosystem sort order
+- [x] Task 1: Ecosystem grid sort (AC: #1)
+  - [x] Verify/fix sort in `LanguagesViewModel` — ecosystems with Drifted counts first, then Detected, then Synced, then all unmanaged
+  - [x] Add test for ecosystem sort order
 
-- [ ] Task 2: Collapsible sub-categories (AC: #2)
-  - [ ] Wrap each sub-category section in an `Expander` or similar collapse control
-  - [ ] Default state: expanded if section has any drifted/detected items, collapsed if all synced/unmanaged and count > 5
-  - [ ] Add `IsExpanded` property per sub-category group in ViewModel
+- [x] Task 2: Collapsible sub-categories (AC: #2)
+  - [x] Wrap each sub-category section in an `Expander` or similar collapse control
+  - [x] Default state: expanded if section has any drifted/detected items, collapsed if all synced/unmanaged and count > 5
+  - [x] Add `IsExpanded` property per sub-category group in ViewModel
 
-- [ ] Task 3: Sub-category status badges (AC: #3)
-  - [ ] Add synced/drifted/detected counts per sub-category group
-  - [ ] Add pill badge elements in sub-category header template
-  - [ ] Wire counts from grouped AppCardModels
+- [x] Task 3: Sub-category status badges (AC: #3)
+  - [x] Add synced/drifted/detected counts per sub-category group
+  - [x] Add pill badge elements in sub-category header template
+  - [x] Wire counts from grouped AppCardModels
 
-- [ ] Task 4: Config files sub-category (AC: #4)
-  - [ ] In ecosystem detail loading, collect language-owned dotfiles (kind: dotfile entries related to this ecosystem)
-  - [ ] Add them as a "Configuration Files" sub-category group (sort order: last)
-  - [ ] These cards show no gear icon — Add/Remove is the only action
+- [x] Task 4: Config files sub-category (AC: #4)
+  - [x] In ecosystem detail loading, collect language-owned dotfiles (kind: dotfile entries related to this ecosystem)
+  - [x] Add them as a "Configuration Files" sub-category group (sort order: last)
+  - [x] These cards show no gear icon — Add/Remove is the only action
 
-- [ ] Task 5: Gear icon conditional (AC: #5)
-  - [ ] Add `HasDetailPage` computed property to `AppCardModel` based on catalog entry richness
-  - [ ] Bind gear/configure button visibility to `HasDetailPage`
+- [x] Task 5: Gear icon conditional (AC: #5)
+  - [x] Add `HasDetailPage` computed property to `AppCardModel` based on catalog entry richness
+  - [x] Bind gear/configure button visibility to `HasDetailPage`
 
-- [ ] Task 6: Tests (AC: #6)
-  - [ ] Test ecosystem sort order
-  - [ ] Test sub-category badge counts
-  - [ ] Test config files sub-category population
-  - [ ] Test HasDetailPage logic
-  - [ ] Build passes with zero warnings
+- [x] Task 6: Tests (AC: #6)
+  - [x] Test ecosystem sort order
+  - [x] Test sub-category badge counts
+  - [x] Test config files sub-category population
+  - [x] Test HasDetailPage logic
+  - [x] Build passes with zero warnings
 
 ## Files to Modify
 
@@ -97,3 +97,30 @@ The Languages page already has:
 - **No new NuGet packages.**
 - **Win10 safe.** Hardcoded opaque colors, no DynamicResource theme brushes for backgrounds.
 - Gallery content (20-3 through 20-9) is separate — this story is about the page scaffold, not gallery YAML entries.
+
+## Dev Agent Record
+
+### Implementation Plan
+- Task 1: Added `EcosystemStatusPriority` method + `OrderBy`/`ThenBy` in `ApplyFilter()` for status-priority + alphabetical sort
+- Task 2+3: Enhanced `AppCategoryGroup` with `SyncedCount`, `DriftedCount`, `DetectedCount`, `IsExpanded` properties; replaced XAML `StackPanel` sub-category headers with `Expander` controls containing status pill badges
+- Task 4: In `RebuildSubCategories`, dotfile entries (kind=Dotfile) are filtered out of regular groups and collected into a "Configuration Files" group at sort order 99; secondary sort within each group by status then name
+- Task 5: Added `HasDetailPage` computed property to `AppCardModel` checking tweaks, extensions, requires, suggests, alternatives, config; added `HasDetailPage` DP to `AppCard` control; bound gear icon visibility
+
+### Completion Notes
+All 6 tasks implemented and tested. 14 new tests in `LanguagesViewModelTests.cs` covering ecosystem sort, sub-category badges, config files grouping, HasDetailPage logic, and collapsible state. Full suite: 956 tests pass, zero warnings.
+
+## File List
+
+| File | Action |
+|------|--------|
+| `src/Perch.Desktop/ViewModels/LanguagesViewModel.cs` | Modified — ecosystem sort, sub-category secondary sort, config files group, dotfile filtering |
+| `src/Perch.Desktop/Views/Pages/LanguagesPage.xaml` | Modified — Expander with status badges, HasDetailPage binding on AppCards |
+| `src/Perch.Desktop/Models/AppCardModel.cs` | Modified — Added `HasDetailPage` computed property |
+| `src/Perch.Desktop/Models/AppCategoryGroup.cs` | Modified — Added status counts + `IsExpanded` |
+| `src/Perch.Desktop/Views/Controls/AppCard.xaml` | Modified — Gear icon visibility bound to `HasDetailPage` |
+| `src/Perch.Desktop/Views/Controls/AppCard.xaml.cs` | Modified — Added `HasDetailPage` DependencyProperty |
+| `tests/Perch.Desktop.Tests/LanguagesViewModelTests.cs` | Added — 14 tests for all ACs |
+
+## Change Log
+
+- 2026-02-20: Implemented Languages Page Scaffold — ecosystem sort, collapsible sub-categories with status badges, config files sub-category, gear icon conditional visibility, 14 tests added

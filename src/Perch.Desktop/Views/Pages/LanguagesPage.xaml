@@ -255,21 +255,50 @@
                             </Grid>
                         </Border>
 
-                        <!-- Sub-category sections with app cards -->
+                        <!-- Sub-category sections with app cards (collapsible) -->
                         <ItemsControl ItemsSource="{Binding SubCategories}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type models:AppCategoryGroup}">
-                                    <StackPanel Margin="0,0,0,16">
-                                        <!-- Sub-category header -->
-                                        <TextBlock
-                                            Text="{Binding SubCategory}"
-                                            FontSize="13"
-                                            FontWeight="SemiBold"
-                                            Foreground="{StaticResource SubcategoryTextBrush}"
-                                            Margin="0,0,0,8" />
+                                    <Expander IsExpanded="{Binding IsExpanded}" Margin="0,0,0,8">
+                                        <Expander.Header>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock
+                                                    Text="{Binding SubCategory}"
+                                                    FontSize="13"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="{StaticResource SubcategoryTextBrush}"
+                                                    VerticalAlignment="Center" />
+
+                                                <!-- Sub-category status badges -->
+                                                <Border Background="{StaticResource SuccessSubtleBrush}" CornerRadius="10" Padding="6,2" Margin="8,0,0,0"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{Binding SyncedCount, Converter={StaticResource CountToVisibilityConverter}}">
+                                                    <TextBlock FontSize="10">
+                                                        <Run Text="{Binding SyncedCount, Mode=OneWay}" Foreground="{StaticResource SuccessBrush}" FontWeight="SemiBold" />
+                                                        <Run Text=" synced" Foreground="{StaticResource SuccessBrush}" />
+                                                    </TextBlock>
+                                                </Border>
+                                                <Border Background="{StaticResource WarningSubtleBrush}" CornerRadius="10" Padding="6,2" Margin="4,0,0,0"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{Binding DriftedCount, Converter={StaticResource CountToVisibilityConverter}}">
+                                                    <TextBlock FontSize="10">
+                                                        <Run Text="{Binding DriftedCount, Mode=OneWay}" Foreground="{StaticResource WarningBrush}" FontWeight="SemiBold" />
+                                                        <Run Text=" drifted" Foreground="{StaticResource WarningBrush}" />
+                                                    </TextBlock>
+                                                </Border>
+                                                <Border Background="{StaticResource InfoSubtleBrush}" CornerRadius="10" Padding="6,2" Margin="4,0,0,0"
+                                                        VerticalAlignment="Center"
+                                                        Visibility="{Binding DetectedCount, Converter={StaticResource CountToVisibilityConverter}}">
+                                                    <TextBlock FontSize="10">
+                                                        <Run Text="{Binding DetectedCount, Mode=OneWay}" Foreground="{StaticResource InfoBrush}" FontWeight="SemiBold" />
+                                                        <Run Text=" detected" Foreground="{StaticResource InfoBrush}" />
+                                                    </TextBlock>
+                                                </Border>
+                                            </StackPanel>
+                                        </Expander.Header>
 
                                         <!-- App cards in wrap panel -->
-                                        <ItemsControl ItemsSource="{Binding Apps}">
+                                        <ItemsControl ItemsSource="{Binding Apps}" Margin="0,8,0,0">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
                                                     <WrapPanel />
@@ -295,6 +324,7 @@
                                                         KindBadge="{Binding KindBadge}"
                                                         GitHubStarsFormatted="{Binding GitHubStarsFormatted}"
                                                         IsHot="{Binding IsHot}"
+                                                        HasDetailPage="{Binding HasDetailPage}"
                                                         Tags="{Binding Tags}"
                                                         ConfigureClicked="OnConfigureClicked"
                                                         ActionClicked="OnActionClicked"
@@ -302,7 +332,7 @@
                                                 </DataTemplate>
                                             </ItemsControl.ItemTemplate>
                                         </ItemsControl>
-                                    </StackPanel>
+                                    </Expander>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

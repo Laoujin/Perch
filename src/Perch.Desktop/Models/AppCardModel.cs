@@ -73,6 +73,14 @@ public partial class AppCardModel : ObservableObject
         _ => null,
     };
 
+    public bool HasDetailPage =>
+        !CatalogEntry.Tweaks.IsDefaultOrEmpty
+        || CatalogEntry.Extensions is not null
+        || !CatalogEntry.Requires.IsDefaultOrEmpty
+        || !CatalogEntry.Suggests.IsDefaultOrEmpty
+        || !CatalogEntry.Alternatives.IsDefaultOrEmpty
+        || CatalogEntry.Config is not null;
+
     public AppCardModel(CatalogEntry entry, CardTier tier, CardStatus status, string? logoUrl = null)
     {
         Id = entry.Id;

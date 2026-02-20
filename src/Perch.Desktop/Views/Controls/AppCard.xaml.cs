@@ -89,6 +89,10 @@ public partial class AppCard : UserControl
         DependencyProperty.Register(nameof(Tags), typeof(ImmutableArray<string>), typeof(AppCard),
             new PropertyMetadata(ImmutableArray<string>.Empty));
 
+    public static readonly DependencyProperty HasDetailPageProperty =
+        DependencyProperty.Register(nameof(HasDetailPage), typeof(bool), typeof(AppCard),
+            new PropertyMetadata(true));
+
     public static readonly RoutedEvent ActionClickedEvent =
         EventManager.RegisterRoutedEvent(nameof(ActionClicked), RoutingStrategy.Bubble,
             typeof(RoutedEventHandler), typeof(AppCard));
@@ -213,6 +217,12 @@ public partial class AppCard : UserControl
     {
         get => (ImmutableArray<string>)GetValue(TagsProperty);
         set => SetValue(TagsProperty, value);
+    }
+
+    public bool HasDetailPage
+    {
+        get => (bool)GetValue(HasDetailPageProperty);
+        set => SetValue(HasDetailPageProperty, value);
     }
 
     public event RoutedEventHandler ConfigureClicked

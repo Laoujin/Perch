@@ -100,7 +100,7 @@ development_status:
   # gallery entry covering SDK, tools, IDE, config files. Detection logic
   # identifies what's installed.
   epic-20: in-progress
-  20-1-languages-page-scaffold: ready-for-dev
+  20-1-languages-page-scaffold: review
   20-2-language-sdk-detection: ready-for-dev
   20-3-gallery-language-dotnet: ready-for-dev
   20-4-gallery-language-node: ready-for-dev

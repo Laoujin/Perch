@@ -95,7 +95,8 @@
                     Margin="4,0"
                     VerticalAlignment="Center"
                     Click="OnConfigureClick"
-                    ToolTip="View details" />
+                    ToolTip="View details"
+                    Visibility="{Binding HasDetailPage, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}" />
             </Grid>
 
             <!-- Row 1: Logo + Name -->
