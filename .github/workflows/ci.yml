@@ -24,7 +24,7 @@ jobs:
         run: dotnet build Perch.CrossPlatform.slnx --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test Perch.CrossPlatform.slnx --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage"
+        run: dotnet test Perch.CrossPlatform.slnx --no-build --configuration Release --verbosity normal --settings coverage.runsettings
 
       - name: Check coverage
         run: python scripts/check-coverage.py linux
@@ -53,7 +53,7 @@ jobs:
         run: dotnet build Perch.slnx --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test Perch.slnx --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --filter "FullyQualifiedName!~Perch.SmokeTests"
+        run: dotnet test Perch.slnx --no-build --configuration Release --verbosity normal --settings coverage.runsettings --filter "FullyQualifiedName!~Perch.SmokeTests"
 
       - name: Check coverage
         run: python scripts/check-coverage.py windows
