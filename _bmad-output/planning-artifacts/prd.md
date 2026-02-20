@@ -73,7 +73,7 @@ classification:
 - Scope 1 (done): machine-specific overrides work across 2-4 machines with shared base config
 - Scope 2: Languages page shows detected SDKs/tools per ecosystem with gallery-driven content for 5+ languages
 - Scope 2: Dotfiles page shows all managed dotfiles with per-entry gallery metadata (git, PowerShell, node, bash)
-- Scope 2: Apps page displays sorted categories, alternatives, suggestions, and top-choice badges from gallery data
+- Scope 2: Apps page displays sorted categories, alternatives, suggestions, and hot badges from gallery data
 - Scope 3: non-author user can onboard via Desktop wizard without reading source code
 - Scope 3: toggling an app/dotfile in the UI and deploying results in a manifest change visible in `git diff`
 - Scope 4: Tweaks expansion brainstormed — which tweaks to include, mechanisms, UX, gallery structure decided
@@ -388,10 +388,10 @@ Improve the Apps WPF page with richer gallery data: sorting, categories, alterna
 - Assign categories to all existing app entries
 - Add `alternatives:` links between competing apps (e.g., VS Code / Sublime / Notepad++)
 - Add `suggests:` links for natural pairings (e.g., Node → nvm, Python → pyenv)
-- Curate top-choice badges for recommended apps per category
+- Curate hot badges for recommended apps per category
 - Add sorting values to categories
 
-**Acceptance:** Apps page shows sorted categories, alternative links on cards, suggestion badges, top-choice indicators. All driven by gallery YAML data.
+**Acceptance:** Apps page shows sorted categories, alternative links on cards, suggestion badges, hot indicators. All driven by gallery YAML data.
 
 ### Scope 3: Experience Completion (P3)
 
