@@ -449,6 +449,8 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
                 return true;
             if (app.Install.Choco is not null && installedIds.Contains(app.Install.Choco))
                 return true;
+            if (app.Install.Detect is not null && IsDetectMatch(app.Install.Detect))
+                return true;
         }
 
         if (app.Config is not null && !app.Config.Links.IsDefaultOrEmpty)
@@ -460,6 +462,31 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
 
                 var resolved = Environment.ExpandEnvironmentVariables(targetPath.Replace('/', '\\'));
                 if (File.Exists(resolved) || Directory.Exists(resolved))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsDetectMatch(string detect)
+    {
+        if (detect.Contains('%') || detect.Contains('/') || detect.Contains('\\'))
+        {
+            var resolved = Environment.ExpandEnvironmentVariables(detect.Replace('/', '\\'));
+            return File.Exists(resolved) || Directory.Exists(resolved);
+        }
+
+        var pathVar = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrEmpty(pathVar))
+            return false;
+
+        var extensions = new[] { "", ".exe", ".cmd", ".bat" };
+        foreach (var dir in pathVar.Split(Path.PathSeparator))
+        {
+            foreach (var ext in extensions)
+            {
+                if (File.Exists(Path.Combine(dir, detect + ext)))
                     return true;
             }
         }

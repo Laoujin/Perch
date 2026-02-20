@@ -231,7 +231,7 @@ public sealed class CatalogParser
         model == null ? null : new CatalogLinks(model.Website, model.Docs, model.GitHub);
 
     private static InstallDefinition? ParseInstall(InstallYamlModel? model) =>
-        model == null ? null : new InstallDefinition(model.Winget, model.Choco, model.DotnetTool, model.NodePackage);
+        model == null ? null : new InstallDefinition(model.Winget, model.Choco, model.DotnetTool, model.NodePackage, model.Detect);
 
     private static CatalogConfigDefinition? ParseConfig(CatalogConfigYamlModel? model)
     {

@@ -102,6 +102,8 @@ internal sealed class InstallYamlModel
 
     [YamlMember(Alias = "node-package")]
     public string? NodePackage { get; set; }
+
+    public string? Detect { get; set; }
 }
 
 internal sealed class CatalogConfigYamlModel

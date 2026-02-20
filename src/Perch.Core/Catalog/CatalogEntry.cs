@@ -42,7 +42,8 @@ public sealed record InstallDefinition(
     string? Winget,
     string? Choco,
     string? DotnetTool = null,
-    string? NodePackage = null);
+    string? NodePackage = null,
+    string? Detect = null);
 
 public sealed record CatalogConfigDefinition(
     ImmutableArray<CatalogConfigLink> Links,
