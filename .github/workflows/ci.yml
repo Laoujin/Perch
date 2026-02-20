@@ -26,6 +26,9 @@ jobs:
       - name: Test
         run: dotnet test Perch.CrossPlatform.slnx --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage"
 
+      - name: Check coverage
+        run: python scripts/check-coverage.py linux
+
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
@@ -51,6 +54,9 @@ jobs:
 
       - name: Test
         run: dotnet test Perch.slnx --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --filter "FullyQualifiedName!~Perch.SmokeTests"
+
+      - name: Check coverage
+        run: python scripts/check-coverage.py windows
 
       - name: Integration smoke test
         run: pwsh tests/integration/smoke-test.ps1
