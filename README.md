@@ -4,6 +4,20 @@ Cross-platform dotfiles and application settings manager. Symlink-first -- chang
 
 Perch manages symlinks, registry entries, VS Code extensions, PowerShell modules, global npm packages, and system package installation across Windows, Linux, and macOS.
 
+## Bootstrap (New Machine)
+
+```powershell
+# One-liner from a fresh Windows machine (run as admin):
+irm https://raw.githubusercontent.com/Laoujin/perch/master/bootstrap.ps1 | iex
+
+# Or with options:
+.\bootstrap.ps1 -SkipDeploy                     # Clone & build only
+.\bootstrap.ps1 -ConfigDir D:\my-config          # Custom paths
+.\bootstrap.ps1 -ConfigRepo YourOrg/your-config  # Different config repo
+```
+
+Installs .NET 10 SDK and git if missing, clones Perch and your config repo, builds, and runs the first deploy. Idempotent -- safe to re-run.
+
 ## Quick Start
 
 ```bash
