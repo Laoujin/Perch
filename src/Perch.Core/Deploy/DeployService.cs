@@ -172,12 +172,31 @@ public sealed class DeployService : IDeployService
             return "Skipped (excluded by machine profile)";
         }
 
-        if (module.Install?.Winget != null && !installedPackages.Contains(module.Install.Winget))
+        if (module.Install?.Winget != null && !IsAppInstalled(module.Install.Winget, installedPackages))
         {
             return "Skipped (not installed)";
         }
 
         return null;
+    }
+
+    private static bool IsAppInstalled(string wingetId, IReadOnlySet<string> installedPackages)
+    {
+        // Direct match on winget ID
+        if (installedPackages.Contains(wingetId))
+            return true;
+
+        // Fallback: check if app name matches (for apps installed outside winget)
+        // e.g., "Git.Git" -> check for "Git" in installed packages
+        int dotIndex = wingetId.IndexOf('.');
+        if (dotIndex > 0)
+        {
+            string appName = wingetId[..dotIndex];
+            if (installedPackages.Contains(appName))
+                return true;
+        }
+
+        return false;
     }
 
     private static bool ReportDiscoveryErrors(DiscoveryResult discovery, IProgress<DeployResult>? progress)
