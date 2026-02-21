@@ -413,7 +413,7 @@ public sealed class DeployService : IDeployService
 
             if (!File.Exists(sourcePath) && !Directory.Exists(sourcePath))
             {
-                progress?.Report(new DeployResult(module.DisplayName, sourcePath, expandedTarget, ResultLevel.Ok,
+                progress?.Report(new DeployResult(module.DisplayName, sourcePath, expandedTarget, ResultLevel.Warning,
                     "Source not found (skipped)"));
                 continue;
             }

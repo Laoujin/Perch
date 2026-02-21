@@ -1831,7 +1831,7 @@ public sealed class DeployServiceTests
             Assert.Multiple(() =>
             {
                 Assert.That(exitCode, Is.EqualTo(0));
-                Assert.That(_reported.Any(r => r.Level == ResultLevel.Ok && r.Message.Contains("Source not found")), Is.True);
+                Assert.That(_reported.Any(r => r.Level == ResultLevel.Warning && r.Message.Contains("Source not found")), Is.True);
             });
         }
         finally
