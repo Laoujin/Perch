@@ -86,14 +86,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<CatalogParser>();
         services.AddSingleton(new System.Net.Http.HttpClient());
         services.AddSingleton<ICatalogFetcher, SettingsAwareCatalogFetcher>();
-        services.AddSingleton<ICatalogCache>(sp =>
-        {
-            var settings = sp.GetRequiredService<ISettingsProvider>().LoadAsync().GetAwaiter().GetResult();
-            if (settings.DisableGalleryCache)
-                return new NoOpCatalogCache();
-            return new FileCatalogCache(
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "perch", "cache", "catalog"));
-        });
+        services.AddSingleton<ICatalogCache, NoOpCatalogCache>();
         services.AddSingleton<ICatalogService, CatalogService>();
         services.AddSingleton<IGalleryOverlayService, GalleryOverlayService>();
         services.AddSingleton<ICertificateScanner, CertificateScanner>();
