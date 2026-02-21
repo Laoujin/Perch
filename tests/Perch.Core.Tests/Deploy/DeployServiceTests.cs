@@ -79,6 +79,18 @@ public sealed class DeployServiceTests
         _progress = new SynchronousProgress<DeployResult>(r => _reported.Add(r));
     }
 
+    private static void CreateSourceFile(string modulePath, string fileName)
+    {
+        string filePath = Path.Combine(modulePath, fileName);
+        string? dir = Path.GetDirectoryName(filePath);
+        if (dir != null && !Directory.Exists(dir))
+        {
+            Directory.CreateDirectory(dir);
+        }
+
+        File.WriteAllText(filePath, "test content");
+    }
+
     [Test]
     public async Task DeployAsync_MultipleModules_ProcessesAll()
     {
@@ -88,6 +100,8 @@ public sealed class DeployServiceTests
         string moduleBPath = Path.Combine(tempDir, "moduleB");
         Directory.CreateDirectory(moduleAPath);
         Directory.CreateDirectory(moduleBPath);
+        CreateSourceFile(moduleAPath, "file.txt");
+        CreateSourceFile(moduleBPath, "file.txt");
         string targetDir = Path.Combine(tempDir, "targets");
         Directory.CreateDirectory(targetDir);
 
@@ -123,6 +137,8 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        CreateSourceFile(modulePath, "file.txt");
+        CreateSourceFile(modulePath, "file2.txt");
 
         try
         {
@@ -176,6 +192,7 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        CreateSourceFile(modulePath, "file.txt");
         string targetDir = Path.Combine(tempDir, "expanded");
         Directory.CreateDirectory(targetDir);
         Environment.SetEnvironmentVariable("PERCH_TEST_DEPLOY", targetDir);
@@ -207,6 +224,7 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "vscode");
         Directory.CreateDirectory(modulePath);
+        CreateSourceFile(modulePath, "settings.json");
         string targetDir = Path.Combine(tempDir, "target");
         Directory.CreateDirectory(targetDir);
 
@@ -267,6 +285,7 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        CreateSourceFile(modulePath, "f.txt");
         string targetDir = Path.Combine(tempDir, "target");
         Directory.CreateDirectory(targetDir);
 
@@ -296,6 +315,7 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        CreateSourceFile(modulePath, "f.txt");
         string targetDir = Path.Combine(tempDir, "target");
         Directory.CreateDirectory(targetDir);
 
@@ -324,6 +344,7 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        CreateSourceFile(modulePath, "f.txt");
         string targetDir = Path.Combine(tempDir, "target");
         Directory.CreateDirectory(targetDir);
 
@@ -396,6 +417,7 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        CreateSourceFile(modulePath, "settings.json");
         string targetDir1 = Path.Combine(tempDir, "target1");
         string targetDir2 = Path.Combine(tempDir, "target2");
         Directory.CreateDirectory(targetDir1);
@@ -431,6 +453,7 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        CreateSourceFile(modulePath, "file.txt");
         string targetDir = Path.Combine(tempDir, "target");
         Directory.CreateDirectory(targetDir);
 
@@ -523,6 +546,7 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        CreateSourceFile(modulePath, "settings.json");
 
         try
         {
@@ -659,6 +683,7 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        CreateSourceFile(modulePath, "file.txt");
         string targetDir = Path.Combine(tempDir, "target");
         Directory.CreateDirectory(targetDir);
 
@@ -691,6 +716,8 @@ public sealed class DeployServiceTests
         string modBPath = Path.Combine(tempDir, "steam");
         Directory.CreateDirectory(modAPath);
         Directory.CreateDirectory(modBPath);
+        CreateSourceFile(modAPath, "f");
+        CreateSourceFile(modBPath, "f");
         string targetDir = Path.Combine(tempDir, "target");
         Directory.CreateDirectory(targetDir);
 
@@ -728,6 +755,8 @@ public sealed class DeployServiceTests
         string modBPath = Path.Combine(tempDir, "steam");
         Directory.CreateDirectory(modAPath);
         Directory.CreateDirectory(modBPath);
+        CreateSourceFile(modAPath, "f");
+        CreateSourceFile(modBPath, "f");
         string targetDir = Path.Combine(tempDir, "target");
         Directory.CreateDirectory(targetDir);
 
@@ -765,6 +794,8 @@ public sealed class DeployServiceTests
         string modBPath = Path.Combine(tempDir, "steam");
         Directory.CreateDirectory(modAPath);
         Directory.CreateDirectory(modBPath);
+        CreateSourceFile(modAPath, "f");
+        CreateSourceFile(modBPath, "f");
         string targetDir = Path.Combine(tempDir, "target");
         Directory.CreateDirectory(targetDir);
 
@@ -1198,6 +1229,7 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        CreateSourceFile(modulePath, "file.txt");
 
         try
         {
@@ -1301,6 +1333,7 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        CreateSourceFile(modulePath, "f.txt");
         string targetDir = Path.Combine(tempDir, "target");
         Directory.CreateDirectory(targetDir);
 
@@ -1337,6 +1370,7 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        CreateSourceFile(modulePath, "f.txt");
         string targetDir = Path.Combine(tempDir, "target");
         Directory.CreateDirectory(targetDir);
 
@@ -1796,8 +1830,8 @@ public sealed class DeployServiceTests
 
             Assert.Multiple(() =>
             {
-                Assert.That(exitCode, Is.EqualTo(1));
-                Assert.That(_reported.Any(r => r.Level == ResultLevel.Error && r.Message.Contains("Template source file not found")), Is.True);
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(_reported.Any(r => r.Level == ResultLevel.Ok && r.Message.Contains("Source not found")), Is.True);
             });
         }
         finally
@@ -1813,6 +1847,7 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        CreateSourceFile(modulePath, "file.txt");
         string targetDir = Path.Combine(tempDir, "resolved");
         Directory.CreateDirectory(targetDir);
 

@@ -411,6 +411,13 @@ public sealed class DeployService : IDeployService
             string expandedTarget = EnvironmentExpander.Expand(target, variables);
             string sourcePath = Path.GetFullPath(Path.Combine(module.ModulePath, link.Source));
 
+            if (!File.Exists(sourcePath) && !Directory.Exists(sourcePath))
+            {
+                progress?.Report(new DeployResult(module.DisplayName, sourcePath, expandedTarget, ResultLevel.Ok,
+                    "Source not found (skipped)"));
+                continue;
+            }
+
             IReadOnlyList<string> resolvedTargets = _globResolver.Resolve(expandedTarget);
             if (resolvedTargets.Count == 0)
             {

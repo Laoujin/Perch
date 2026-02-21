@@ -212,11 +212,13 @@ public sealed class DeployCommand : AsyncCommand<DeployCommand.Settings>
                 _console.MarkupLine($"[bold]{module.DisplayName.EscapeMarkup()}[/]");
                 if (preview.Count > 0)
                 {
-                    var previewTable = new Table().AddColumn("Action").AddColumn("Details");
+                    var previewTable = new Table().AddColumn("Action").AddColumn("Source").AddColumn("Details");
                     foreach (DeployResult r in preview)
                     {
+                        string source = string.IsNullOrEmpty(r.SourcePath) ? "" : Path.GetFileName(r.SourcePath);
                         previewTable.AddRow(
                             $"[{GetColor(r.Level)}]{r.Level}[/]",
+                            source.EscapeMarkup(),
                             r.Message.EscapeMarkup());
                     }
                     _console.Write(previewTable);
