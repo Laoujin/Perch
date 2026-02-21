@@ -12,17 +12,53 @@ public sealed class GalleryOverlayService : IGalleryOverlayService
         var links = MergeLinks(manifest.Links, gallery.Config?.Links ?? ImmutableArray<CatalogConfigLink>.Empty);
         var cleanFilter = manifest.CleanFilter ?? ConvertCleanFilter(gallery.Id, gallery.Config?.CleanFilter);
         var vscodeExtensions = MergeExtensions(manifest.VscodeExtensions, gallery.Extensions);
-        string displayName = manifest.DisplayName == manifest.ModuleName && gallery.DisplayName != null
-            ? gallery.DisplayName
-            : manifest.DisplayName;
+        var platforms = MergePlatforms(manifest.Platforms, gallery.Os);
+        string displayName = MergeDisplayName(manifest, gallery);
 
         return manifest with
         {
             Links = links,
             CleanFilter = cleanFilter,
             VscodeExtensions = vscodeExtensions,
+            Platforms = platforms,
             DisplayName = displayName,
         };
+    }
+
+    private static ImmutableArray<Platform> MergePlatforms(
+        ImmutableArray<Platform> manifestPlatforms,
+        ImmutableArray<string> galleryOs)
+    {
+        if (!manifestPlatforms.IsDefaultOrEmpty)
+        {
+            return manifestPlatforms;
+        }
+
+        if (galleryOs.IsDefaultOrEmpty)
+        {
+            return ImmutableArray<Platform>.Empty;
+        }
+
+        var platforms = new List<Platform>();
+        foreach (string os in galleryOs)
+        {
+            if (Enum.TryParse<Platform>(os, ignoreCase: true, out var platform))
+            {
+                platforms.Add(platform);
+            }
+        }
+
+        return platforms.ToImmutableArray();
+    }
+
+    private static string MergeDisplayName(AppManifest manifest, CatalogEntry gallery)
+    {
+        if (manifest.DisplayName != manifest.ModuleName)
+        {
+            return manifest.DisplayName;
+        }
+
+        return gallery.DisplayName ?? gallery.Name ?? manifest.DisplayName;
     }
 
     private static ImmutableArray<LinkEntry> MergeLinks(
