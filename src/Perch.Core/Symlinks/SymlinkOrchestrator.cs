@@ -22,10 +22,17 @@ public sealed class SymlinkOrchestrator
         try
         {
             string? targetDir = Path.GetDirectoryName(targetPath);
+            bool createdParentDir = false;
             if (targetDir != null && !Directory.Exists(targetDir))
             {
-                return new DeployResult(moduleName, sourcePath, targetPath, ResultLevel.Error,
-                    $"Parent directory does not exist: {targetDir}");
+                if (dryRun)
+                {
+                    return new DeployResult(moduleName, sourcePath, targetPath, ResultLevel.Ok,
+                        $"Would create parent directory {targetDir} and create link");
+                }
+
+                Directory.CreateDirectory(targetDir);
+                createdParentDir = true;
             }
 
             if (_symlinkProvider.IsSymlink(targetPath))
@@ -65,6 +72,12 @@ public sealed class SymlinkOrchestrator
             }
 
             CreateLink(targetPath, sourcePath, linkType);
+            if (createdParentDir)
+            {
+                return new DeployResult(moduleName, sourcePath, targetPath, ResultLevel.Warning,
+                    $"Created parent directory {targetDir}, created link");
+            }
+
             return new DeployResult(moduleName, sourcePath, targetPath, ResultLevel.Ok, "Created link");
         }
         catch (Exception ex) when (IsSymlinkPrivilegeError(ex))

@@ -123,15 +123,29 @@ public sealed class SymlinkOrchestratorTests
     }
 
     [Test]
-    public void ProcessLink_ParentDirectoryMissing_ReturnsError()
+    public void ProcessLink_ParentDirectoryMissing_CreatesDirectoryAndLink()
     {
-        string target = Path.Combine(Path.GetTempPath(), $"perch-nonexistent-{Guid.NewGuid():N}", "sub", "settings.json");
+        string tempDir = Path.Combine(Path.GetTempPath(), $"perch-nonexistent-{Guid.NewGuid():N}");
+        string target = Path.Combine(tempDir, "sub", "settings.json");
         string source = "C:\\repo\\vscode\\settings.json";
 
-        DeployResult result = _orchestrator.ProcessLink("vscode", source, target, LinkType.Symlink);
+        try
+        {
+            DeployResult result = _orchestrator.ProcessLink("vscode", source, target, LinkType.Symlink);
 
-        Assert.That(result.Level, Is.EqualTo(ResultLevel.Error));
-        Assert.That(result.Message, Does.Contain("Parent directory"));
+            Assert.Multiple(() =>
+            {
+                Assert.That(result.Level, Is.EqualTo(ResultLevel.Warning));
+                Assert.That(result.Message, Does.Contain("Created parent directory"));
+            });
+            Assert.That(Directory.Exists(Path.GetDirectoryName(target)), Is.True);
+            _symlinkProvider.Received(1).CreateSymlink(target, source);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, true);
+        }
     }
 
     [Test]
@@ -201,6 +215,23 @@ public sealed class SymlinkOrchestratorTests
         {
             Directory.Delete(tempDir, true);
         }
+    }
+
+    [Test]
+    public void ProcessLink_DryRun_ParentDirectoryMissing_ReportsWouldCreate()
+    {
+        string target = Path.Combine(Path.GetTempPath(), $"perch-nonexistent-{Guid.NewGuid():N}", "sub", "settings.json");
+        string source = "C:\\repo\\vscode\\settings.json";
+
+        DeployResult result = _orchestrator.ProcessLink("vscode", source, target, LinkType.Symlink, dryRun: true);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Level, Is.EqualTo(ResultLevel.Ok));
+            Assert.That(result.Message, Does.Contain("Would create parent directory"));
+        });
+        Assert.That(Directory.Exists(Path.GetDirectoryName(target)), Is.False);
+        _symlinkProvider.DidNotReceive().CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Test]

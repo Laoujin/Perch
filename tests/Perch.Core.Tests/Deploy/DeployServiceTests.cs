@@ -144,15 +144,21 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
         CreateSourceFile(modulePath, "file.txt");
         CreateSourceFile(modulePath, "file2.txt");
 
         try
         {
+            string failTarget = Path.Combine(targetDir, "a.txt");
+            _symlinkProvider.When(x => x.CreateSymlink(failTarget, Arg.Any<string>()))
+                .Do(_ => throw new IOException("Simulated failure"));
+
             var modules = ImmutableArray.Create(
                 new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
-                    new LinkEntry("file.txt", Path.Combine(tempDir, "nonexistent", "sub", "a.txt"), LinkType.Symlink),
-                    new LinkEntry("file2.txt", Path.Combine(tempDir, "a.txt"), LinkType.Symlink))));
+                    new LinkEntry("file.txt", failTarget, LinkType.Symlink),
+                    new LinkEntry("file2.txt", Path.Combine(targetDir, "b.txt"), LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
 
@@ -1236,13 +1242,19 @@ public sealed class DeployServiceTests
         Directory.CreateDirectory(tempDir);
         string modulePath = Path.Combine(tempDir, "mod");
         Directory.CreateDirectory(modulePath);
+        string targetDir = Path.Combine(tempDir, "target");
+        Directory.CreateDirectory(targetDir);
         CreateSourceFile(modulePath, "file.txt");
 
         try
         {
+            string failTarget = Path.Combine(targetDir, "a.txt");
+            _symlinkProvider.When(x => x.CreateSymlink(failTarget, Arg.Any<string>()))
+                .Do(_ => throw new IOException("Simulated failure"));
+
             var modules = ImmutableArray.Create(
                 new AppModule("mod", "Module", true, modulePath, ImmutableArray<Platform>.Empty, ImmutableArray.Create(
-                    new LinkEntry("file.txt", Path.Combine(tempDir, "nonexistent", "sub", "a.txt"), LinkType.Symlink))));
+                    new LinkEntry("file.txt", failTarget, LinkType.Symlink))));
             _discoveryService.DiscoverAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
                 .Returns(new DiscoveryResult(modules, ImmutableArray<string>.Empty));
 
