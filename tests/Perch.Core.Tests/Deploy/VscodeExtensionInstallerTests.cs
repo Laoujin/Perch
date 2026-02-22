@@ -1,5 +1,6 @@
 using Perch.Core.Deploy;
 using Perch.Core.Packages;
+using Perch.Core.Scanner;
 
 namespace Perch.Core.Tests.Deploy;
 
@@ -7,13 +8,30 @@ namespace Perch.Core.Tests.Deploy;
 public sealed class VscodeExtensionInstallerTests
 {
     private IProcessRunner _processRunner = null!;
+    private IVsCodeService _vsCodeService = null!;
     private VscodeExtensionInstaller _installer = null!;
 
     [SetUp]
     public void SetUp()
     {
         _processRunner = Substitute.For<IProcessRunner>();
-        _installer = new VscodeExtensionInstaller(_processRunner);
+        _vsCodeService = Substitute.For<IVsCodeService>();
+        _vsCodeService.GetCodePath().Returns("code");
+        _installer = new VscodeExtensionInstaller(_processRunner, _vsCodeService);
+    }
+
+    [Test]
+    public async Task InstallAsync_VsCodeNotFound_ReturnsError()
+    {
+        _vsCodeService.GetCodePath().Returns((string?)null);
+
+        DeployResult result = await _installer.InstallAsync("VS Code", "ms-dotnettools.csharp", dryRun: false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Level, Is.EqualTo(ResultLevel.Error));
+            Assert.That(result.Message, Does.Contain("VS Code not found"));
+        });
     }
 
     [Test]

@@ -15,6 +15,8 @@ public class VsCodeService : IVsCodeService
 
     public bool IsInstalled => FindCodePath() != null;
 
+    public string? GetCodePath() => FindCodePath();
+
     public async Task<ImmutableArray<DetectedVsCodeExtension>> GetInstalledExtensionsAsync(CancellationToken cancellationToken = default)
     {
         string? codePath = FindCodePath();
