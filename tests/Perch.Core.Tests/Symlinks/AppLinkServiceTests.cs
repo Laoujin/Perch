@@ -172,7 +172,7 @@ public sealed class AppLinkServiceTests
             Assert.Multiple(() =>
             {
                 Assert.That(results, Has.Count.EqualTo(1));
-                Assert.That(results[0].Level, Is.EqualTo(ResultLevel.Ok));
+                Assert.That(results[0].Level, Is.EqualTo(ResultLevel.Skipped));
                 Assert.That(results[0].Message, Does.Contain("Not a symlink"));
             });
         }
@@ -231,7 +231,7 @@ public sealed class AppLinkServiceTests
             Assert.Multiple(() =>
             {
                 Assert.That(results, Has.Count.EqualTo(1));
-                Assert.That(results[0].Level, Is.EqualTo(ResultLevel.Ok));
+                Assert.That(results[0].Level, Is.EqualTo(ResultLevel.Synced));
                 Assert.That(results[0].Message, Does.Contain("Already correct"));
             });
             _symlinkProvider.DidNotReceive().CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
@@ -259,7 +259,7 @@ public sealed class AppLinkServiceTests
             Assert.Multiple(() =>
             {
                 Assert.That(results, Has.Count.EqualTo(1));
-                Assert.That(results[0].Level, Is.EqualTo(ResultLevel.Ok));
+                Assert.That(results[0].Level, Is.EqualTo(ResultLevel.Skipped));
                 Assert.That(results[0].Message, Does.Contain("Not a symlink"));
             });
         }

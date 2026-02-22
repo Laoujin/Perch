@@ -94,7 +94,7 @@ public sealed class AppLinkService : IAppLinkService
         try
         {
             if (!_symlinkProvider.IsSymlink(targetPath))
-                return new DeployResult(moduleName, source, targetPath, ResultLevel.Ok, "Not a symlink (skipped)");
+                return new DeployResult(moduleName, source, targetPath, ResultLevel.Skipped, "Not a symlink");
 
             File.Delete(targetPath);
             return new DeployResult(moduleName, source, targetPath, ResultLevel.Ok, "Unlinked");
@@ -110,11 +110,11 @@ public sealed class AppLinkService : IAppLinkService
         try
         {
             if (!_symlinkProvider.IsSymlink(targetPath))
-                return new DeployResult(moduleName, expectedSource, targetPath, ResultLevel.Ok, "Not a symlink (skipped)");
+                return new DeployResult(moduleName, expectedSource, targetPath, ResultLevel.Skipped, "Not a symlink");
 
             var currentTarget = _symlinkProvider.GetSymlinkTarget(targetPath);
             if (string.Equals(currentTarget, expectedSource, StringComparison.OrdinalIgnoreCase))
-                return new DeployResult(moduleName, expectedSource, targetPath, ResultLevel.Ok, "Already correct (skipped)");
+                return new DeployResult(moduleName, expectedSource, targetPath, ResultLevel.Synced, "Already correct");
 
             File.Delete(targetPath);
             _symlinkProvider.CreateSymlink(targetPath, expectedSource);

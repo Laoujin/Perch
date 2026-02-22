@@ -413,7 +413,8 @@ public sealed class DeployServiceTests
             {
                 Assert.That(exitCode, Is.EqualTo(0));
                 Assert.That(actions, Has.Count.EqualTo(1));
-                Assert.That(actions[0].Message, Does.Contain("Skipped"));
+                Assert.That(actions[0].Level, Is.EqualTo(ResultLevel.Skipped));
+                Assert.That(actions[0].Message, Does.Contain("No target for"));
             });
             _symlinkProvider.DidNotReceive().CreateSymlink(Arg.Any<string>(), Arg.Any<string>());
         }

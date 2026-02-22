@@ -564,8 +564,8 @@ public sealed class DeployService : IDeployService
             string? target = link.GetTargetForPlatform(currentPlatform);
             if (target == null)
             {
-                progress?.Report(new DeployResult(module.DisplayName, link.Source, "", ResultLevel.Ok,
-                    $"Skipped (no target for {currentPlatform})"));
+                progress?.Report(new DeployResult(module.DisplayName, link.Source, "", ResultLevel.Skipped,
+                    $"No target for {currentPlatform}"));
                 continue;
             }
 
