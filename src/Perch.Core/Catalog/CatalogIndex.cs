@@ -14,5 +14,5 @@ public sealed record CatalogIndexEntry(
     ImmutableArray<string> Tags,
     CatalogKind Kind = CatalogKind.App,
     ImmutableArray<string> Profiles = default,
-    bool Hidden = false,
-    string? Path = null);
+    string? Path = null,
+    int? Sort = null);

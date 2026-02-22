@@ -73,7 +73,6 @@
                                 IsManaged="{Binding IsManaged}"
                                 ActionButtonText="{Binding ActionButtonText}"
                                 IsActionAdd="{Binding IsActionAdd}"
-                                IsSuggested="{Binding IsSuggested}"
                                 KindBadge="{Binding KindBadge}"
                                 GitHubStarsFormatted="{Binding GitHubStarsFormatted}"
                                 IsHot="{Binding IsHot}"

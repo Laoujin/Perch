@@ -29,12 +29,12 @@ public sealed record CatalogEntry(
     ImmutableArray<AppOwnedTweak> Tweaks = default,
     ImmutableArray<string> Profiles = default,
     ImmutableArray<string> Os = default,
-    bool Hidden = false,
     string? License = null,
     ImmutableArray<string> Alternatives = default,
     ImmutableArray<string> Suggests = default,
     ImmutableArray<string> Requires = default,
-    bool Hot = false);
+    bool Hot = false,
+    int? Sort = null);
 
 public sealed record CatalogLinks(string? Website, string? Docs, string? GitHub);
 
@@ -85,6 +85,5 @@ public sealed record AppOwnedTweak(
             Registry,
             Script,
             UndoScript,
-            Hidden: owner.Hidden,
             License: owner.License);
 }

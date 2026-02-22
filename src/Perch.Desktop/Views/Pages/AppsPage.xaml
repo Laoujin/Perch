@@ -118,17 +118,6 @@
                                                     <Run Text=" detected" Foreground="{StaticResource InfoBrush}" />
                                                 </TextBlock>
                                             </Border>
-                                            <Border
-                                                Background="{StaticResource SuggestedLightSubtleBrush}"
-                                                CornerRadius="8"
-                                                Padding="6,2"
-                                                Margin="0,0,6,0"
-                                                Visibility="{Binding SuggestedCount, Converter={StaticResource CountToVisibilityConverter}}">
-                                                <TextBlock FontSize="10">
-                                                    <Run Text="{Binding SuggestedCount, Mode=OneWay}" Foreground="{StaticResource SuggestedLightBrush}" FontWeight="SemiBold" />
-                                                    <Run Text=" suggested" Foreground="{StaticResource SuggestedLightBrush}" />
-                                                </TextBlock>
-                                            </Border>
                                             <TextBlock FontSize="11" Foreground="{StaticResource TextMutedBrush}">
                                                 <Run Text="{Binding ItemCount, Mode=OneWay}" />
                                                 <Run Text=" apps" />
@@ -198,7 +187,6 @@
                                                                 IsManaged="{Binding IsManaged}"
                                                                 ActionButtonText="{Binding ActionButtonText}"
                                                                 IsActionAdd="{Binding IsActionAdd}"
-                                                                IsSuggested="{Binding IsSuggested}"
                                                                 KindBadge="{Binding KindBadge}"
                                                                 GitHubStarsFormatted="{Binding GitHubStarsFormatted}"
                                                                 IsHot="{Binding IsHot}"

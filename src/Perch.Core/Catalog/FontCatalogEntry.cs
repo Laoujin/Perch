@@ -12,5 +12,5 @@ public sealed record FontCatalogEntry(
     string? PreviewText,
     InstallDefinition? Install,
     ImmutableArray<string> Profiles = default,
-    bool Hidden = false,
-    string? License = null);
+    string? License = null,
+    int? Sort = null);

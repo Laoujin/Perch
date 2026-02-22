@@ -40,7 +40,7 @@ public sealed class ModelTests
         string? license = null,
         ImmutableArray<string> tags = default) =>
         new(id, name, displayName, category, tags.IsDefault ? [] : tags, description, null, links, install, config, extensions,
-            kind, tweaks, default, os, false, license, alternatives, suggests, requires);
+            kind, tweaks, default, os, license, alternatives, suggests, requires);
 
     [TestFixture]
     [Platform("Win")]
@@ -367,19 +367,6 @@ public sealed class ModelTests
             Assert.That(model.ActionButtonText, Is.EqualTo("Remove from Perch"));
         }
 
-        [Test]
-        public void IsSuggested_True()
-        {
-            var model = new AppCardModel(MakeEntry(), CardTier.Suggested, CardStatus.Unmanaged);
-            Assert.That(model.IsSuggested, Is.True);
-        }
-
-        [Test]
-        public void IsSuggested_False()
-        {
-            var model = new AppCardModel(MakeEntry(), CardTier.Other, CardStatus.Unmanaged);
-            Assert.That(model.IsSuggested, Is.False);
-        }
 
         [TestCase(CatalogKind.CliTool, "cli-tool")]
         [TestCase(CatalogKind.Runtime, "runtime")]
@@ -1106,7 +1093,7 @@ public sealed class ModelTests
         [Test]
         public void Constructor_SetsProperties()
         {
-            var model = new AppCategoryCardModel("Development", "Development", 10, 5, 2, 1);
+            var model = new AppCategoryCardModel("Development", "Development", 10, 5, 2);
 
             Assert.Multiple(() =>
             {
@@ -1115,7 +1102,6 @@ public sealed class ModelTests
                 Assert.That(model.ItemCount, Is.EqualTo(10));
                 Assert.That(model.SelectedCount, Is.EqualTo(5));
                 Assert.That(model.DetectedCount, Is.EqualTo(2));
-                Assert.That(model.SuggestedCount, Is.EqualTo(1));
             });
         }
 

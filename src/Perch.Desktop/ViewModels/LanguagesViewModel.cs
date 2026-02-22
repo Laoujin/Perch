@@ -122,8 +122,7 @@ public sealed partial class LanguagesViewModel : GalleryViewModelBase
         }
 
         var runtimes = allApps
-            .Where(a => a.CatalogEntry.Kind == CatalogKind.Runtime
-                && !a.CatalogEntry.Hidden)
+            .Where(a => a.CatalogEntry.Kind == CatalogKind.Runtime)
             .ToList();
 
         var ecosystems = runtimes.Select(runtime =>

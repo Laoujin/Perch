@@ -344,27 +344,7 @@ public sealed class CatalogParserTests
     }
 
     [Test]
-    public void ParseApp_WithKindDotfile_SetsKindToDotfile()
-    {
-        string yaml = """
-            name: Git
-            kind: dotfile
-            category: Development/Version Control
-            config:
-              links:
-                - source: .gitconfig
-                  target:
-                    windows: "%USERPROFILE%/.gitconfig"
-            """;
-
-        var result = _parser.ParseApp(yaml, "git");
-
-        Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value!.Kind, Is.EqualTo(CatalogKind.Dotfile));
-    }
-
-    [Test]
-    public void ParseApp_WithoutKind_DefaultsToApp()
+    public void ParseApp_WithoutCliTool_DefaultsToApp()
     {
         string yaml = """
             name: TestApp
@@ -382,18 +362,21 @@ public sealed class CatalogParserTests
     }
 
     [Test]
-    public void ParseIndex_WithKindDotfile_SetsKindOnIndexEntry()
+    public void ParseIndex_DeriveKindFromCategory()
     {
         string yaml = """
             apps:
-              - id: git
-                name: Git
-                category: Development
-                tags: [vcs]
-                kind: dotfile
+              - id: bash
+                name: Bash
+                category: Terminal/Shells/Bash
+                tags: [shell]
+              - id: ripgrep
+                name: ripgrep
+                category: Terminal/CLI Tools
+                cli-tool: true
               - id: vscode
                 name: Visual Studio Code
-                category: Development
+                category: Development/IDEs
                 tags: [editor]
             """;
 
@@ -404,7 +387,8 @@ public sealed class CatalogParserTests
         Assert.Multiple(() =>
         {
             Assert.That(index.Apps[0].Kind, Is.EqualTo(CatalogKind.Dotfile));
-            Assert.That(index.Apps[1].Kind, Is.EqualTo(CatalogKind.App));
+            Assert.That(index.Apps[1].Kind, Is.EqualTo(CatalogKind.CliTool));
+            Assert.That(index.Apps[2].Kind, Is.EqualTo(CatalogKind.App));
         });
     }
 
@@ -743,32 +727,8 @@ public sealed class CatalogParserTests
             Assert.That(tweak.Reversible, Is.True);
             Assert.That(tweak.Profiles, Is.EqualTo(new[] { "developer" }));
             Assert.That(tweak.Registry, Has.Length.EqualTo(1));
-            Assert.That(tweak.Hidden, Is.False);
             Assert.That(tweak.License, Is.EqualTo("GPL-2.0"));
         });
-    }
-
-    [Test]
-    public void AppOwnedTweak_ToTweakCatalogEntry_InheritsHiddenFromOwner()
-    {
-        string yaml = """
-            name: HiddenApp
-            category: Test
-            hidden: true
-            tweaks:
-              - id: test-tweak
-                name: Test
-                registry:
-                  - key: HKCU\Software\Test
-                    name: Val
-                    value: 1
-                    type: dword
-            """;
-
-        var result = _parser.ParseApp(yaml, "hidden-app");
-        var tweak = result.Value!.Tweaks[0].ToTweakCatalogEntry(result.Value!);
-
-        Assert.That(tweak.Hidden, Is.True);
     }
 
     [Test]
@@ -829,7 +789,6 @@ public sealed class CatalogParserTests
             Assert.That(entry.Kind, Is.EqualTo(CatalogKind.App));
             Assert.That(entry.Profiles, Is.EqualTo(new[] { "developer", "power-user" }));
             Assert.That(entry.Os, Is.EqualTo(new[] { "windows", "linux", "macos" }));
-            Assert.That(entry.Hidden, Is.False);
             Assert.That(entry.License, Is.EqualTo("MIT"));
             Assert.That(entry.Alternatives, Is.EqualTo(new[] { "sublimetext", "notepadplusplus" }));
             Assert.That(entry.Suggests, Is.EqualTo(new[] { "git", "windows-terminal" }));
@@ -853,7 +812,6 @@ public sealed class CatalogParserTests
         {
             Assert.That(entry.Profiles, Is.Empty);
             Assert.That(entry.Os, Is.Empty);
-            Assert.That(entry.Hidden, Is.False);
             Assert.That(entry.License, Is.Null);
             Assert.That(entry.Alternatives, Is.Empty);
             Assert.That(entry.Suggests, Is.Empty);
@@ -862,40 +820,60 @@ public sealed class CatalogParserTests
     }
 
     [Test]
-    public void ParseApp_WithHiddenTrue_SetsHidden()
+    public void ParseApp_WithCliToolTrue_SetsCliToolKind()
     {
         string yaml = """
-            name: PuTTY
-            category: Networking
-            hidden: true
+            name: TestCli
+            category: Terminal/CLI Tools
+            cli-tool: true
             """;
 
-        var result = _parser.ParseApp(yaml, "putty");
+        var result = _parser.ParseApp(yaml, "testcli");
 
         Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value!.Hidden, Is.True);
+        Assert.That(result.Value!.Kind, Is.EqualTo(CatalogKind.CliTool));
     }
 
-    [TestCase("cli-tool", CatalogKind.CliTool)]
-    [TestCase("runtime", CatalogKind.Runtime)]
-    [TestCase("dotfile", CatalogKind.Dotfile)]
-    [TestCase("app", CatalogKind.App)]
-    [TestCase(null, CatalogKind.App)]
-    public void ParseApp_KindValues_ParseCorrectly(string? kind, CatalogKind expected)
+    [Test]
+    public void ParseApp_WithRuntimeCategory_SetsRuntimeKind()
     {
-        string yaml = kind != null
-            ? $"""
-                name: TestApp
-                kind: {kind}
-                """
-            : """
-                name: TestApp
-                """;
+        string yaml = """
+            name: .NET SDK
+            category: Languages/.NET/Runtimes
+            """;
+
+        var result = _parser.ParseApp(yaml, "dotnet-sdk");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.Kind, Is.EqualTo(CatalogKind.Runtime));
+    }
+
+    [Test]
+    public void ParseApp_WithShellCategory_SetsDotfileKind()
+    {
+        string yaml = """
+            name: Bash
+            category: Terminal/Shells/Bash
+            """;
+
+        var result = _parser.ParseApp(yaml, "bash");
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.Kind, Is.EqualTo(CatalogKind.Dotfile));
+    }
+
+    [Test]
+    public void ParseApp_WithRegularCategory_SetsAppKind()
+    {
+        string yaml = """
+            name: TestApp
+            category: Development/IDEs
+            """;
 
         var result = _parser.ParseApp(yaml, "testapp");
 
         Assert.That(result.IsSuccess, Is.True);
-        Assert.That(result.Value!.Kind, Is.EqualTo(expected));
+        Assert.That(result.Value!.Kind, Is.EqualTo(CatalogKind.App));
     }
 
     [Test]
@@ -946,7 +924,6 @@ public sealed class CatalogParserTests
             category: Fonts/Programming
             tags: [monospace, ligatures]
             profiles: [developer]
-            hidden: false
             license: OFL-1.1
             install:
               choco: firacode
@@ -959,7 +936,6 @@ public sealed class CatalogParserTests
         Assert.Multiple(() =>
         {
             Assert.That(entry.Profiles, Is.EqualTo(new[] { "developer" }));
-            Assert.That(entry.Hidden, Is.False);
             Assert.That(entry.License, Is.EqualTo("OFL-1.1"));
         });
     }
@@ -973,7 +949,6 @@ public sealed class CatalogParserTests
             tags: [theme]
             reversible: true
             profiles: [developer, power-user]
-            hidden: false
             license: null
             alternatives: [light-mode]
             windows-versions: [10, 11]
@@ -992,7 +967,6 @@ public sealed class CatalogParserTests
         {
             Assert.That(entry.Alternatives, Is.EqualTo(new[] { "light-mode" }));
             Assert.That(entry.WindowsVersions, Is.EqualTo(new[] { 10, 11 }));
-            Assert.That(entry.Hidden, Is.False);
         });
     }
 
@@ -1377,7 +1351,7 @@ public sealed class CatalogParserTests
     }
 
     [Test]
-    public void ParseIndex_WithProfilesAndHidden_ParsesCorrectly()
+    public void ParseIndex_WithProfiles_ParsesCorrectly()
     {
         string yaml = """
             apps:
@@ -1386,12 +1360,10 @@ public sealed class CatalogParserTests
                 category: Development
                 tags: [editor]
                 profiles: [developer]
-                hidden: false
               - id: putty
                 name: PuTTY
                 category: Networking
                 tags: [ssh]
-                hidden: true
             fonts: []
             tweaks: []
             """;
@@ -1403,8 +1375,26 @@ public sealed class CatalogParserTests
         Assert.Multiple(() =>
         {
             Assert.That(index.Apps[0].Profiles, Is.EqualTo(new[] { "developer" }));
-            Assert.That(index.Apps[0].Hidden, Is.False);
-            Assert.That(index.Apps[1].Hidden, Is.True);
+            Assert.That(index.Apps[1].Profiles, Is.Empty);
         });
+    }
+
+    [Test]
+    public void ParseIndex_WithCliTool_SetsKind()
+    {
+        string yaml = """
+            apps:
+              - id: ripgrep
+                name: ripgrep
+                category: Terminal/CLI Tools
+                cli-tool: true
+            fonts: []
+            tweaks: []
+            """;
+
+        var result = _parser.ParseIndex(yaml);
+
+        Assert.That(result.IsSuccess, Is.True);
+        Assert.That(result.Value!.Apps[0].Kind, Is.EqualTo(CatalogKind.CliTool));
     }
 }

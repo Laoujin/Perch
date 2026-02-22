@@ -90,7 +90,6 @@ public sealed class GalleryDetectionServiceAppTests
         {
             Assert.That(result.YourApps, Has.Length.EqualTo(1));
             Assert.That(result.YourApps[0].Status, Is.EqualTo(CardStatus.Detected));
-            Assert.That(result.Suggested, Is.Empty);
             Assert.That(result.OtherApps, Is.Empty);
         });
     }
@@ -181,7 +180,7 @@ public sealed class GalleryDetectionServiceAppTests
     }
 
     [Test]
-    public async Task DetectAppsAsync_NotDetectedButMatchesProfile_InSuggested()
+    public async Task DetectAppsAsync_NotDetectedButMatchesProfile_InOtherApps()
     {
         var app = MakeApp("rider", "JetBrains Rider", category: "Development/IDEs",
             install: new InstallDefinition("JetBrains.Rider", null),
@@ -194,8 +193,7 @@ public sealed class GalleryDetectionServiceAppTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(result.Suggested, Has.Length.EqualTo(1));
-            Assert.That(result.Suggested[0].Tier, Is.EqualTo(CardTier.Suggested));
+            Assert.That(result.OtherApps, Has.Length.EqualTo(1));
             Assert.That(result.YourApps, Is.Empty);
         });
     }
@@ -211,15 +209,11 @@ public sealed class GalleryDetectionServiceAppTests
 
         var result = await _service.DetectAppsAsync(new HashSet<UserProfile> { UserProfile.Developer });
 
-        Assert.Multiple(() =>
-        {
-            Assert.That(result.OtherApps, Has.Length.EqualTo(1));
-            Assert.That(result.Suggested, Is.Empty);
-        });
+        Assert.That(result.OtherApps, Has.Length.EqualTo(1));
     }
 
     [Test]
-    public async Task DetectAppsAsync_ProfileMatchesMultipleCategories()
+    public async Task DetectAppsAsync_ProfileMatchesMultipleCategories_InOtherApps()
     {
         var ide = MakeApp("rider", "Rider", category: "Development/IDEs",
             install: new InstallDefinition("JetBrains.Rider", null),
@@ -233,11 +227,11 @@ public sealed class GalleryDetectionServiceAppTests
 
         var result = await _service.DetectAppsAsync(new HashSet<UserProfile> { UserProfile.Developer });
 
-        Assert.That(result.Suggested, Has.Length.EqualTo(2));
+        Assert.That(result.OtherApps, Has.Length.EqualTo(2));
     }
 
     [Test]
-    public async Task DetectAppsAsync_DetectedAppNotInSuggested_EvenWhenProfileMatches()
+    public async Task DetectAppsAsync_DetectedAppInYourApps_WhenProfileMatches()
     {
         var app = MakeApp("rider", "JetBrains Rider", category: "Development/IDEs",
             install: new InstallDefinition("JetBrains.Rider", null),
@@ -256,7 +250,7 @@ public sealed class GalleryDetectionServiceAppTests
         Assert.Multiple(() =>
         {
             Assert.That(result.YourApps, Has.Length.EqualTo(1));
-            Assert.That(result.Suggested, Is.Empty);
+            Assert.That(result.OtherApps, Is.Empty);
         });
     }
 
@@ -350,7 +344,7 @@ public sealed class GalleryDetectionServiceAppTests
 
         var result = await _service.DetectAppsAsync(new HashSet<UserProfile> { UserProfile.Developer });
 
-        var allCards = result.YourApps.AsEnumerable().Concat(result.Suggested).Concat(result.OtherApps).ToList();
+        var allCards = result.YourApps.AsEnumerable().Concat(result.OtherApps).ToList();
         Assert.Multiple(() =>
         {
             Assert.That(allCards, Has.Count.EqualTo(1));
@@ -372,7 +366,7 @@ public sealed class GalleryDetectionServiceAppTests
 
         var result = await _service.DetectAppsAsync(new HashSet<UserProfile> { UserProfile.Developer });
 
-        var allCards = result.YourApps.AsEnumerable().Concat(result.Suggested).Concat(result.OtherApps);
+        var allCards = result.YourApps.AsEnumerable().Concat(result.OtherApps);
         var card = allCards.First(c => c.Id == "vscode");
         Assert.That(card.GitHubStars, Is.EqualTo(181800));
     }
@@ -521,7 +515,7 @@ public sealed class GalleryDetectionServiceAppTests
 
         var result = await _service.DetectAppsAsync(new HashSet<UserProfile> { UserProfile.Developer });
 
-        var allCards = result.YourApps.AsEnumerable().Concat(result.Suggested).Concat(result.OtherApps);
+        var allCards = result.YourApps.AsEnumerable().Concat(result.OtherApps);
         var card = allCards.First();
         Assert.That(card.LogoUrl, Does.StartWith("file:///"));
     }
@@ -554,7 +548,7 @@ public sealed class GalleryDetectionServiceAppTests
 
         var result = await _service.DetectAppsAsync(new HashSet<UserProfile> { UserProfile.Developer });
 
-        var allCards = result.YourApps.AsEnumerable().Concat(result.Suggested).Concat(result.OtherApps);
+        var allCards = result.YourApps.AsEnumerable().Concat(result.OtherApps);
         Assert.That(allCards.First().IsHot, Is.True);
     }
 

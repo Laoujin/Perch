@@ -93,7 +93,6 @@ public sealed partial class WizardShellViewModel : ViewModelBase
 
     public ObservableCollection<AppCardModel> Dotfiles { get; } = [];
     public ObservableCollection<AppCardModel> YourApps { get; } = [];
-    public ObservableCollection<AppCardModel> SuggestedApps { get; } = [];
     public ObservableCollection<AppCardModel> OtherApps { get; } = [];
     public ObservableCollection<TweakCardModel> Tweaks { get; } = [];
     public ObservableCollection<TweakCardModel> FilteredTweaks { get; } = [];
@@ -464,7 +463,6 @@ public sealed partial class WizardShellViewModel : ViewModelBase
             var fontResult = fontsTask.Result;
 
             YourApps.Clear();
-            SuggestedApps.Clear();
             OtherApps.Clear();
             Tweaks.Clear();
             Dotfiles.Clear();
@@ -472,7 +470,6 @@ public sealed partial class WizardShellViewModel : ViewModelBase
             NerdFonts.Clear();
 
             foreach (var app in appResult.YourApps) { app.IsSelected = true; YourApps.Add(app); }
-            foreach (var app in appResult.Suggested) SuggestedApps.Add(app);
             foreach (var app in appResult.OtherApps) OtherApps.Add(app);
             foreach (var tweak in tweakResult.Tweaks) Tweaks.Add(tweak);
             foreach (var df in dotfileResult) { df.IsSelected = df.IsManaged; Dotfiles.Add(df); }
@@ -519,7 +516,7 @@ public sealed partial class WizardShellViewModel : ViewModelBase
         ErrorCount = 0;
         DeployStatusMessage = "Deploying...";
 
-        var selectedModules = YourApps.Concat(SuggestedApps).Concat(OtherApps)
+        var selectedModules = YourApps.Concat(OtherApps)
             .Where(a => a.IsSelected && a.Config is not null)
             .Select(a => a.Id)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -597,7 +594,7 @@ public sealed partial class WizardShellViewModel : ViewModelBase
 
     public void NotifySelectionCounts()
     {
-        SelectedAppCount = YourApps.Concat(SuggestedApps).Concat(OtherApps).Count(a => a.IsSelected);
+        SelectedAppCount = YourApps.Concat(OtherApps).Count(a => a.IsSelected);
         SelectedDotfileCount = Dotfiles.Count(d => d.IsSelected);
         SelectedTweakCount = Tweaks.Count(t => t.IsSelected);
         SelectedFontCount = InstalledFonts.Count(f => f.IsSelected) + NerdFonts.Count(f => f.IsSelected);

@@ -39,11 +39,12 @@ public sealed class CatalogParser
             return CatalogParseResult<CatalogEntry>.Failure("App entry is missing 'name'.");
         }
 
+        var category = model.Category ?? "Uncategorized";
         var entry = new CatalogEntry(
             id,
             model.Name!,
             model.DisplayName,
-            model.Category ?? "Uncategorized",
+            category,
             ToImmutableTags(model.Tags),
             model.Description,
             model.Logo,
@@ -51,16 +52,16 @@ public sealed class CatalogParser
             ParseInstall(model.Install),
             ParseConfig(model.Config),
             ParseExtensions(model.Extensions),
-            ParseKind(model.Kind),
+            DeriveKind(category, model.CliTool),
             ParseAppOwnedTweaks(model.Tweaks),
             ToImmutableTags(model.Profiles),
             ToImmutableTags(model.Os),
-            model.Hidden,
             model.License,
             ToImmutableTags(model.Alternatives),
             ToImmutableTags(model.Suggests),
             ToImmutableTags(model.Requires),
-            model.Hot);
+            model.Hot,
+            model.Sort);
 
         return CatalogParseResult<CatalogEntry>.Ok(entry);
     }
@@ -97,8 +98,8 @@ public sealed class CatalogParser
             model.PreviewText,
             ParseInstall(model.Install),
             ToImmutableTags(model.Profiles),
-            model.Hidden,
-            model.License);
+            model.License,
+            model.Sort);
 
         return CatalogParseResult<FontCatalogEntry>.Ok(entry);
     }
@@ -142,9 +143,9 @@ public sealed class CatalogParser
             ToImmutableTags(model.Requires),
             ToImmutableTags(model.Alternatives),
             model.WindowsVersions?.ToImmutableArray() ?? ImmutableArray<int>.Empty,
-            model.Hidden,
             model.License,
-            model.Source);
+            model.Source,
+            model.Sort);
 
         return CatalogParseResult<TweakCatalogEntry>.Ok(entry);
     }
@@ -249,10 +250,10 @@ public sealed class CatalogParser
                 e.Name!,
                 e.Category ?? "Uncategorized",
                 ToImmutableTags(e.Tags),
-                ParseKind(e.Kind),
+                DeriveKind(e.Category ?? "Uncategorized", e.CliTool),
                 ToImmutableTags(e.Profiles),
-                e.Hidden,
-                e.Path))
+                e.Path,
+                e.Sort))
             .ToImmutableArray();
     }
 
@@ -365,14 +366,26 @@ public sealed class CatalogParser
         return new CatalogCleanFilter(model.Files.ToImmutableArray(), rules.ToImmutableArray());
     }
 
-    private static CatalogKind ParseKind(string? kind) =>
-        kind?.ToLowerInvariant() switch
+    private static CatalogKind DeriveKind(string category, bool cliTool)
+    {
+        if (cliTool)
+            return CatalogKind.CliTool;
+
+        var parts = category.Split('/');
+        if (parts.Length >= 2 && parts[0].Equals("Languages", StringComparison.OrdinalIgnoreCase))
         {
-            "cli-tool" => CatalogKind.CliTool,
-            "runtime" => CatalogKind.Runtime,
-            "dotfile" => CatalogKind.Dotfile,
-            _ => CatalogKind.App,
-        };
+            if (parts.Length >= 3 && parts[2].Equals("Runtimes", StringComparison.OrdinalIgnoreCase))
+                return CatalogKind.Runtime;
+        }
+
+        if (parts[0].Equals("Terminal", StringComparison.OrdinalIgnoreCase) &&
+            parts.Length >= 2 && parts[1].Equals("Shells", StringComparison.OrdinalIgnoreCase))
+        {
+            return CatalogKind.Dotfile;
+        }
+
+        return CatalogKind.App;
+    }
 
     private static CatalogExtensions? ParseExtensions(CatalogExtensionsYamlModel? model)
     {

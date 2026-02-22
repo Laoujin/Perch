@@ -398,7 +398,6 @@
                                             Status="{Binding Status}"
                                             LogoUrl="{Binding LogoUrl}"
                                             IsSelected="{Binding IsSelected, Mode=TwoWay}"
-                                            IsSuggested="{Binding IsSuggested}"
                                             KindBadge="{Binding KindBadge}"
                                             Tags="{Binding Tags}"
                                             Margin="0,0,12,12" />
@@ -407,32 +406,7 @@
                             </ItemsControl>
                         </StackPanel>
 
-                        <!-- Tier 2: Suggested -->
-                        <StackPanel Visibility="{Binding SuggestedApps.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}">
-                            <controls:TierSectionHeader Title="Suggested for You" ItemCount="{Binding SuggestedApps.Count}" />
-                            <ItemsControl ItemsSource="{Binding SuggestedApps}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate DataType="{x:Type models:AppCardModel}">
-                                        <controls:AppCard
-                                            DisplayLabel="{Binding DisplayLabel}"
-                                            Description="{Binding Description}"
-                                            Category="{Binding Category}"
-                                            Status="{Binding Status}"
-                                            LogoUrl="{Binding LogoUrl}"
-                                            IsSelected="{Binding IsSelected, Mode=TwoWay}"
-                                            IsSuggested="{Binding IsSuggested}"
-                                            KindBadge="{Binding KindBadge}"
-                                            Tags="{Binding Tags}"
-                                            Margin="0,0,12,12" />
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-
-                        <!-- Tier 3: Browse All -->
+                        <!-- Tier 2: Browse All -->
                         <StackPanel Visibility="{Binding BrowseCategories.Count, Converter={StaticResource CountToVisibilityConverter}, FallbackValue=Collapsed}">
                             <controls:TierSectionHeader Title="Browse All" ItemCount="{Binding BrowseCategories.Count}" />
                             <ItemsControl ItemsSource="{Binding BrowseCategories}">
@@ -520,7 +494,6 @@
                                                             Category="{Binding Category}"
                                                             Status="{Binding Status}"
                                                             IsSelected="{Binding IsSelected, Mode=TwoWay}"
-                                                            IsSuggested="{Binding IsSuggested}"
                                                             KindBadge="{Binding KindBadge}"
                                                             Tags="{Binding Tags}"
                                                             Margin="0,0,12,12" />

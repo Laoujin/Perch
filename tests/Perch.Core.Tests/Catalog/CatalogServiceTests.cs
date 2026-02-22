@@ -414,10 +414,10 @@ public sealed class CatalogServiceTests
             apps:
               - id: git
                 name: Git
-                category: Dev
+                category: Development
               - id: bash
                 name: Bash
-                category: Dev
+                category: Terminal/Shells/Bash
             fonts: []
             tweaks: []
             """;
@@ -431,8 +431,7 @@ public sealed class CatalogServiceTests
 
         string bashYaml = """
             name: Bash
-            category: Development
-            kind: dotfile
+            category: Terminal/Shells/Bash
             """;
 
         _cache.GetAsync("index.yaml", Arg.Any<CancellationToken>()).Returns(indexYaml);

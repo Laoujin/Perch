@@ -24,9 +24,6 @@ public partial class AppCategoryCardModel : ObservableObject
     private int _detectedCount;
 
     [ObservableProperty]
-    private int _suggestedCount;
-
-    [ObservableProperty]
     private bool _isExpanded;
 
     public AppCategoryCardModel(
@@ -35,7 +32,6 @@ public partial class AppCategoryCardModel : ObservableObject
         int itemCount,
         int selectedCount,
         int detectedCount = 0,
-        int suggestedCount = 0,
         IReadOnlyList<AppCategoryGroup>? subGroups = null,
         IReadOnlyList<AppCardModel>? apps = null)
     {
@@ -45,7 +41,6 @@ public partial class AppCategoryCardModel : ObservableObject
         ItemCount = itemCount;
         SelectedCount = selectedCount;
         DetectedCount = detectedCount;
-        SuggestedCount = suggestedCount;
         SubGroups = subGroups ?? [];
         Apps = apps ?? [];
     }

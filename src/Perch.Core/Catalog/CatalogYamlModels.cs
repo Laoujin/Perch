@@ -13,10 +13,12 @@ internal sealed class AppCatalogYamlModel
     public List<string>? Tags { get; set; }
     public string? Description { get; set; }
     public string? Logo { get; set; }
-    public string? Kind { get; set; }
+    [YamlMember(Alias = "cli-tool")]
+    public bool CliTool { get; set; }
+
+    public int? Sort { get; set; }
     public List<string>? Profiles { get; set; }
     public List<string>? Os { get; set; }
-    public bool Hidden { get; set; }
     public bool Hot { get; set; }
     public string? License { get; set; }
     public CatalogLinksYamlModel? Links { get; set; }
@@ -37,8 +39,8 @@ internal sealed class FontCatalogYamlModel
     public string? Description { get; set; }
     public string? Logo { get; set; }
     public List<string>? Profiles { get; set; }
-    public bool Hidden { get; set; }
     public string? License { get; set; }
+    public int? Sort { get; set; }
 
     [YamlMember(Alias = "preview-text")]
     public string? PreviewText { get; set; }
@@ -54,9 +56,9 @@ internal sealed class TweakCatalogYamlModel
     public string? Description { get; set; }
     public bool Reversible { get; set; }
     public List<string>? Profiles { get; set; }
-    public bool Hidden { get; set; }
     public string? License { get; set; }
     public string? Source { get; set; }
+    public int? Sort { get; set; }
     public List<TweakRegistryYamlModel>? Registry { get; set; }
     public string? Script { get; set; }
 
@@ -179,9 +181,12 @@ internal sealed class CatalogIndexEntryYamlModel
     public string? Name { get; set; }
     public string? Category { get; set; }
     public List<string>? Tags { get; set; }
-    public string? Kind { get; set; }
+
+    [YamlMember(Alias = "cli-tool")]
+    public bool CliTool { get; set; }
+
+    public int? Sort { get; set; }
     public List<string>? Profiles { get; set; }
-    public bool Hidden { get; set; }
     public string? Path { get; set; }
 }
 

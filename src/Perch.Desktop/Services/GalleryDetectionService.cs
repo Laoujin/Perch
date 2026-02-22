@@ -72,7 +72,6 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
         var logoBaseUrl = GetLogoBaseUrl(settings);
 
         var yourApps = ImmutableArray.CreateBuilder<AppCardModel>();
-        var suggested = ImmutableArray.CreateBuilder<AppCardModel>();
         var other = ImmutableArray.CreateBuilder<AppCardModel>();
 
         foreach (var app in allApps)
@@ -95,10 +94,6 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
             {
                 yourApps.Add(new AppCardModel(app, CardTier.YourApps, status, logoUrl) { GitHubStars = appStars, IsHot = app.Hot });
             }
-            else if (IsSuggestedForProfiles(app, selectedProfiles))
-            {
-                suggested.Add(new AppCardModel(app, CardTier.Suggested, status, logoUrl) { GitHubStars = appStars, IsHot = app.Hot });
-            }
             else
             {
                 other.Add(new AppCardModel(app, CardTier.Other, status, logoUrl) { GitHubStars = appStars, IsHot = app.Hot });
@@ -107,7 +102,6 @@ public sealed class GalleryDetectionService : IGalleryDetectionService
 
         return new GalleryDetectionResult(
             yourApps.ToImmutable(),
-            suggested.ToImmutable(),
             other.ToImmutable());
     }
 

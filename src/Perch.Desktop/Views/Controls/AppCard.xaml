@@ -50,18 +50,6 @@
                     Status="{Binding Status, RelativeSource={RelativeSource AncestorType=UserControl}}"
                     VerticalAlignment="Center" />
 
-                <!-- Suggested badge -->
-                <Border
-                    Grid.Column="1"
-                    Background="{StaticResource SuggestedBadgeBrush}"
-                    CornerRadius="4"
-                    Padding="4,1"
-                    Margin="4,0,0,0"
-                    VerticalAlignment="Center"
-                    Visibility="{Binding IsSuggested, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}">
-                    <TextBlock Text="Suggested" FontSize="9" Foreground="{StaticResource SuggestedTextBrush}" />
-                </Border>
-
                 <!-- Kind badge -->
                 <Border
                     Grid.Column="2"

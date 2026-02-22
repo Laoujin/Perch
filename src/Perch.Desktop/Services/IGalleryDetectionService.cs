@@ -17,7 +17,6 @@ public interface IGalleryDetectionService
 
 public sealed record GalleryDetectionResult(
     ImmutableArray<AppCardModel> YourApps,
-    ImmutableArray<AppCardModel> Suggested,
     ImmutableArray<AppCardModel> OtherApps);
 
 public sealed record FontDetectionResult(

@@ -19,6 +19,6 @@ public sealed record TweakCatalogEntry(
     ImmutableArray<string> Requires = default,
     ImmutableArray<string> Alternatives = default,
     ImmutableArray<int> WindowsVersions = default,
-    bool Hidden = false,
     string? License = null,
-    string? Source = null);
+    string? Source = null,
+    int? Sort = null);

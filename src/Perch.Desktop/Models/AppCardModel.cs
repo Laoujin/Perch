@@ -67,7 +67,6 @@ public partial class AppCardModel : ObservableObject
     public bool IsManaged => Status is CardStatus.Synced or CardStatus.Drifted or CardStatus.PendingAdd;
     public bool IsActionAdd => Status is CardStatus.Unmanaged or CardStatus.Detected or CardStatus.PendingRemove;
     public string ActionButtonText => IsActionAdd ? "Add to Perch" : "Remove from Perch";
-    public bool IsSuggested => Tier == CardTier.Suggested;
 
     public string? KindBadge => CatalogEntry.Kind switch
     {

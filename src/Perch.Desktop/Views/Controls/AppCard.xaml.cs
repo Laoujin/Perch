@@ -65,10 +65,6 @@ public partial class AppCard : UserControl
         DependencyProperty.Register(nameof(IsSelected), typeof(bool), typeof(AppCard),
             new PropertyMetadata(false));
 
-    public static readonly DependencyProperty IsSuggestedProperty =
-        DependencyProperty.Register(nameof(IsSuggested), typeof(bool), typeof(AppCard),
-            new PropertyMetadata(false));
-
     public static readonly DependencyProperty KindBadgeProperty =
         DependencyProperty.Register(nameof(KindBadge), typeof(string), typeof(AppCard),
             new PropertyMetadata(null));
@@ -185,12 +181,6 @@ public partial class AppCard : UserControl
     {
         get => (bool)GetValue(IsSelectedProperty);
         set => SetValue(IsSelectedProperty, value);
-    }
-
-    public bool IsSuggested
-    {
-        get => (bool)GetValue(IsSuggestedProperty);
-        set => SetValue(IsSuggestedProperty, value);
     }
 
     public string? KindBadge

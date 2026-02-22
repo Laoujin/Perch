@@ -66,7 +66,7 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
             _activeProfiles = profiles;
             var result = await _detectionService.DetectAppsAsync(profiles, cancellationToken);
 
-            BuildDependencyGraph(result.YourApps, result.Suggested, result.OtherApps);
+            BuildDependencyGraph(result.YourApps, result.OtherApps);
 
             RebuildCategories();
         }
@@ -116,7 +116,6 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
                     items.Count,
                     items.Count(a => a.IsManaged),
                     items.Count(a => a.Status is CardStatus.Detected or CardStatus.Synced or CardStatus.Drifted),
-                    items.Count(a => a.IsSuggested),
                     subGroups: subGroups);
             });
 
@@ -213,10 +212,9 @@ public sealed partial class AppsViewModel : GalleryViewModelBase
 
     private void BuildDependencyGraph(
         ImmutableArray<AppCardModel> yourApps,
-        ImmutableArray<AppCardModel> suggested,
         ImmutableArray<AppCardModel> other)
     {
-        var allApps = yourApps.AsEnumerable().Concat(suggested).Concat(other).ToList();
+        var allApps = yourApps.AsEnumerable().Concat(other).ToList();
         _allAppsByIdIncludingChildren = allApps.ToDictionary(a => a.Id, StringComparer.OrdinalIgnoreCase);
         var byId = _allAppsByIdIncludingChildren;
 

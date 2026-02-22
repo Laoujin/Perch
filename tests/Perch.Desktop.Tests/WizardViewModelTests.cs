@@ -45,7 +45,6 @@ public sealed class WizardShellViewModelTests
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
             .Returns(new GalleryDetectionResult(
                 ImmutableArray<AppCardModel>.Empty,
-                ImmutableArray<AppCardModel>.Empty,
                 ImmutableArray<AppCardModel>.Empty));
 
         _detectionService.DetectTweaksAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
@@ -310,13 +309,11 @@ public sealed class WizardShellViewModelTests
     public async Task Detection_PopulatesApps()
     {
         var yourApp = MakeApp("vscode", "Development/IDEs");
-        var suggested = MakeApp("rider", "Development/IDEs");
         var other = MakeApp("notepad", "Editors/Text");
 
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
             .Returns(new GalleryDetectionResult(
                 ImmutableArray.Create(yourApp),
-                ImmutableArray.Create(suggested),
                 ImmutableArray.Create(other)));
 
         _vm.ConfigRepoPath = Path.GetTempPath();
@@ -326,7 +323,6 @@ public sealed class WizardShellViewModelTests
         Assert.Multiple(() =>
         {
             Assert.That(_vm.YourApps, Has.Count.EqualTo(1));
-            Assert.That(_vm.SuggestedApps, Has.Count.EqualTo(1));
             Assert.That(_vm.OtherApps, Has.Count.EqualTo(1));
             Assert.That(_vm.YourApps[0].IsSelected, Is.True);
             Assert.That(_vm.IsLoadingDetection, Is.False);
@@ -362,7 +358,6 @@ public sealed class WizardShellViewModelTests
 
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
             .Returns(new GalleryDetectionResult(
-                ImmutableArray<AppCardModel>.Empty,
                 ImmutableArray<AppCardModel>.Empty,
                 ImmutableArray.Create(app1, app2)));
 
@@ -417,7 +412,6 @@ public sealed class WizardShellViewModelTests
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
             .Returns(new GalleryDetectionResult(
                 ImmutableArray.Create(app),
-                ImmutableArray<AppCardModel>.Empty,
                 ImmutableArray<AppCardModel>.Empty));
         _detectionService.DetectDotfilesAsync(Arg.Any<CancellationToken>())
             .Returns(ImmutableArray.Create(dotfile));
@@ -485,7 +479,6 @@ public sealed class WizardShellViewModelTests
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
             .Returns(new GalleryDetectionResult(
                 ImmutableArray.Create(app1, app2),
-                ImmutableArray<AppCardModel>.Empty,
                 ImmutableArray<AppCardModel>.Empty));
 
         _vm.ConfigRepoPath = Path.GetTempPath();
@@ -510,7 +503,6 @@ public sealed class WizardShellViewModelTests
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
             .Returns(new GalleryDetectionResult(
                 ImmutableArray.Create(app),
-                ImmutableArray<AppCardModel>.Empty,
                 ImmutableArray<AppCardModel>.Empty));
         _detectionService.DetectDotfilesAsync(Arg.Any<CancellationToken>())
             .Returns(ImmutableArray.Create(dotfile));

@@ -27,6 +27,7 @@ public sealed class AppsViewModelTests
     private IAppDetailService _detailService = null!;
     private ISettingsProvider _settingsProvider = null!;
     private IPendingChangesService _pendingChanges = null!;
+    private ICatalogService _catalogService = null!;
     private AppsViewModel _vm = null!;
 
     [SetUp]
@@ -36,6 +37,7 @@ public sealed class AppsViewModelTests
         _detailService = Substitute.For<IAppDetailService>();
         _settingsProvider = Substitute.For<ISettingsProvider>();
         _pendingChanges = Substitute.For<IPendingChangesService>();
+        _catalogService = Substitute.For<ICatalogService>();
 
         _settingsProvider.LoadAsync(Arg.Any<CancellationToken>())
             .Returns(new PerchSettings { Profiles = ["Developer"] });
@@ -43,10 +45,12 @@ public sealed class AppsViewModelTests
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
             .Returns(new GalleryDetectionResult(
                 ImmutableArray<AppCardModel>.Empty,
-                ImmutableArray<AppCardModel>.Empty,
                 ImmutableArray<AppCardModel>.Empty));
 
-        _vm = new AppsViewModel(_detectionService, _detailService, _settingsProvider, _pendingChanges);
+        _catalogService.GetCategoriesAsync(Arg.Any<CancellationToken>())
+            .Returns(ImmutableDictionary<string, CategoryDefinition>.Empty);
+
+        _vm = new AppsViewModel(_detectionService, _detailService, _settingsProvider, _pendingChanges, _catalogService);
     }
 
     [Test]
@@ -64,14 +68,13 @@ public sealed class AppsViewModelTests
     public async Task RefreshAsync_PopulatesCategories()
     {
         var yourApp = MakeCard("vscode", "Development/IDEs", CardStatus.Synced);
-        var suggested = MakeCard("rider", "Development/IDEs", CardStatus.Detected);
-        var other = MakeCard("vlc", "Media/Players", CardStatus.Detected, CardTier.Other);
+        var other1 = MakeCard("rider", "Development/IDEs", CardStatus.Detected, CardTier.Other);
+        var other2 = MakeCard("vlc", "Media/Players", CardStatus.Detected, CardTier.Other);
 
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
             .Returns(new GalleryDetectionResult(
                 ImmutableArray.Create(yourApp),
-                ImmutableArray.Create(suggested),
-                ImmutableArray.Create(other)));
+                ImmutableArray.Create(other1, other2)));
 
         await _vm.RefreshCommand.ExecuteAsync(null);
 
@@ -172,14 +175,13 @@ public sealed class AppsViewModelTests
     public async Task SearchText_FiltersCategories()
     {
         var yourApp = MakeCard("vscode", "Development/IDEs");
-        var suggested = MakeCard("rider", "Development/IDEs");
-        var other = MakeCard("vlc", "Media/Players", CardStatus.Detected, CardTier.Other);
+        var other1 = MakeCard("rider", "Development/IDEs", CardStatus.Detected, CardTier.Other);
+        var other2 = MakeCard("vlc", "Media/Players", CardStatus.Detected, CardTier.Other);
 
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
             .Returns(new GalleryDetectionResult(
                 ImmutableArray.Create(yourApp),
-                ImmutableArray.Create(suggested),
-                ImmutableArray.Create(other)));
+                ImmutableArray.Create(other1, other2)));
 
         await _vm.RefreshCommand.ExecuteAsync(null);
         Assert.That(_vm.Categories, Has.Count.EqualTo(2));
@@ -197,12 +199,11 @@ public sealed class AppsViewModelTests
             MakeCard("zapp", "Dev/IDEs", CardStatus.Detected, CardTier.Other),
             MakeCard("aapp", "Dev/IDEs", CardStatus.Synced, CardTier.YourApps),
             MakeCard("mapp", "Dev/IDEs", CardStatus.Drifted, CardTier.YourApps),
-            MakeCard("sapp", "Dev/IDEs", CardStatus.Detected, CardTier.Suggested));
+            MakeCard("oapp", "Dev/IDEs", CardStatus.Detected, CardTier.Other));
 
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
             .Returns(new GalleryDetectionResult(
                 apps.Where(a => a.Tier == CardTier.YourApps).ToImmutableArray(),
-                apps.Where(a => a.Tier == CardTier.Suggested).ToImmutableArray(),
                 apps.Where(a => a.Tier == CardTier.Other).ToImmutableArray()));
 
         await _vm.RefreshCommand.ExecuteAsync(null);
@@ -216,7 +217,7 @@ public sealed class AppsViewModelTests
             Assert.That(group.SubCategory, Is.EqualTo("IDEs"));
             Assert.That(group.Apps[0].Name, Is.EqualTo("mapp"));  // YourApps + Broken (status 0)
             Assert.That(group.Apps[1].Name, Is.EqualTo("aapp"));  // YourApps + Linked (status 2)
-            Assert.That(group.Apps[2].Name, Is.EqualTo("sapp"));  // Suggested
+            Assert.That(group.Apps[2].Name, Is.EqualTo("oapp"));  // Other
             Assert.That(group.Apps[3].Name, Is.EqualTo("zapp"));  // Other
         });
     }
@@ -228,7 +229,7 @@ public sealed class AppsViewModelTests
         var child = MakeCardWithRequires("vscode", "Development/IDEs", ["dotnet-sdk"], CardStatus.Detected);
 
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
-            .Returns(new GalleryDetectionResult(ImmutableArray.Create(parent, child), [], []));
+            .Returns(new GalleryDetectionResult(ImmutableArray.Create(parent, child), []));
 
         await _vm.RefreshCommand.ExecuteAsync(null);
 
@@ -252,7 +253,7 @@ public sealed class AppsViewModelTests
         var b = MakeCardWithRequires("app-b", "Dev/Tools", ["app-a"]);
 
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
-            .Returns(new GalleryDetectionResult(ImmutableArray.Create(a, b), [], []));
+            .Returns(new GalleryDetectionResult(ImmutableArray.Create(a, b), []));
 
         await _vm.RefreshCommand.ExecuteAsync(null);
 
@@ -273,7 +274,7 @@ public sealed class AppsViewModelTests
         var child = MakeCardWithRequires("my-child-tool", "Development/Tools", ["dotnet-sdk"]);
 
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
-            .Returns(new GalleryDetectionResult(ImmutableArray.Create(parent, child), [], []));
+            .Returns(new GalleryDetectionResult(ImmutableArray.Create(parent, child), []));
 
         await _vm.RefreshCommand.ExecuteAsync(null);
 
@@ -393,7 +394,7 @@ public sealed class AppsViewModelTests
     {
         var app = MakeCard("vscode", "Development/IDEs", CardStatus.Synced);
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
-            .Returns(new GalleryDetectionResult(ImmutableArray.Create(app), [], []));
+            .Returns(new GalleryDetectionResult(ImmutableArray.Create(app), []));
         await _vm.RefreshCommand.ExecuteAsync(null);
 
         _vm.NavigateToAppCommand.Execute("vscode");
@@ -448,7 +449,7 @@ public sealed class AppsViewModelTests
         app3.GitHubStars = 3000;
 
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
-            .Returns(new GalleryDetectionResult([], [], ImmutableArray.Create(app1, app2, app3)));
+            .Returns(new GalleryDetectionResult([], ImmutableArray.Create(app1, app2, app3)));
 
         await _vm.RefreshCommand.ExecuteAsync(null);
 
@@ -464,7 +465,7 @@ public sealed class AppsViewModelTests
         app2.GitHubStars = 2000;
 
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
-            .Returns(new GalleryDetectionResult(ImmutableArray.Create(app1), [], ImmutableArray.Create(app2)));
+            .Returns(new GalleryDetectionResult(ImmutableArray.Create(app1), ImmutableArray.Create(app2)));
 
         await _vm.RefreshCommand.ExecuteAsync(null);
 
@@ -480,7 +481,7 @@ public sealed class AppsViewModelTests
         app2.GitHubStars = 4000;
 
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
-            .Returns(new GalleryDetectionResult([], [], ImmutableArray.Create(app1, app2)));
+            .Returns(new GalleryDetectionResult([], ImmutableArray.Create(app1, app2)));
 
         await _vm.RefreshCommand.ExecuteAsync(null);
 
@@ -498,8 +499,19 @@ public sealed class AppsViewModelTests
         var cli = MakeCard("dotnet-cli", "Development/CLI Tools", CardStatus.Detected);
         var editor = MakeCard("vim", "Development/Editors", CardStatus.Detected);
 
+        var devChildren = ImmutableDictionary.CreateBuilder<string, CategoryDefinition>(StringComparer.OrdinalIgnoreCase);
+        devChildren["IDEs"] = new CategoryDefinition("IDEs", 10, null, ImmutableDictionary<string, CategoryDefinition>.Empty);
+        devChildren["Editors"] = new CategoryDefinition("Editors", 20, null, ImmutableDictionary<string, CategoryDefinition>.Empty);
+        devChildren["CLI Tools"] = new CategoryDefinition("CLI Tools", 30, null, ImmutableDictionary<string, CategoryDefinition>.Empty);
+
+        var categories = ImmutableDictionary.CreateBuilder<string, CategoryDefinition>(StringComparer.OrdinalIgnoreCase);
+        categories["Development"] = new CategoryDefinition("Development", 100, "direct", devChildren.ToImmutable());
+
+        _catalogService.GetCategoriesAsync(Arg.Any<CancellationToken>())
+            .Returns(categories.ToImmutable());
+
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
-            .Returns(new GalleryDetectionResult(ImmutableArray.Create(cli, editor, ide), [], []));
+            .Returns(new GalleryDetectionResult(ImmutableArray.Create(cli, editor, ide), []));
 
         await _vm.RefreshCommand.ExecuteAsync(null);
 
@@ -515,7 +527,7 @@ public sealed class AppsViewModelTests
         var gameApp = MakeCard("steam", "Gaming/Stores", CardStatus.Detected);
 
         _detectionService.DetectAppsAsync(Arg.Any<IReadOnlySet<UserProfile>>(), Arg.Any<CancellationToken>())
-            .Returns(new GalleryDetectionResult(ImmutableArray.Create(gameApp, devApp), [], []));
+            .Returns(new GalleryDetectionResult(ImmutableArray.Create(gameApp, devApp), []));
 
         await _vm.RefreshCommand.ExecuteAsync(null);
 
