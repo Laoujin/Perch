@@ -7,13 +7,33 @@ namespace Perch.Core.Tests.Deploy;
 public sealed class SystemPackageInstallerTests
 {
     private IProcessRunner _processRunner = null!;
+    private IInstalledAppChecker _installedAppChecker = null!;
     private SystemPackageInstaller _installer = null!;
 
     [SetUp]
     public void SetUp()
     {
         _processRunner = Substitute.For<IProcessRunner>();
-        _installer = new SystemPackageInstaller(_processRunner);
+        _installedAppChecker = Substitute.For<IInstalledAppChecker>();
+        _installedAppChecker.GetInstalledPackageIdsAsync(Arg.Any<CancellationToken>())
+            .Returns(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+        _installer = new SystemPackageInstaller(_processRunner, _installedAppChecker);
+    }
+
+    [Test]
+    public async Task InstallAsync_AlreadyInstalled_SkipsInstall()
+    {
+        _installedAppChecker.GetInstalledPackageIdsAsync(Arg.Any<CancellationToken>())
+            .Returns(new HashSet<string>(["7zip.7zip"], StringComparer.OrdinalIgnoreCase));
+
+        DeployResult result = await _installer.InstallAsync("7zip.7zip", PackageManager.Winget, dryRun: false);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Level, Is.EqualTo(ResultLevel.Ok));
+            Assert.That(result.Message, Does.Contain("Already installed"));
+        });
+        await _processRunner.DidNotReceive().RunAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
     }
 
     [Test]

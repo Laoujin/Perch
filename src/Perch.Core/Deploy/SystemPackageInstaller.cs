@@ -5,10 +5,13 @@ namespace Perch.Core.Deploy;
 public sealed class SystemPackageInstaller : ISystemPackageInstaller
 {
     private readonly IProcessRunner _processRunner;
+    private readonly IInstalledAppChecker _installedAppChecker;
+    private IReadOnlySet<string>? _installedPackages;
 
-    public SystemPackageInstaller(IProcessRunner processRunner)
+    public SystemPackageInstaller(IProcessRunner processRunner, IInstalledAppChecker installedAppChecker)
     {
         _processRunner = processRunner;
+        _installedAppChecker = installedAppChecker;
     }
 
     public async Task<DeployResult> InstallAsync(string packageName, PackageManager manager, bool dryRun, CancellationToken cancellationToken = default)
@@ -18,6 +21,13 @@ public sealed class SystemPackageInstaller : ISystemPackageInstaller
         if (command.Length == 0)
         {
             return new DeployResult("system-packages", "", packageName, ResultLevel.Ok, $"Skipped {packageName} ({manager} handled elsewhere)");
+        }
+
+        _installedPackages ??= await _installedAppChecker.GetInstalledPackageIdsAsync(cancellationToken).ConfigureAwait(false);
+
+        if (_installedPackages.Contains(packageName))
+        {
+            return new DeployResult("system-packages", "", packageName, ResultLevel.Ok, $"Already installed: {packageName}");
         }
 
         if (dryRun)
