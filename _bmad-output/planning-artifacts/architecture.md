@@ -170,7 +170,7 @@ dotnet add tests/Perch.Desktop.Tests package NSubstitute --version 5.3.0
 | 13 | System tweak mechanisms | Registry YAML + PowerShell script/undo_script + font install. .reg retired | Covers ~95% of tweaks. Services/tasks/GPO deferred — add when needed |
 | 14 | Registry value model | Three-value: default_value (Windows default), captured (pre-Perch machine state), desired | Enables drift detection, revert-to-default, revert-to-previous without prior deploy |
 | 15 | Gallery role | Source of truth for defaults. Manifest stores only deviations + captured old values | Minimal configs, clean diffs. Gallery YAML is canonical |
-| 16 | Content taxonomy | Unified tree with deep category paths (e.g., `Apps/Languages/.NET/Editors/Visual Studio`) | One navigable tree for everything Perch manages — apps, tweaks, fonts, dotfiles |
+| 16 | Content taxonomy | 8 top-level categories with drill-down vs direct patterns. Taxonomy in `categories.yaml`, not hardcoded. `kind` removed, `cli-tool: true` flag + category placement | Per brainstorming 2026-02-20. Categories: Languages, Terminal, Development, Essentials, Media, Gaming, Power User, Companion Tools |
 | 17 | Gallery entry dependencies | `suggests:` (soft) and `requires:` (hard) links. Replaces `priority:` field | Execution order derives from dependency graph, not manual numbers |
 | 18 | App-owned tweaks | App gallery entries own their bad behavior (context menus, startup, telemetry) as sub-items | No artificial separation between installing an app and cleaning up after it |
 | 19 | Import strategy | One-time scripts per source (WinUtil, Sophia). Not a framework | Pragmatic — sources change rarely. Human review required anyway |
@@ -336,7 +336,14 @@ Gallery YAML entries gain new fields. Backwards-compatible — new fields are op
 | `undo_script` | `string` | PowerShell command to revert |
 | `default_value` | per registry entry | Windows default for three-value model |
 
-**Removed fields:** `priority` (replaced by `requires:` dependency graph)
+**New fields (from brainstorming 2026-02-20):**
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `cli-tool` | `bool` | Replaces `kind: cli-tool`. True for CLI tools, affects sort order |
+| `sort` | `int` | Entry display order within category (also at category level in categories.yaml) |
+
+**Removed fields:** `priority` (replaced by `requires:` dependency graph), `kind` (replaced by `cli-tool` flag + category placement), `hidden` (128 entries — field retired entirely)
 
 **Gallery as source of truth:** User manifests in perch-config reference gallery entries by ID and store only deviations:
 
@@ -351,18 +358,24 @@ overrides:
   enabled: false  # I prefer light mode on this machine
 ```
 
-**Unified tree taxonomy:** Category paths define the tree structure. Depth matches content density:
+**8-Category Taxonomy (from brainstorming 2026-02-20):**
 
-```
-Apps/Browsers/Firefox
-Apps/Languages/.NET/SDKs
-Apps/Languages/.NET/Editors/Visual Studio
-Apps/Languages/Node/nvm
-Windows Tweaks/Explorer
-Windows Tweaks/Context Menus
-Windows Tweaks/Startup Items
-Windows Tweaks/Fonts/Nerd Fonts
-```
+| Category | Pattern | Examples |
+|----------|---------|----------|
+| Languages | Drill-down | .NET/Runtimes, Node/Version Managers, Python/IDEs |
+| Terminal | Direct | Shells/PowerShell, CLI Tools, Git, SSH |
+| Development | Direct | IDEs & Editors, API Tools, Databases, Containers |
+| Essentials | Drill-down | Browsers, Communication, Passwords, Office |
+| Media | Direct | Graphics, Video, Audio |
+| Gaming | Direct | Launchers, Controllers, Modding |
+| Power User | Direct | File Management, System Tools, Networking |
+| Companion Tools | Direct | Alternatives to Perch |
+
+**Navigation patterns:**
+- **Drill-down:** Click category to see subcategory cards, then click subcategory to see apps
+- **Direct:** Click category to see app cards immediately
+
+Categories and sort order defined in `categories.yaml`, not hardcoded in C#.
 
 **Auto-generated index.yaml:** CI or build step scans `catalog/` and regenerates `index.yaml`. Never manually edited.
 

@@ -1,4 +1,4 @@
-# updated: 2026-02-20 (sprint-planning refresh)
+# updated: 2026-02-22 (create-story: 30-1, 30-2 ready-for-dev)
 # project: dotfiles
 # project_key: NOKEY
 # tracking_system: file-system
@@ -126,12 +126,39 @@ development_status:
   # Epic 22: Apps Page + Gallery
   # Improve apps WPF page: sorting, categories, alternatives, top choices,
   # suggestions, badges. Configure gallery entries.
+  # NOTE: Stories 22-1/22-2/22-3 blocked by Epic 30 (taxonomy changes)
   epic-22: in-progress
   22-5-appcard-finish-shared-component: review
-  22-1-apps-gallery-sorting-categories: backlog
-  22-2-apps-alternatives-suggestions: backlog
-  22-3-apps-hot-badges: backlog
   22-4-app-detail-page: ready-for-dev
+  22-1-apps-gallery-sorting-categories: blocked  # blocked by Epic 30
+  22-2-apps-alternatives-suggestions: blocked    # blocked by Epic 30
+  22-3-apps-hot-badges: blocked                  # blocked by Epic 30
+
+  # ============================================================
+  # INSERTED: Gallery Taxonomy & Schema Overhaul (from brainstorming 2026-02-20)
+  # ============================================================
+
+  # Epic 30: Gallery Taxonomy & Schema Overhaul
+  # Implements 8-category taxonomy, schema changes (remove kind/hidden,
+  # add cli-tool/sort), detection improvements. Spans Perch + perch-gallery repos.
+  # Source: _bmad-output/brainstorming/brainstorming-session-2026-02-20.md
+  # BLOCKS: Epic 22 stories 22-1, 22-2, 22-3
+  epic-30: in-progress
+  30-1-redesign-categories-yaml: ready-for-dev     # perch-gallery
+  30-2-remove-hardcoded-sort-order: ready-for-dev  # Perch, blocked by 30-1
+  30-3-recategorize-261-entries: backlog           # perch-gallery, blocked by 30-1
+  30-4-remove-kind-add-cli-tool: backlog           # Both repos
+  30-5-remove-hidden-field: backlog                # Both repos
+  30-6-add-sort-field: backlog                     # Both repos, blocked by 30-2
+  30-7-drill-down-pattern-essentials: backlog      # Perch, blocked by 30-2
+  30-8-sidebar-navigation-8-categories: backlog    # Perch, blocked by 30-7
+  30-9-remove-suggested-tier: backlog              # Perch
+  30-10-detection-config-link-target: backlog      # Perch
+  30-11-detection-perch-config-manifest: backlog   # Perch
+  30-12-add-install-detect-entries: backlog        # perch-gallery, blocked by 30-3
+  30-13-audit-add-github-links: backlog            # perch-gallery
+  30-14-validation-script-missing-fields: backlog  # perch-gallery
+  30-15-retire-index-yaml: backlog                 # Both repos
 
   # ============================================================
   # P3: Dashboard & Wizard Polish

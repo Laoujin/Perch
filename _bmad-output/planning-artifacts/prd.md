@@ -620,7 +620,7 @@ Every Desktop issue must include:
 ### Gallery Schema & Taxonomy
 
 - **FR63:** Gallery is the source of truth for defaults. User manifests store only deviations from gallery values plus captured old values. Minimizes config size and diff noise [Scope 3]
-- **FR64:** Gallery uses a unified tree taxonomy with deep category paths (e.g., `Apps/Languages/.NET/Editors/Visual Studio`, `Windows Tweaks/Explorer`, `Windows Tweaks/Startup Items`). Tree depth matches content density — no subcategories for 2 items [Scope 3]
+- **FR64:** Gallery uses an 8-category taxonomy with two navigation patterns: **drill-down** (Languages, Essentials — click to see subcategory cards) and **direct** (Terminal, Development, Media, Gaming, Power User, Companion Tools — click to see app cards). Categories and sort order defined in `categories.yaml`. `kind` field removed, replaced by `cli-tool: true` flag + category placement. See brainstorming session 2026-02-20 for full taxonomy specification [Scope 3]
 - **FR65:** Gallery entries declare a `type:` field (app, tweak, font) with a shared base schema where possible, while respecting that different types have different install/apply mechanisms [Scope 3]
 - **FR66:** Gallery entries declare `windows_versions: [10, 11]` for OS-aware filtering. Desktop UI hides entries that don't apply to the current machine's OS version [Scope 3]
 - **FR67:** Gallery categories declare a `sort:` value controlling display order in the tree [Scope 3]
