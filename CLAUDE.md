@@ -51,7 +51,7 @@ See global `~/.claude/AGENTS-DOTNET-STYLE.md` and `~/.claude/AGENTS-DOTNET-TESTI
 1. **Implement** — make changes
 2. **Build** — `dotnet build` must complete with zero warnings
 3. **Test** — `dotnet test` must pass all tests
-4. **Commit & push** — commit to master and push
+4. **Commit & push** — commit to main and push
 
 ## Project Docs
 

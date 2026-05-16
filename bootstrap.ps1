@@ -15,7 +15,7 @@
     Clone and build only, don't run deploy.
 .EXAMPLE
     # One-liner from a fresh machine:
-    irm https://raw.githubusercontent.com/Laoujin/perch/master/bootstrap.ps1 | iex
+    irm https://raw.githubusercontent.com/Laoujin/perch/main/bootstrap.ps1 | iex
 #>
 param(
     [string]$ConfigRepo = 'Laoujin/perch-config',

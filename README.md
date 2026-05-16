@@ -8,7 +8,7 @@ Perch manages symlinks, registry entries, VS Code extensions, PowerShell modules
 
 ```powershell
 # One-liner from a fresh Windows machine (run as admin):
-irm https://raw.githubusercontent.com/Laoujin/perch/master/bootstrap.ps1 | iex
+irm https://raw.githubusercontent.com/Laoujin/perch/main/bootstrap.ps1 | iex
 
 # Or with options:
 .\bootstrap.ps1 -SkipDeploy                     # Clone & build only
